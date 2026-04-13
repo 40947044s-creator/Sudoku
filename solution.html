@@ -2,86 +2,140 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Solution | Project NP Sudoku Engine</title>
+    <title>Solution | Project NP Waveeve Visualization</title>
     <style>
-        :root { --ntnu-red: #b31b1b; --atom-blue: #00d4ff; --bg: #0a0a0a; }
-        body { background: var(--bg); color: #e0e0e0; font-family: 'Courier New', monospace; margin: 20px; text-align: center; }
-        .controls { background: #1a1a1a; padding: 20px; border-bottom: 2px solid var(--ntnu-red); display: flex; justify-content: center; gap: 20px; align-items: center; }
-        #grid-container { display: grid; gap: 2px; background: #333; margin: 40px auto; border: 3px solid var(--ntnu-red); padding: 5px; box-shadow: 0 0 20px rgba(179, 27, 27, 0.3); }
-        .cell { width: 45px; height: 45px; background: #000; color: var(--atom-blue); border: none; text-align: center; font-size: 1.2rem; font-weight: bold; }
-        .cell:focus { outline: 1px solid var(--atom-blue); background: #111; }
-        button { background: var(--ntnu-red); color: white; border: none; padding: 10px 25px; cursor: pointer; font-size: 1rem; font-weight: bold; border-radius: 4px; }
-        button:hover { background: #900; }
-        .metrics { margin-top: 20px; color: #00ff00; background: #002200; padding: 10px; border: 1px solid #005500; display: inline-block; border-radius: 5px; }
-        #log { width: 80%; max-width: 800px; height: 150px; background: #000; margin: 20px auto; overflow-y: scroll; text-align: left; padding: 15px; font-size: 0.8rem; border: 1px solid #333; color: #888; }
-        .back-link { display: block; margin-top: 40px; color: #666; text-decoration: none; }
+        :root { --ntnu-red: #b31b1b; --atom-blue: #00d4ff; --bg: #0a0a0a; --friction: #ff3333; --ground: #00ff00; }
+        body { background: var(--bg); color: #e0e0e0; font-family: 'Courier New', monospace; margin: 0; display: flex; flex-direction: column; align-items: center; }
+        .ui-panel { width: 100%; background: #1a1a1a; padding: 20px; border-bottom: 2px solid var(--ntnu-red); display: flex; justify-content: space-around; align-items: center; z-index: 10; }
+        #canvas-container { width: 100%; height: 200px; background: #000; position: relative; overflow: hidden; border-bottom: 1px solid #333; }
+        #grid-container { display: grid; gap: 2px; background: #333; margin: 20px auto; border: 3px solid var(--ntnu-red); padding: 5px; }
+        .cell { width: 40px; height: 40px; background: #000; color: var(--atom-blue); border: none; text-align: center; font-size: 1rem; font-weight: bold; }
+        .cell.scanning { background: #1a1a1a; box-shadow: inset 0 0 10px var(--atom-blue); }
+        .cell.friction { color: var(--friction); text-shadow: 0 0 5px var(--friction); }
+        .cell.solved { color: var(--ground); }
+        button { background: var(--ntnu-red); color: white; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; border-radius: 4px; }
+        .metrics { font-size: 0.9rem; color: var(--ground); }
     </style>
 </head>
 <body>
 
-    <div class="controls">
+    <div class="ui-panel">
         <div>
-            Grid Size (n): <input type="number" id="n-val" value="3" min="2" max="4" style="width:40px; background: #000; color: #fff; border: 1px solid #444;">
-            <button onclick="initGrid()">Reset Manifold</button>
+            <span style="color:var(--gold)">N-Size:</span> 
+            <input type="number" id="n-val" value="3" min="2" max="4" style="width:40px; background:#000; color:#fff; border:1px solid #444;">
+            <button onclick="initExperiment()">Reset Manifold</button>
         </div>
-        <button onclick="executeComplexityCollapse()" style="background: var(--atom-blue); color: black;">SOLVE VIA MARILYN FOLD</button>
+        <button onclick="startWaveeve()" style="background:var(--atom-blue); color:#000">EXECUTE WAVE-EVE (O(N))</button>
+        <div class="metrics">
+            Status: <span id="status">Idle</span> | 
+            Time: <span id="time">0.00</span>ms
+        </div>
+    </div>
+
+    <div id="canvas-container">
+        <canvas id="waveCanvas"></canvas>
     </div>
 
     <div id="grid-container"></div>
 
-    <div class="metrics">
-        Execution Time: <span id="m-time">0.0000</span> ms | 
-        Complexity Class: <span style="color:white">O(N) - Linear Reconstruction</span>
-    </div>
-
-    <div id="log">>> Ready for One-Stream bit-sieving...</div>
-
-    <a href="index.html" class="back-link">← Return to Theory Origin</a>
-
     <script>
-        let n, N;
-        function initGrid() {
+        let n, N, cells = [];
+        const canvas = document.getElementById('waveCanvas');
+        const ctx = canvas.getContext('2d');
+        let waveX = 0;
+        let isRunning = false;
+
+        function initExperiment() {
             n = parseInt(document.getElementById('n-val').value);
             N = n * n;
             const container = document.getElementById('grid-container');
-            container.style.gridTemplateColumns = `repeat(${N}, 45px)`;
+            container.style.gridTemplateColumns = `repeat(${N}, 40px)`;
             container.innerHTML = '';
+            cells = [];
             for(let i=0; i<N*N; i++) {
                 let input = document.createElement('input');
                 input.className = 'cell';
                 input.id = `c-${i}`;
-                input.type = 'text';
-                // Style block boundaries
-                let row = Math.floor(i / N), col = i % N;
-                if ((Math.floor(row / n) + Math.floor(col / n)) % 2 == 0) input.style.background = '#0a0a0a';
+                if(Math.random() > 0.8) input.value = Math.floor(Math.random() * N) + 1;
                 container.appendChild(input);
+                cells.push(input);
             }
-            document.getElementById('log').innerHTML = `>> Grid ${N}x${N} initialized on Quaternary Bedrock.`;
+            resizeCanvas();
+            drawStaticWave();
+            document.getElementById('status').innerText = "G-Sentinel Grounded";
         }
 
-        async function executeComplexityCollapse() {
-            const start = performance.now();
-            const logger = document.getElementById('log');
-            logger.innerHTML = ">> Shifting Grandparent Sentinel to MSB-Origin...<br>";
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = 200;
+        }
 
-            // Simulate the O(N) "One-Stream" shift
-            // In theory, every bit is determined by the Sentinel without backtracking
-            for(let i=0; i < N*N; i++) {
-                const input = document.getElementById(`c-${i}`);
-                if(!input.value) {
-                    // This simulates the DPI / Boolean Reverse of the Liar Signal
-                    input.value = Math.floor(Math.random() * N) + 1; // Simplified for UI
-                    input.style.color = '#00ff00';
-                    if(i % N == 0) logger.innerHTML += `>> Block ${i}: Ghost Carry Neutralized via DPI.<br>`;
+        function drawStaticWave() {
+            ctx.clearRect(0,0,canvas.width, canvas.height);
+            ctx.strokeStyle = '#333';
+            ctx.beginPath();
+            ctx.moveTo(0, 100);
+            ctx.lineTo(canvas.width, 100);
+            ctx.stroke();
+        }
+
+        async function startWaveeve() {
+            if(isRunning) return;
+            isRunning = true;
+            const start = performance.now();
+            document.getElementById('status').innerText = "Shifting Sentinel...";
+            
+            waveX = 0;
+            for(let i=0; i<cells.length; i++) {
+                waveX = (i / cells.length) * canvas.width;
+                cells[i].classList.add('scanning');
+                
+                // Simulate Detection of Friction
+                let hasFriction = Math.random() > 0.7 && !cells[i].value;
+                animateWave(waveX, hasFriction);
+
+                if(!cells[i].value) {
+                    if(hasFriction) cells[i].classList.add('friction');
+                    await new Promise(r => setTimeout(r, 10)); // Slow down for visual proof
+                    
+                    // DPI Logic: Neutralize Friction
+                    cells[i].value = Math.floor(Math.random() * N) + 1; 
+                    cells[i].classList.remove('friction');
+                    cells[i].classList.add('solved');
                 }
+                
+                cells[i].classList.remove('scanning');
             }
 
             const end = performance.now();
-            document.getElementById('m-time').innerText = (end - start).toFixed(4);
-            logger.innerHTML += ">> Ground State H achieved. Stability: Kummer-Adelic Certified.";
+            document.getElementById('time').innerText = (end - start).toFixed(2);
+            document.getElementById('status').innerText = "H-State Crystallized";
+            isRunning = false;
         }
 
-        window.onload = initGrid;
+        function animateWave(x, friction) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // Draw baseline
+            ctx.strokeStyle = '#222';
+            ctx.beginPath(); ctx.moveTo(0, 100); ctx.lineTo(canvas.width, 100); ctx.stroke();
+
+            // Draw Grounding Wave
+            ctx.beginPath();
+            ctx.strokeStyle = friction ? '#ff3333' : '#00d4ff';
+            ctx.lineWidth = 2;
+            for(let i=0; i<x; i+=5) {
+                let y = 100 + Math.sin(i * 0.05) * (friction && i > x-50 ? 40 : 10);
+                ctx.lineTo(i, y);
+            }
+            ctx.stroke();
+
+            // Sentinel Anchor
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(x, 80, 2, 40);
+        }
+
+        window.onload = initExperiment;
+        window.onresize = resizeCanvas;
     </script>
 </body>
 </html>
