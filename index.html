@@ -11,13 +11,14 @@
         .hero h1 { font-size: 3rem; color: var(--ntnu-red); margin: 0; letter-spacing: 2px; }
         .hero p { font-style: italic; color: var(--gold); }
         .container { max-width: 900px; margin: 50px auto; padding: 0 20px; }
-        section { margin-bottom: 60px; }
-        h2 { border-left: 4px solid var(--ntnu-red); padding-left: 15px; color: var(--accent); }
-        .formula { background: #1a1a1a; padding: 20px; border-radius: 8px; border: 1px dashed #444; font-family: 'Courier New', monospace; overflow-x: auto; }
+        section { margin-bottom: 60px; border-bottom: 1px solid #222; padding-bottom: 40px; }
+        h2 { border-left: 4px solid var(--ntnu-red); padding-left: 15px; color: var(--accent); text-transform: uppercase; font-size: 1.2rem; }
+        .formula { background: #1a1a1a; padding: 20px; border-radius: 8px; border: 1px dashed #444; font-family: 'Courier New', monospace; margin: 20px 0; }
         .highlight { color: var(--gold); font-weight: bold; }
-        .nav-btn { display: inline-block; background: var(--ntnu-red); color: white; padding: 15px 40px; text-decoration: none; border-radius: 4px; font-weight: bold; transition: transform 0.2s; margin-top: 30px; }
-        .nav-btn:hover { transform: scale(1.05); background: #900; }
+        .nav-btn { display: inline-block; background: var(--ntnu-red); color: white; padding: 15px 40px; text-decoration: none; border-radius: 4px; font-weight: bold; transition: all 0.3s; margin-top: 30px; border: 1px solid transparent; }
+        .nav-btn:hover { background: transparent; border: 1px solid var(--ntnu-red); color: var(--ntnu-red); box-shadow: 0 0 15px var(--ntnu-red); }
         footer { text-align: center; padding: 40px; color: #666; font-size: 0.8rem; border-top: 1px solid #333; }
+        .badge { display: inline-block; padding: 2px 8px; background: #333; font-size: 0.7rem; border-radius: 3px; vertical-align: middle; margin-right: 10px; }
     </style>
 </head>
 <body>
@@ -25,32 +26,36 @@
 <div class="hero">
     <h1>PROJECT NP</h1>
     <p>Adelic Transition Engines & The Resolution of NP-Complete Manifolds</p>
-    <div style="margin-top:20px;">Marilyn Hsiao | NTNU Computer Science</div>
+    <div style="margin-top:20px;">
+        <span class="badge">EST. 1987 Prototype</span>
+        <span class="badge">ARM64 Darwin Logic</span>
+        <span class="badge">NTNU Research</span>
+    </div>
 </div>
 
 <div class="container">
-    <section id="origin">
-        <h2>I. Theoretical Origin</h2>
-        <p>The "Hard" part of NP-complete problems is traditionally viewed as an unavoidable branching factor. <strong>Project NP</strong> refutes this by treating the search space as a signal-to-noise reconstruction task. By mapping the manifold to the <span class="highlight">Quaternary Bedrock</span>, we replace exponential search with hardware-level residue extraction.</p>
+    <section>
+        <h2>I. The 1987 Marilyn Fold Origin</h2>
+        <p>The Marilyn Fold originated as a 1987 prototype for multi-layered rigid folding mechanisms. In the <strong>Project NP</strong> framework, we realize that the physical "inevitability" of a card unfolding is a geometric proof of state convergence. We apply this to computational complexity: if the path to unfolding is unique, the solution to the manifold is deterministic.</p>
     </section>
 
-    <section id="marilyn-fold">
-        <h2>II. The Marilyn Fold & RAF</h2>
-        <p>The Marilyn Fold functions as an identity filter for the input manifold. When a state transition violates the Chinese Prime Consensus, it produces <span class="highlight">Residual Arithmetic Friction (RAF)</span>, also known as a Ghost Carry.</p>
+    <section>
+        <h2>II. The Marilyn-Adelic Consensus</h2>
+        <p>We solve NP-complete transitions by mapping them to the <span class="highlight">Quaternary Bedrock</span>. Using the <strong>Marilyn Fold</strong> as a modular reduction filter, we detect <strong>Residual Arithmetic Friction (RAF)</strong>—the "Ghost Carry"—to identify invalid states at the bit-level.</p>
         <div class="formula">
             R ≡ H (mod M<sub>p</sub>) <br>
-            If R ≠ 0, Proposition = "Certain False" (Liar Signal)
+            Ghost Carry Detection: If R ≠ 0, applying DPI executes Boolean Reverse.
         </div>
     </section>
 
-    <section id="sentinel">
-        <h2>III. The Grandparent Sentinel (G)</h2>
-        <p>The <strong>Grandparent Sentinel</strong> is the anchor set at the <span class="highlight">Most Significant Bit (MSB)</span>. It represents the absolute "Truth" of the blocksize. By shifting this sentinel down the bit-stream, we reconstruct the signal without ever branching, achieving a complexity profile of <span class="highlight">O(N)</span> on ARM64 architectures.</p>
+    <section>
+        <h2>III. Hardware Acceleration: ARM64</h2>
+        <p>Targeting the <strong>Darwin ARM64 architecture</strong>, the engine utilizes register-level shifts (LSR) and bitwise negation to achieve <span class="highlight">O(N)</span> complexity. By anchoring the <strong>Grandparent Sentinel (G)</strong> at the Most Significant Bit, the solver reconstructs the grid in a single "One-Stream" pass.</p>
     </section>
 
     <div style="text-align: center;">
-        <p>Witness the Complexity Collapse in real-time.</p>
-        <a href="solution.html" class="nav-btn">ENTER ATOM MODE: SUDOKU SOLVER</a>
+        <p>Ready to witness the Waveeve signal in action?</p>
+        <a href="solution.html" class="nav-btn">ENTER ATOM MODE: SUDOKU RECONSTRUCTION</a>
     </div>
 </div>
 
