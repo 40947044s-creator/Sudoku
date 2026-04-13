@@ -245,5 +245,58 @@
         window.onload = initManifold;
         window.onresize = resizeCanvas;
     </script>
+    <button onclick="verifyGrounding()" style="background:var(--gold); color:#000;">VERIFY GROUND STATE</button>
+
+<script>
+async function verifyGrounding() {
+    const logger = document.getElementById('status');
+    logger.innerText = "VERIFYING CHINESE PRIME CONSENSUS...";
+    
+    // Identity Filter Flags (Mersenne Windows)
+    let rows = Array.from({length: N}, () => new Set());
+    let cols = Array.from({length: N}, () => new Set());
+    let blocks = Array.from({length: N}, () => new Set());
+    
+    let isGrounded = true;
+    let emptyCells = 0;
+
+    for (let i = 0; i < N * N; i++) {
+        let val = cells[i].innerText;
+        if (!val || val === "" || val === "?") {
+            emptyCells++;
+            isGrounded = false;
+            continue;
+        }
+
+        let r = Math.floor(i / N);
+        let c = i % N;
+        let b = Math.floor(r / n) * n + Math.floor(c / n);
+
+        // Check for Friction (Duplicates)
+        if (rows[r].has(val) || cols[c].has(val) || blocks[b].has(val)) {
+            cells[i].classList.add('friction');
+            isGrounded = false;
+        }
+
+        rows[r].add(val);
+        cols[c].add(val);
+        blocks[b].add(val);
+    }
+
+    if (isGrounded && emptyCells === 0) {
+        logger.style.color = "var(--ground)";
+        logger.innerText = "AC: HAMILTONIAN INVARIANT ACHIEVED";
+        // Final Phase Wave
+        updateWave(canvas.width, false);
+    } else {
+        logger.style.color = "var(--friction)";
+        logger.innerText = emptyCells > 0 ? 
+            `STABILITY FAILURE: ${emptyCells} BITS UNGROUNDED` : 
+            "GHOSTS DETECTED: MANIFOLD UNSTABLE";
+        // Pulse Friction on the Wave
+        updateWave(canvas.width / 2, true);
+    }
+}
+</script>
 </body>
 </html>
