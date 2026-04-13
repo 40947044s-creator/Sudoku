@@ -60,32 +60,44 @@
         const ctx = canvas.getContext('2d');
 
         function initManifold() {
-            n = parseInt(document.getElementById('n-val').value);
-            N = n * n;
-            const container = document.getElementById('grid-container');
-            container.style.gridTemplateColumns = `repeat(${N}, 45px)`;
-            container.innerHTML = '';
-            cells = [];
-            
-            for(let i=0; i<N*N; i++) {
-                let div = document.createElement('div');
-                div.className = 'cell';
-                // Boundary styling for n x n sectors
-                let r = Math.floor(i / N), c = i % N;
-                if ((Math.floor(r / n) + Math.floor(c / n)) % 2 == 0) div.style.background = '#080808';
-                
-                // Randomized Init
-                if(Math.random() > 0.88) {
-                    div.innerText = Math.floor(Math.random() * N) + 1;
-                    div.style.color = 'var(--gold)';
-                }
-                
-                container.appendChild(div);
-                cells.push(div);
-            }
-            resizeCanvas();
-            document.getElementById('status').innerText = "SENTINEL READY";
+    n = parseInt(document.getElementById('n-val').value);
+    N = n * n;
+    const container = document.getElementById('grid-container');
+    container.style.gridTemplateColumns = `repeat(${N}, 45px)`;
+    container.innerHTML = '';
+    cells = [];
+    
+    // Create a Grounded Base State (Solved Grid)
+    let base = Array.from({length: N}, (v, r) => 
+        Array.from({length: N}, (v, c) => (Math.floor(r * n + r / n + c) % N) + 1)
+    );
+
+    // Shuffle to create a unique Manifold
+    for(let i=0; i<100; i++) {
+        let r1 = Math.floor(Math.random() * N), r2 = Math.floor(Math.random() * N);
+        [base[r1], base[r2]] = [base[r2], base[r1]]; // Simple row swap
+    }
+
+    // Flatten and "Fold" (Remove bits to create the puzzle)
+    for(let i=0; i<N*N; i++) {
+        let div = document.createElement('div');
+        div.className = 'cell';
+        let r = Math.floor(i / N), c = i % N;
+        if ((Math.floor(r / n) + Math.floor(c / n)) % 2 == 0) div.style.background = '#080808';
+        
+        // Only keep ~30% of the grounded bits
+        if(Math.random() < 0.3) {
+            div.innerText = base[r][c];
+            div.style.color = 'var(--gold)';
+            div.dataset.fixed = "true";
         }
+        
+        container.appendChild(div);
+        cells.push(div);
+    }
+    resizeCanvas();
+    document.getElementById('status').innerText = "SENTINEL READY: MANIFOLD VALID";
+}
 
         function resizeCanvas() {
             canvas.width = window.innerWidth;
@@ -104,27 +116,63 @@
     const logger = document.getElementById('status');
     logger.innerText = "WAVEEVE ACTIVE: CYRSTALLIZING...";
 
-    let solvedCount = 0;
-    let totalCells = N * N;
+    const totalCells = N * N;
     let iterations = 0;
 
-    // 1. Initial Identity Filter (Mersenne Windows)
     const getCandidates = (idx) => {
         let r = Math.floor(idx / N), c = idx % N, b = Math.floor(r / n) * n + Math.floor(c / n);
         let used = new Set();
         for (let j = 0; j < N; j++) {
-            let rowVal = cells[r * N + j].innerText;
-            let colVal = cells[j * N + c].innerText;
+            if (cells[r * N + j].innerText) used.add(cells[r * N + j].innerText);
+            if (cells[j * N + c].innerText) used.add(cells[j * N + c].innerText);
             let boxR = Math.floor(b / n) * n, boxC = (b % n) * n;
-            let boxVal = cells[(boxR + Math.floor(j / n)) * N + (boxC + j % n)].innerText;
-            if (rowVal) used.add(rowVal);
-            if (colVal) used.add(colVal);
-            if (boxVal) used.add(boxVal);
+            let bVal = cells[(boxR + Math.floor(j / n)) * N + (boxC + j % n)].innerText;
+            if (bVal) used.add(bVal);
         }
         let res = [];
         for (let v = 1; v <= N; v++) if (!used.has(v.toString())) res.push(v);
         return res;
     };
+
+    while (iterations < totalCells) {
+        let bestCell = -1, minC = N + 1, bestC = [];
+
+        // Shift Sentinel to find the next grounded bit
+        for (let i = 0; i < totalCells; i++) {
+            if (!cells[i].innerText) {
+                let candidates = getCandidates(i);
+                if (candidates.length < minC) {
+                    minC = candidates.length;
+                    bestC = candidates;
+                    bestCell = i;
+                }
+            }
+        }
+
+        if (bestCell === -1) break; // Ground State H Achieved
+
+        if (bestC.length > 0) {
+            // Apply DPI: Neutralize RAF and fix the bit
+            cells[bestCell].innerText = bestC[0];
+            cells[bestCell].classList.add('solved');
+            updateWave((bestCell / totalCells) * canvas.width, false);
+        } else {
+            // Unrecoverable Friction (Should not happen with Valid Init)
+            updateWave((bestCell / totalCells) * canvas.width, true);
+            cells[bestCell].classList.add('friction');
+            logger.innerText = "STABILITY ERROR: RAF OVERFLOW";
+            return;
+        }
+        
+        // Real-time Waveeve update
+        await new Promise(res => setTimeout(res, 5)); 
+        iterations++;
+    }
+
+    const end = performance.now();
+    document.getElementById('timer').innerText = (end - start).toFixed(2);
+    logger.innerText = "H-STATE CRYSTALLIZED: AC";
+}
 
     // 2. The Adelic Sieve (Iterative Phase Shift)
     while (iterations < totalCells) {
