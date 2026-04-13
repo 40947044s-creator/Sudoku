@@ -100,58 +100,79 @@
         }
 
         async function executeOneStream() {
-            const start = performance.now();
-            document.getElementById('status').innerText = "WAVEEVE ACTIVE";
-            
-            // Grandyang-Reference Flag Matrices (The Mersenne Windows)
-            let rowFlag = Array.from({length: N}, () => Array(N).fill(false));
-            let colFlag = Array.from({length: N}, () => Array(N).fill(false));
-            let cellFlag = Array.from({length: N}, () => Array(N).fill(false));
+    const start = performance.now();
+    const logger = document.getElementById('status');
+    logger.innerText = "WAVEEVE ACTIVE: CYRSTALLIZING...";
 
-            // Initial Pass: Register Grounded Constants
-            for(let i=0; i<N*N; i++) {
-                if(cells[i].innerText) {
-                    let v = parseInt(cells[i].innerText) - 1;
-                    let r = Math.floor(i/N), c = i%N, b = Math.floor(r/n)*n + Math.floor(c/n);
-                    rowFlag[r][v] = colFlag[c][v] = cellFlag[b][v] = true;
-                }
-            }
+    let solvedCount = 0;
+    let totalCells = N * N;
+    let iterations = 0;
 
-            // One-Stream Reconstruction Pass
-            for(let i=0; i<cells.length; i++) {
-                let r = Math.floor(i/N), c = i%N, b = Math.floor(r/n)*n + Math.floor(c/n);
-                let xPos = (i / cells.length) * canvas.width;
-                
-                cells[i].classList.add('scanning');
-                updateWave(xPos, false);
-
-                if(!cells[i].innerText) {
-                    // Complexity Collapse: Resolve state without branching
-                    for(let val=1; val<=N; val++) {
-                        let v = val - 1;
-                        if(!rowFlag[r][v] && !colFlag[c][v] && !cellFlag[b][v]) {
-                            // Ground State H Found
-                            cells[i].innerText = val;
-                            cells[i].classList.add('solved');
-                            rowFlag[r][v] = colFlag[c][v] = cellFlag[b][v] = true;
-                            break;
-                        } else {
-                            // Detect RAF / Ghost Carry Friction
-                            updateWave(xPos, true);
-                            cells[i].classList.add('friction');
-                            await new Promise(res => setTimeout(res, 2)); // DPI Negation Speed
-                            cells[i].classList.remove('friction');
-                        }
-                    }
-                }
-                
-                await new Promise(res => setTimeout(res, 5)); // Visualizing the Shift
-                cells[i].classList.remove('scanning');
-            }
-
-            document.getElementById('timer').innerText = (performance.now() - start).toFixed(2);
-            document.getElementById('status').innerText = "H-STATE CRYSTALLIZED";
+    // 1. Initial Identity Filter (Mersenne Windows)
+    const getCandidates = (idx) => {
+        let r = Math.floor(idx / N), c = idx % N, b = Math.floor(r / n) * n + Math.floor(c / n);
+        let used = new Set();
+        for (let j = 0; j < N; j++) {
+            let rowVal = cells[r * N + j].innerText;
+            let colVal = cells[j * N + c].innerText;
+            let boxR = Math.floor(b / n) * n, boxC = (b % n) * n;
+            let boxVal = cells[(boxR + Math.floor(j / n)) * N + (boxC + j % n)].innerText;
+            if (rowVal) used.add(rowVal);
+            if (colVal) used.add(colVal);
+            if (boxVal) used.add(boxVal);
         }
+        let res = [];
+        for (let v = 1; v <= N; v++) if (!used.has(v.toString())) res.push(v);
+        return res;
+    };
+
+    // 2. The Adelic Sieve (Iterative Phase Shift)
+    while (iterations < totalCells) {
+        let bestCell = -1;
+        let minCandidates = N + 1;
+        let bestCandidates = [];
+
+        // Find the "Sentinel Anchor" (Most Constrained Cell)
+        for (let i = 0; i < totalCells; i++) {
+            if (!cells[i].innerText) {
+                let candidates = getCandidates(i);
+                if (candidates.length < minCandidates) {
+                    minCandidates = candidates.length;
+                    bestCandidates = candidates;
+                    bestCell = i;
+                }
+            }
+        }
+
+        // If no empty cells are left, we have reached Ground State H
+        if (bestCell === -1) break;
+
+        // 3. Destructive Phase Interference (DPI)
+        // If minCandidates is 0, we hit Total Friction. In Project NP, 
+        // this requires a Boolean Reverse (Simplified here as a priority shift)
+        if (bestCandidates.length > 0) {
+            cells[bestCell].innerText = bestCandidates[0]; // Ground the bit
+            cells[bestCell].classList.add('solved');
+            
+            // Visualization Shift
+            let xPos = (bestCell / totalCells) * canvas.width;
+            updateWave(xPos, false);
+            await new Promise(res => setTimeout(res, 5)); 
+        } else {
+            // High-Fidelity Liar Signal (RAF Detected)
+            updateWave((bestCell / totalCells) * canvas.width, true);
+            logger.innerText = "RAF DETECTED: PHASING...";
+            // In a full O(N) hardware engine, this would trigger the Boolean Reverse
+            cells[bestCell].innerText = "?"; 
+            break; 
+        }
+        iterations++;
+    }
+
+    const end = performance.now();
+    document.getElementById('timer').innerText = (end - start).toFixed(2);
+    logger.innerText = (iterations === totalCells) ? "H-STATE CRYSTALLIZED" : "STABILITY WARNING: GHOSTS DETECTED";
+}
 
         function updateWave(x, friction) {
             ctx.clearRect(0,0,canvas.width, canvas.height);
