@@ -115,74 +115,102 @@
             for (let v = 1; v <= N; v++) if (!used.has(v.toString())) res.push(v);
             return res;
         }
+function mapToPriorityStream() {
+    let emptyCells = [];
+    
+    for (let i = 0; i < N * N; i++) {
+        if (!cells[i].innerText) {
+            // Calculate Grounded Potential (Clue Density)
+            let r = Math.floor(i / N), c = i % N, b = Math.floor(r / n) * n + Math.floor(c / n);
+            let used = new Set();
+            for (let j = 0; j < N; j++) {
+                if (cells[r * N + j].innerText) used.add(cells[r * N + j].innerText);
+                if (cells[j * N + c].innerText) used.add(cells[j * N + c].innerText);
+                let boxR = Math.floor(b / n) * n, boxC = (b % n) * n;
+                let bVal = cells[(boxR + Math.floor(j / n)) * N + (boxC + j % n)].innerText;
+                if (bVal) used.add(bVal);
+            }
+            // Weight = Number of occupied constraints
+            emptyCells.push({ index: i, weight: used.size });
+        }
+    }
 
-        async function executeOneStream() {
-            const start = performance.now();
-            const logger = document.getElementById('status');
-            logger.innerText = "WAVEEVE ACTIVE...";
+    // Sort: Most Clues (Highest Weight) to Least
+    emptyCells.sort((a, b) => b.weight - a.weight);
+    
+    // Map to a string of indices for the One-Stream pass
+    return emptyCells.map(c => c.index);
+}
+       // ... existing variables and initManifold ...
+
+async function executeOneStream() {
+    const start = performance.now();
+    const logger = document.getElementById('status');
+    logger.innerText = "WAVEEVE ACTIVE: COLLAPSING ENTROPY...";
+    
+    // 1. MSB-Origin Mapping: Define the Sentinel Chain
+    // This maps the manifold to a 1D string from High Friction to Low
+    let priorityStream = mapToPriorityStream();
+    let totalToSolve = priorityStream.length;
+    let solvedCount = 0;
+
+    // 2. The One-Stream Pass
+    for (let cellIndex of priorityStream) {
+        let r = Math.floor(cellIndex / N), c = cellIndex % N;
+        let xPos = (cellIndex / (N * N)) * canvas.width;
+        
+        cells[cellIndex].classList.add('scanning');
+        
+        // Get Residues (Phases)
+        let candidates = getCandidates(cellIndex);
+        
+        if (candidates.length > 0) {
+            // DPI: Crystallize the bit
+            // In a true Adelic solver, we choose the ground state value
+            cells[cellIndex].innerText = candidates[0];
+            cells[cellIndex].classList.add('solved');
             
-            let total = N * N;
-            let iterations = 0;
-
-            while (iterations < total) {
-                let bestCell = -1, minC = N + 1, bestC = [];
-
-                // Find Highest Friction (Most Constrained) bit - MSB Anchor Logic
-                for (let i = 0; i < total; i++) {
-                    if (!cells[i].innerText) {
-                        let candidates = getCandidates(i);
-                        if (candidates.length < minC) {
-                            minC = candidates.length;
-                            bestC = candidates;
-                            bestCell = i;
-                        }
-                    }
-                }
-
-                if (bestCell === -1) break; 
-
-                let xPos = (bestCell / total) * canvas.width;
-                cells[bestCell].classList.add('scanning');
-
-                if (bestC.length > 0) {
-                    // DPI: Phase Correction
-                    cells[bestCell].innerText = bestC[0];
-                    cells[bestCell].classList.add('solved');
-                    updateWave(xPos, false);
-                } else {
-                    // Unrecoverable RAF
-                    updateWave(xPos, true);
-                    cells[bestCell].innerText = "?";
-                    cells[bestCell].classList.add('friction');
-                    logger.innerText = "RAF OVERFLOW: UNSTABLE";
-                    return;
-                }
-                
-                await new Promise(res => setTimeout(res, 5)); 
-                cells[bestCell].classList.remove('scanning');
-                iterations++;
-            }
-
-            document.getElementById('timer').innerText = (performance.now() - start).toFixed(2);
-            logger.innerText = "H-STATE CRYSTALLIZED";
+            // Wave reflects Entropy Collapse: more candidates = more friction
+            updateWave(xPos, false, candidates.length);
+        } else {
+            // RAF Overflow: The manifold is ungrounded
+            updateWave(xPos, true, 10);
+            cells[cellIndex].innerText = "?";
+            cells[cellIndex].classList.add('friction');
+            logger.innerText = "RAF OVERFLOW: UNSTABLE ATOM";
+            return;
         }
 
-        function updateWave(x, friction) {
-            ctx.clearRect(0,0,canvas.width, canvas.height);
-            ctx.strokeStyle = '#111';
-            ctx.beginPath(); ctx.moveTo(0, 60); ctx.lineTo(canvas.width, 60); ctx.stroke();
-            ctx.beginPath();
-            ctx.strokeStyle = friction ? 'var(--friction)' : 'var(--accent)';
-            ctx.lineWidth = 2;
-            for(let i=0; i<x; i+=5) {
-                let amp = friction && i > x-30 ? 25 : 8;
-                let y = 60 + Math.sin(i * 0.1) * amp;
-                ctx.lineTo(i, y);
-            }
-            ctx.stroke();
-            ctx.fillStyle = "#fff"; ctx.fillRect(x, 40, 2, 40);
-        }
+        // Processing Speed: Simulating ARM64 Cycle
+        await new Promise(res => setTimeout(res, 10)); 
+        cells[cellIndex].classList.remove('scanning');
+        solvedCount++;
+    }
 
+    const end = performance.now();
+    document.getElementById('timer').innerText = (end - start).toFixed(2);
+    logger.innerText = "H-STATE CRYSTALLIZED: AC";
+    logger.style.color = "var(--ground)";
+}
+
+// Updated Wave Visual to show Entropy (amp)
+function updateWave(x, friction, entropy = 5) {
+    ctx.clearRect(0,0,canvas.width, canvas.height);
+    ctx.strokeStyle = '#111';
+    ctx.beginPath(); ctx.moveTo(0, 60); ctx.lineTo(canvas.width, 60); ctx.stroke();
+    
+    ctx.beginPath();
+    ctx.strokeStyle = friction ? 'var(--friction)' : 'var(--accent)';
+    ctx.lineWidth = 2;
+    for(let i=0; i<x; i+=5) {
+        // Amplitude is proportional to the remaining entropy (candidates)
+        let amp = friction ? 30 : (entropy * 2); 
+        let y = 60 + Math.sin(i * 0.1) * amp;
+        ctx.lineTo(i, y);
+    }
+    ctx.stroke();
+    ctx.fillStyle = "#fff"; ctx.fillRect(x, 40, 2, 40);
+}
         async function verifyGrounding() {
             const logger = document.getElementById('status');
             let rows = Array.from({length: N}, () => new Set());
