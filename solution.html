@@ -54,163 +54,142 @@
 
     <script>
         let n, N, cells = [];
-        const canvas = document.getElementById('waveCanvas');
-        const ctx = canvas.getContext('2d');
+const canvas = document.getElementById('waveCanvas');
+const ctx = canvas.getContext('2d');
 
-        function initManifold() {
-            n = parseInt(document.getElementById('n-val').value);
-            N = n * n;
-            const container = document.getElementById('grid-container');
-            container.style.gridTemplateColumns = `repeat(${N}, 42px)`;
-            container.innerHTML = '';
-            cells = [];
-            
-            // Seed a valid Ground State H via rotation
-            let seed = Array.from({length: N}, (v, r) => 
-                Array.from({length: N}, (v, c) => (Math.floor(r * n + r / n + c) % N) + 1)
-            );
-
-            // Fold back to puzzle (Masking)
-            for(let i=0; i<N*N; i++) {
-                let div = document.createElement('div');
-                div.className = 'cell';
-                let r = Math.floor(i / N), c = i % N;
-                if ((Math.floor(r / n) + Math.floor(c / n)) % 2 == 0) div.style.background = '#080808';
-                
-                if(Math.random() < 0.35) {
-                    div.innerText = seed[r][c];
-                    div.classList.add('initial');
-                }
-                container.appendChild(div);
-                cells.push(div);
-            }
-            resizeCanvas();
-            document.getElementById('status').innerText = "SENTINEL READY";
-            document.getElementById('status').style.color = "var(--accent)";
-        }
-
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = 120;
-            drawStaticWave();
-        }
-
-        function drawStaticWave() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.strokeStyle = '#222';
-            ctx.beginPath(); ctx.moveTo(0, 60); ctx.lineTo(canvas.width, 60); ctx.stroke();
-        }
-
-        function getCandidates(idx) {
-            let r = Math.floor(idx / N), c = idx % N, b = Math.floor(r / n) * n + Math.floor(c / n);
-            let used = new Set();
-            for (let j = 0; j < N; j++) {
-                if (cells[r * N + j].innerText) used.add(cells[r * N + j].innerText);
-                if (cells[j * N + c].innerText) used.add(cells[j * N + c].innerText);
-                let boxR = Math.floor(b / n) * n, boxC = (b % n) * n;
-                let bVal = cells[(boxR + Math.floor(j / n)) * N + (boxC + j % n)].innerText;
-                if (bVal) used.add(bVal);
-            }
-            let res = [];
-            for (let v = 1; v <= N; v++) if (!used.has(v.toString())) res.push(v);
-            return res;
-        }
-function mapToPriorityStream() {
-    let emptyCells = [];
+function initManifold() {
+    n = parseInt(document.getElementById('n-val').value);
+    N = n * n;
+    const container = document.getElementById('grid-container');
+    container.style.gridTemplateColumns = `repeat(${N}, 42px)`;
+    container.innerHTML = '';
+    cells = [];
     
-    for (let i = 0; i < N * N; i++) {
-        if (!cells[i].innerText) {
-            // Calculate Grounded Potential (Clue Density)
-            let r = Math.floor(i / N), c = i % N, b = Math.floor(r / n) * n + Math.floor(c / n);
-            let used = new Set();
-            for (let j = 0; j < N; j++) {
-                if (cells[r * N + j].innerText) used.add(cells[r * N + j].innerText);
-                if (cells[j * N + c].innerText) used.add(cells[j * N + c].innerText);
-                let boxR = Math.floor(b / n) * n, boxC = (b % n) * n;
-                let bVal = cells[(boxR + Math.floor(j / n)) * N + (boxC + j % n)].innerText;
-                if (bVal) used.add(bVal);
-            }
-            // Weight = Number of occupied constraints
-            emptyCells.push({ index: i, weight: used.size });
-        }
+    // Seed a valid Ground State H
+    let seed = Array.from({length: N}, (v, r) => 
+        Array.from({length: N}, (v, c) => (Math.floor(r * n + r / n + c) % N) + 1)
+    );
+
+    // Shuffle Manifold (Rows/Cols within blocks)
+    for(let i=0; i<N; i++) {
+        let r1 = Math.floor(Math.random() * n) + Math.floor(i/n)*n;
+        let r2 = Math.floor(Math.random() * n) + Math.floor(i/n)*n;
+        [seed[r1], seed[r2]] = [seed[r2], seed[r1]];
     }
 
-    // Sort: Most Clues (Highest Weight) to Least
-    emptyCells.sort((a, b) => b.weight - a.weight);
-    
-    // Map to a string of indices for the One-Stream pass
-    return emptyCells.map(c => c.index);
+    for(let i=0; i<N*N; i++) {
+        let div = document.createElement('div');
+        div.className = 'cell';
+        let r = Math.floor(i / N), c = i % N;
+        if ((Math.floor(r / n) + Math.floor(c / n)) % 2 == 0) div.style.background = '#080808';
+        
+        if(Math.random() < 0.30) {
+            div.innerText = seed[r][c];
+            div.classList.add('initial');
+        }
+        container.appendChild(div);
+        cells.push(div);
+    }
+    resizeCanvas();
+    document.getElementById('status').innerText = "SENTINEL READY";
+    document.getElementById('status').style.color = "var(--accent)";
 }
-       // ... existing variables and initManifold ...
+
+// The Clue-to-String Mapping Algorithm
+function mapToPriorityStream() {
+    let emptyIndices = [];
+    for (let i = 0; i < N * N; i++) {
+        if (!cells[i].innerText) emptyIndices.push(i);
+    }
+    
+    // Sort by "Highest Friction" (Least Candidates)
+    emptyIndices.sort((a, b) => {
+        return getCandidates(a).length - getCandidates(b).length;
+    });
+    
+    return emptyIndices;
+}
+
+function getCandidates(idx) {
+    let r = Math.floor(idx / N), c = idx % N, b = Math.floor(r / n) * n + Math.floor(c / n);
+    let used = new Set();
+    for (let j = 0; j < N; j++) {
+        if (cells[r * N + j].innerText) used.add(cells[r * N + j].innerText);
+        if (cells[j * N + c].innerText) used.add(cells[j * N + c].innerText);
+        let boxR = Math.floor(b / n) * n, boxC = (b % n) * n;
+        let bVal = cells[(boxR + Math.floor(j / n)) * N + (boxC + j % n)].innerText;
+        if (bVal) used.add(bVal);
+    }
+    let res = [];
+    for (let v = 1; v <= N; v++) if (!used.has(v.toString())) res.push(v);
+    return res;
+}
 
 async function executeOneStream() {
     const start = performance.now();
     const logger = document.getElementById('status');
-    logger.innerText = "WAVEEVE ACTIVE: COLLAPSING ENTROPY...";
+    logger.innerText = "WAVEEVE: MAPPING MANIFOLD...";
     
-    // 1. MSB-Origin Mapping: Define the Sentinel Chain
-    // This maps the manifold to a 1D string from High Friction to Low
+    // 1. Generate the Sentinel Chain (Priority String)
     let priorityStream = mapToPriorityStream();
-    let totalToSolve = priorityStream.length;
-    let solvedCount = 0;
+    
+    // 2. Recursive Waveeve Operator (Backtracking framed as DPI)
+    async function solve(streamIdx) {
+        if (streamIdx === priorityStream.length) return true;
 
-    // 2. The One-Stream Pass
-    for (let cellIndex of priorityStream) {
-        let r = Math.floor(cellIndex / N), c = cellIndex % N;
-        let xPos = (cellIndex / (N * N)) * canvas.width;
-        
-        cells[cellIndex].classList.add('scanning');
-        
-        // Get Residues (Phases)
-        let candidates = getCandidates(cellIndex);
-        
-        if (candidates.length > 0) {
-            // DPI: Crystallize the bit
-            // In a true Adelic solver, we choose the ground state value
-            cells[cellIndex].innerText = candidates[0];
-            cells[cellIndex].classList.add('solved');
+        let cellIdx = priorityStream[streamIdx];
+        let candidates = getCandidates(cellIdx);
+        let xPos = (cellIdx / (N * N)) * canvas.width;
+
+        cells[cellIdx].classList.add('scanning');
+        updateWave(xPos, false, candidates.length);
+
+        for (let val of candidates) {
+            cells[cellIdx].innerText = val;
+            cells[cellIdx].classList.add('solved');
             
-            // Wave reflects Entropy Collapse: more candidates = more friction
-            updateWave(xPos, false, candidates.length);
-        } else {
-            // RAF Overflow: The manifold is ungrounded
+            // Allow browser to render the "Crystallization"
+            await new Promise(r => setTimeout(r, 1)); 
+
+            if (await solve(streamIdx + 1)) return true;
+
+            // RAF Detected -> Apply Boolean Reverse (Backtrack)
+            cells[cellIdx].innerText = "";
+            cells[cellIdx].classList.remove('solved');
             updateWave(xPos, true, 10);
-            cells[cellIndex].innerText = "?";
-            cells[cellIndex].classList.add('friction');
-            logger.innerText = "RAF OVERFLOW: UNSTABLE ATOM";
-            return;
         }
 
-        // Processing Speed: Simulating ARM64 Cycle
-        await new Promise(res => setTimeout(res, 10)); 
-        cells[cellIndex].classList.remove('scanning');
-        solvedCount++;
+        cells[cellIdx].classList.remove('scanning');
+        return false;
     }
 
-    const end = performance.now();
-    document.getElementById('timer').innerText = (end - start).toFixed(2);
-    logger.innerText = "H-STATE CRYSTALLIZED: AC";
-    logger.style.color = "var(--ground)";
+    if (await solve(0)) {
+        document.getElementById('timer').innerText = (performance.now() - start).toFixed(2);
+        logger.innerText = "H-STATE CRYSTALLIZED: AC";
+        logger.style.color = "var(--ground)";
+    } else {
+        logger.innerText = "STABILITY FAILURE: NO GROUND STATE";
+        logger.style.color = "var(--friction)";
+    }
 }
 
-// Updated Wave Visual to show Entropy (amp)
 function updateWave(x, friction, entropy = 5) {
     ctx.clearRect(0,0,canvas.width, canvas.height);
     ctx.strokeStyle = '#111';
     ctx.beginPath(); ctx.moveTo(0, 60); ctx.lineTo(canvas.width, 60); ctx.stroke();
-    
     ctx.beginPath();
     ctx.strokeStyle = friction ? 'var(--friction)' : 'var(--accent)';
     ctx.lineWidth = 2;
     for(let i=0; i<x; i+=5) {
-        // Amplitude is proportional to the remaining entropy (candidates)
-        let amp = friction ? 30 : (entropy * 2); 
+        let amp = friction ? 25 : (entropy * 3); 
         let y = 60 + Math.sin(i * 0.1) * amp;
         ctx.lineTo(i, y);
     }
     ctx.stroke();
     ctx.fillStyle = "#fff"; ctx.fillRect(x, 40, 2, 40);
 }
+
+// ... verifyGrounding remains as provided before ...
         async function verifyGrounding() {
             const logger = document.getElementById('status');
             let rows = Array.from({length: N}, () => new Set());
