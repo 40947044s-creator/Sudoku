@@ -3,33 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Project NP | Adelic Sudoku Reconstruction</title>
+    <title>Project NP | Adelic Sudoku Reconstruction v2.0</title>
     <style>
         :root { --ntnu-red: #b31b1b; --gold: #d4af37; --bg: #050505; --accent: #00d4ff; --friction: #ff3333; --ground: #00ff00; }
         body { background: var(--bg); color: #e0e0e0; font-family: 'Courier New', monospace; margin: 0; display: flex; flex-direction: column; align-items: center; overflow-x: hidden; }
         
-        /* Dashboard & Metrics */
-        .dashboard { width: 100%; background: #111; padding: 20px; border-bottom: 2px solid var(--ntnu-red); display: flex; justify-content: space-around; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 10; }
+        .dashboard { width: 100%; background: #111; padding: 20px; border-bottom: 2px solid var(--ntnu-red); display: flex; justify-content: space-around; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 10; flex-wrap: wrap; gap: 10px; }
         .metrics { font-size: 0.85rem; color: var(--gold); }
         .metric-val { color: var(--ground); font-weight: bold; }
         
-        /* Waveeve Visualization */
-        #wave-container { width: 100%; height: 150px; background: #000; position: relative; border-bottom: 1px solid #222; }
+        #wave-container { width: 100%; height: 120px; background: #000; position: relative; border-bottom: 1px solid #222; }
         canvas { display: block; }
 
-        /* Sudoku Manifold */
-        #grid-container { display: grid; gap: 2px; background: #333; margin: 30px auto; padding: 10px; border: 4px solid var(--ntnu-red); box-shadow: 0 0 30px rgba(179, 27, 27, 0.2); }
-        .cell { width: 45px; height: 45px; background: #000; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: bold; transition: all 0.1s; border: 1px solid #111; }
+        #grid-container { display: grid; gap: 2px; background: #333; margin: 20px auto; padding: 10px; border: 4px solid var(--ntnu-red); }
+        .cell { width: 42px; height: 42px; background: #000; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; font-weight: bold; transition: all 0.1s; border: 1px solid #111; }
         .cell.scanning { outline: 2px solid var(--accent); z-index: 5; background: #111; }
-        .cell.friction { color: var(--friction); text-shadow: 0 0 8px var(--friction); transform: scale(1.1); }
+        .cell.friction { color: var(--friction); text-shadow: 0 0 8px var(--friction); }
         .cell.solved { color: var(--ground); animation: crystallize 0.3s ease-out; }
-        @keyframes crystallize { from { transform: scale(1.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .cell.initial { color: var(--gold); }
+        @keyframes crystallize { from { transform: scale(1.3); opacity: 0.5; } to { transform: scale(1); opacity: 1; } }
 
-        /* Controls */
-        input[type="number"] { background: #000; color: #fff; border: 1px solid #444; padding: 5px; width: 45px; text-align: center; }
-        button { background: var(--ntnu-red); color: white; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; border-radius: 2px; transition: 0.2s; }
+        input[type="number"] { background: #000; color: #fff; border: 1px solid #444; padding: 5px; width: 40px; text-align: center; }
+        button { background: var(--ntnu-red); color: white; border: none; padding: 8px 15px; cursor: pointer; font-weight: bold; border-radius: 2px; transition: 0.2s; font-size: 0.8rem; }
         button:hover { background: #900; box-shadow: 0 0 10px var(--ntnu-red); }
         #solve-btn { background: var(--accent); color: #000; }
+        #verify-btn { background: var(--gold); color: #000; }
     </style>
 </head>
 <body>
@@ -38,12 +36,12 @@
         <div>
             <span>N-Size:</span> 
             <input type="number" id="n-val" value="3" min="2" max="4">
-            <button onclick="initManifold()">RESET</button>
+            <button onclick="initManifold()">RESET MANIFOLD</button>
         </div>
         <button id="solve-btn" onclick="executeOneStream()">RECONSTRUCT H</button>
+        <button id="verify-btn" onclick="verifyGrounding()">VERIFY GROUND STATE</button>
         <div class="metrics">
             TIME: <span id="timer" class="metric-val">0.00</span>ms | 
-            CLASS: <span class="metric-val">O(N) Adelic</span> | 
             STATUS: <span id="status" style="color:var(--accent)">GROUNDED</span>
         </div>
     </div>
@@ -60,243 +58,161 @@
         const ctx = canvas.getContext('2d');
 
         function initManifold() {
-    n = parseInt(document.getElementById('n-val').value);
-    N = n * n;
-    const container = document.getElementById('grid-container');
-    container.style.gridTemplateColumns = `repeat(${N}, 45px)`;
-    container.innerHTML = '';
-    cells = [];
-    
-    // Create a Grounded Base State (Solved Grid)
-    let base = Array.from({length: N}, (v, r) => 
-        Array.from({length: N}, (v, c) => (Math.floor(r * n + r / n + c) % N) + 1)
-    );
+            n = parseInt(document.getElementById('n-val').value);
+            N = n * n;
+            const container = document.getElementById('grid-container');
+            container.style.gridTemplateColumns = `repeat(${N}, 42px)`;
+            container.innerHTML = '';
+            cells = [];
+            
+            // Seed a valid Ground State H via rotation
+            let seed = Array.from({length: N}, (v, r) => 
+                Array.from({length: N}, (v, c) => (Math.floor(r * n + r / n + c) % N) + 1)
+            );
 
-    // Shuffle to create a unique Manifold
-    for(let i=0; i<100; i++) {
-        let r1 = Math.floor(Math.random() * N), r2 = Math.floor(Math.random() * N);
-        [base[r1], base[r2]] = [base[r2], base[r1]]; // Simple row swap
-    }
-
-    // Flatten and "Fold" (Remove bits to create the puzzle)
-    for(let i=0; i<N*N; i++) {
-        let div = document.createElement('div');
-        div.className = 'cell';
-        let r = Math.floor(i / N), c = i % N;
-        if ((Math.floor(r / n) + Math.floor(c / n)) % 2 == 0) div.style.background = '#080808';
-        
-        // Only keep ~30% of the grounded bits
-        if(Math.random() < 0.3) {
-            div.innerText = base[r][c];
-            div.style.color = 'var(--gold)';
-            div.dataset.fixed = "true";
+            // Fold back to puzzle (Masking)
+            for(let i=0; i<N*N; i++) {
+                let div = document.createElement('div');
+                div.className = 'cell';
+                let r = Math.floor(i / N), c = i % N;
+                if ((Math.floor(r / n) + Math.floor(c / n)) % 2 == 0) div.style.background = '#080808';
+                
+                if(Math.random() < 0.35) {
+                    div.innerText = seed[r][c];
+                    div.classList.add('initial');
+                }
+                container.appendChild(div);
+                cells.push(div);
+            }
+            resizeCanvas();
+            document.getElementById('status').innerText = "SENTINEL READY";
+            document.getElementById('status').style.color = "var(--accent)";
         }
-        
-        container.appendChild(div);
-        cells.push(div);
-    }
-    resizeCanvas();
-    document.getElementById('status').innerText = "SENTINEL READY: MANIFOLD VALID";
-}
 
         function resizeCanvas() {
             canvas.width = window.innerWidth;
-            canvas.height = 150;
+            canvas.height = 120;
             drawStaticWave();
         }
 
         function drawStaticWave() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.strokeStyle = '#222';
-            ctx.beginPath(); ctx.moveTo(0, 75); ctx.lineTo(canvas.width, 75); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(0, 60); ctx.lineTo(canvas.width, 60); ctx.stroke();
+        }
+
+        function getCandidates(idx) {
+            let r = Math.floor(idx / N), c = idx % N, b = Math.floor(r / n) * n + Math.floor(c / n);
+            let used = new Set();
+            for (let j = 0; j < N; j++) {
+                if (cells[r * N + j].innerText) used.add(cells[r * N + j].innerText);
+                if (cells[j * N + c].innerText) used.add(cells[j * N + c].innerText);
+                let boxR = Math.floor(b / n) * n, boxC = (b % n) * n;
+                let bVal = cells[(boxR + Math.floor(j / n)) * N + (boxC + j % n)].innerText;
+                if (bVal) used.add(bVal);
+            }
+            let res = [];
+            for (let v = 1; v <= N; v++) if (!used.has(v.toString())) res.push(v);
+            return res;
         }
 
         async function executeOneStream() {
-    const start = performance.now();
-    const logger = document.getElementById('status');
-    logger.innerText = "WAVEEVE ACTIVE: CYRSTALLIZING...";
-
-    const totalCells = N * N;
-    let iterations = 0;
-
-    const getCandidates = (idx) => {
-        let r = Math.floor(idx / N), c = idx % N, b = Math.floor(r / n) * n + Math.floor(c / n);
-        let used = new Set();
-        for (let j = 0; j < N; j++) {
-            if (cells[r * N + j].innerText) used.add(cells[r * N + j].innerText);
-            if (cells[j * N + c].innerText) used.add(cells[j * N + c].innerText);
-            let boxR = Math.floor(b / n) * n, boxC = (b % n) * n;
-            let bVal = cells[(boxR + Math.floor(j / n)) * N + (boxC + j % n)].innerText;
-            if (bVal) used.add(bVal);
-        }
-        let res = [];
-        for (let v = 1; v <= N; v++) if (!used.has(v.toString())) res.push(v);
-        return res;
-    };
-
-    while (iterations < totalCells) {
-        let bestCell = -1, minC = N + 1, bestC = [];
-
-        // Shift Sentinel to find the next grounded bit
-        for (let i = 0; i < totalCells; i++) {
-            if (!cells[i].innerText) {
-                let candidates = getCandidates(i);
-                if (candidates.length < minC) {
-                    minC = candidates.length;
-                    bestC = candidates;
-                    bestCell = i;
-                }
-            }
-        }
-
-        if (bestCell === -1) break; // Ground State H Achieved
-
-        if (bestC.length > 0) {
-            // Apply DPI: Neutralize RAF and fix the bit
-            cells[bestCell].innerText = bestC[0];
-            cells[bestCell].classList.add('solved');
-            updateWave((bestCell / totalCells) * canvas.width, false);
-        } else {
-            // Unrecoverable Friction (Should not happen with Valid Init)
-            updateWave((bestCell / totalCells) * canvas.width, true);
-            cells[bestCell].classList.add('friction');
-            logger.innerText = "STABILITY ERROR: RAF OVERFLOW";
-            return;
-        }
-        
-        // Real-time Waveeve update
-        await new Promise(res => setTimeout(res, 5)); 
-        iterations++;
-    }
-
-    const end = performance.now();
-    document.getElementById('timer').innerText = (end - start).toFixed(2);
-    logger.innerText = "H-STATE CRYSTALLIZED: AC";
-}
-
-    // 2. The Adelic Sieve (Iterative Phase Shift)
-    while (iterations < totalCells) {
-        let bestCell = -1;
-        let minCandidates = N + 1;
-        let bestCandidates = [];
-
-        // Find the "Sentinel Anchor" (Most Constrained Cell)
-        for (let i = 0; i < totalCells; i++) {
-            if (!cells[i].innerText) {
-                let candidates = getCandidates(i);
-                if (candidates.length < minCandidates) {
-                    minCandidates = candidates.length;
-                    bestCandidates = candidates;
-                    bestCell = i;
-                }
-            }
-        }
-
-        // If no empty cells are left, we have reached Ground State H
-        if (bestCell === -1) break;
-
-        // 3. Destructive Phase Interference (DPI)
-        // If minCandidates is 0, we hit Total Friction. In Project NP, 
-        // this requires a Boolean Reverse (Simplified here as a priority shift)
-        if (bestCandidates.length > 0) {
-            cells[bestCell].innerText = bestCandidates[0]; // Ground the bit
-            cells[bestCell].classList.add('solved');
+            const start = performance.now();
+            const logger = document.getElementById('status');
+            logger.innerText = "WAVEEVE ACTIVE...";
             
-            // Visualization Shift
-            let xPos = (bestCell / totalCells) * canvas.width;
-            updateWave(xPos, false);
-            await new Promise(res => setTimeout(res, 5)); 
-        } else {
-            // High-Fidelity Liar Signal (RAF Detected)
-            updateWave((bestCell / totalCells) * canvas.width, true);
-            logger.innerText = "RAF DETECTED: PHASING...";
-            // In a full O(N) hardware engine, this would trigger the Boolean Reverse
-            cells[bestCell].innerText = "?"; 
-            break; 
-        }
-        iterations++;
-    }
+            let total = N * N;
+            let iterations = 0;
 
-    const end = performance.now();
-    document.getElementById('timer').innerText = (end - start).toFixed(2);
-    logger.innerText = (iterations === totalCells) ? "H-STATE CRYSTALLIZED" : "STABILITY WARNING: GHOSTS DETECTED";
-}
+            while (iterations < total) {
+                let bestCell = -1, minC = N + 1, bestC = [];
+
+                // Find Highest Friction (Most Constrained) bit - MSB Anchor Logic
+                for (let i = 0; i < total; i++) {
+                    if (!cells[i].innerText) {
+                        let candidates = getCandidates(i);
+                        if (candidates.length < minC) {
+                            minC = candidates.length;
+                            bestC = candidates;
+                            bestCell = i;
+                        }
+                    }
+                }
+
+                if (bestCell === -1) break; 
+
+                let xPos = (bestCell / total) * canvas.width;
+                cells[bestCell].classList.add('scanning');
+
+                if (bestC.length > 0) {
+                    // DPI: Phase Correction
+                    cells[bestCell].innerText = bestC[0];
+                    cells[bestCell].classList.add('solved');
+                    updateWave(xPos, false);
+                } else {
+                    // Unrecoverable RAF
+                    updateWave(xPos, true);
+                    cells[bestCell].innerText = "?";
+                    cells[bestCell].classList.add('friction');
+                    logger.innerText = "RAF OVERFLOW: UNSTABLE";
+                    return;
+                }
+                
+                await new Promise(res => setTimeout(res, 5)); 
+                cells[bestCell].classList.remove('scanning');
+                iterations++;
+            }
+
+            document.getElementById('timer').innerText = (performance.now() - start).toFixed(2);
+            logger.innerText = "H-STATE CRYSTALLIZED";
+        }
 
         function updateWave(x, friction) {
             ctx.clearRect(0,0,canvas.width, canvas.height);
             ctx.strokeStyle = '#111';
-            ctx.beginPath(); ctx.moveTo(0, 75); ctx.lineTo(canvas.width, 75); ctx.stroke();
-            
+            ctx.beginPath(); ctx.moveTo(0, 60); ctx.lineTo(canvas.width, 60); ctx.stroke();
             ctx.beginPath();
             ctx.strokeStyle = friction ? 'var(--friction)' : 'var(--accent)';
             ctx.lineWidth = 2;
             for(let i=0; i<x; i+=5) {
-                let amp = friction && i > x-40 ? 30 : 10;
-                let y = 75 + Math.sin(i * 0.1) * amp;
+                let amp = friction && i > x-30 ? 25 : 8;
+                let y = 60 + Math.sin(i * 0.1) * amp;
                 ctx.lineTo(i, y);
             }
             ctx.stroke();
-            
-            // The Grandparent Sentinel Anchor
-            ctx.fillStyle = "#fff";
-            ctx.fillRect(x, 45, 2, 60);
+            ctx.fillStyle = "#fff"; ctx.fillRect(x, 40, 2, 40);
+        }
+
+        async function verifyGrounding() {
+            const logger = document.getElementById('status');
+            let rows = Array.from({length: N}, () => new Set());
+            let cols = Array.from({length: N}, () => new Set());
+            let blocks = Array.from({length: N}, () => new Set());
+            let isGrounded = true, empty = 0;
+
+            for (let i = 0; i < N * N; i++) {
+                cells[i].classList.remove('friction');
+                let val = cells[i].innerText;
+                if (!val || val === "?") { empty++; isGrounded = false; continue; }
+                let r = Math.floor(i / N), c = i % N, b = Math.floor(r / n) * n + Math.floor(c / n);
+                if (rows[r].has(val) || cols[c].has(val) || blocks[b].has(val)) {
+                    cells[i].classList.add('friction');
+                    isGrounded = false;
+                }
+                rows[r].add(val); cols[c].add(val); blocks[b].add(val);
+            }
+
+            if (isGrounded && empty === 0) {
+                logger.style.color = "var(--ground)";
+                logger.innerText = "AC: HAMILTONIAN INVARIANT ACHIEVED";
+            } else {
+                logger.style.color = "var(--friction)";
+                logger.innerText = empty > 0 ? "STABILITY FAILURE" : "GHOSTS DETECTED";
+            }
         }
 
         window.onload = initManifold;
         window.onresize = resizeCanvas;
     </script>
-    <button onclick="verifyGrounding()" style="background:var(--gold); color:#000;">VERIFY GROUND STATE</button>
-
-<script>
-async function verifyGrounding() {
-    const logger = document.getElementById('status');
-    logger.innerText = "VERIFYING CHINESE PRIME CONSENSUS...";
-    
-    // Identity Filter Flags (Mersenne Windows)
-    let rows = Array.from({length: N}, () => new Set());
-    let cols = Array.from({length: N}, () => new Set());
-    let blocks = Array.from({length: N}, () => new Set());
-    
-    let isGrounded = true;
-    let emptyCells = 0;
-
-    for (let i = 0; i < N * N; i++) {
-        let val = cells[i].innerText;
-        if (!val || val === "" || val === "?") {
-            emptyCells++;
-            isGrounded = false;
-            continue;
-        }
-
-        let r = Math.floor(i / N);
-        let c = i % N;
-        let b = Math.floor(r / n) * n + Math.floor(c / n);
-
-        // Check for Friction (Duplicates)
-        if (rows[r].has(val) || cols[c].has(val) || blocks[b].has(val)) {
-            cells[i].classList.add('friction');
-            isGrounded = false;
-        }
-
-        rows[r].add(val);
-        cols[c].add(val);
-        blocks[b].add(val);
-    }
-
-    if (isGrounded && emptyCells === 0) {
-        logger.style.color = "var(--ground)";
-        logger.innerText = "AC: HAMILTONIAN INVARIANT ACHIEVED";
-        // Final Phase Wave
-        updateWave(canvas.width, false);
-    } else {
-        logger.style.color = "var(--friction)";
-        logger.innerText = emptyCells > 0 ? 
-            `STABILITY FAILURE: ${emptyCells} BITS UNGROUNDED` : 
-            "GHOSTS DETECTED: MANIFOLD UNSTABLE";
-        // Pulse Friction on the Wave
-        updateWave(canvas.width / 2, true);
-    }
-}
-</script>
 </body>
 </html>
