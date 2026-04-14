@@ -1,3 +1,4 @@
+#include <emscripten.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <time.h>
@@ -46,19 +47,42 @@ int find_sentinel() {
     }
     return best_cell;
 }
+// This is the function the browser calls
+EMSCRIPTEN_KEEPALIVE
+int solve_manifold(int n_val, uint64_t* external_grid) {
+    N = n_val;
+    get_factors(N, &bR, &bC);
+    full_bits = (1ULL << N) - 1;
 
-int solve() {
+    // Transfer external data into internal manifold
+    for(int i = 0; i < N * N; i++) {
+        manifold[i] = external_grid[i];
+    }
+
+    // Start the recursion
+    int result = solve_internal();
+
+    // Transfer solved data back to external memory for the UI to read
+    if (result == 1) {
+        for(int i = 0; i < N * N; i++) {
+            external_grid[i] = manifold[i];
+        }
+    }
+    return result;
+}
+// Rename your existing solve() to solve_internal()
+int solve_internal() {
     int idx = find_sentinel();
-    if (idx == -1) return 1; // H=0 achieved
-    if (idx == -2) return 0; // Friction detected
+    if (idx == -1) return 1; 
+    if (idx == -2) return 0; 
 
     uint64_t sieve = get_sieve(idx / N, idx % N);
     while (sieve) {
         int val = get_first_bit(sieve);
         manifold[idx] = val;
-        if (solve()) return 1;
+        if (solve_internal()) return 1;
         manifold[idx] = 0;
-        sieve &= ~(1ULL << (val - 1)); // Bit-peeling
+        sieve &= ~(1ULL << (val - 1));
     }
     return 0;
 }
