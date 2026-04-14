@@ -104,6 +104,7 @@
         // Initialize WASM
         Module.onRuntimeInitialized = () => {
             marilynEngine = {
+                // Link to the solve_manifold entry point in Adelic.c
                 solve: Module.cwrap('solve_manifold', 'number', ['number', 'number'])
             };
             document.getElementById('status-tag').innerText = "[ ADELIC CORE GROUNDED ]";
@@ -119,6 +120,8 @@
             N = parseInt(document.getElementById('n-val').value);
             [bR, bC] = getFactors(N);
             document.getElementById('complexity').innerText = `N^${N*N}`;
+            document.getElementById('raf-val').innerText = "0.000";
+            document.getElementById('target-status').innerText = "WAITING...";
             
             const container = document.getElementById('grid-container');
             container.innerHTML = '';
@@ -139,10 +142,17 @@
                 const input = document.createElement('input');
                 input.dataset.idx = i;
                 
-                // Visual "Phase Cloud" container
+                // POPULATING THE WAVE (Superposition Cloud)
                 const cloud = document.createElement('div');
                 cloud.className = 'cloud';
                 cloud.id = `cloud-${i}`;
+                
+                // Each cell starts in a state of all possible residues
+                for (let v = 1; v <= N; v++) {
+                    const span = document.createElement('span');
+                    span.innerText = v;
+                    cloud.appendChild(span);
+                }
 
                 cell.appendChild(cloud);
                 cell.appendChild(input);
@@ -152,7 +162,9 @@
 
         async function startInference() {
             if (!marilynEngine) return alert("WASM Engine loading...");
-            document.getElementById('status-tag').innerText = "[ FOLDING MANIFOLD... ]";
+            
+            document.getElementById('status-tag').innerText = "[ ANNIHILATING NOISE... ]";
+            document.getElementById('target-status').innerText = "FOLDING...";
             
             const inputs = document.querySelectorAll('.cell input');
             const initialData = new BigUint64Array(N * N);
@@ -164,14 +176,19 @@
             heapData.set(initialData);
 
             const start = performance.now();
-            const status = marilynEngine.solve(N, ptr); // THE MARILYN FOLD
+            
+            // THE MARILYN FOLD: Adelic Transition at Hardware Speed
+            const status = marilynEngine.solve(N, ptr); 
+            
             const end = performance.now();
+            const latency = (end - start).toFixed(2);
 
             if (status === 1) {
+                document.getElementById('raf-val').innerText = "0.000";
                 document.getElementById('target-status').innerText = "H=0 (STABLE)";
-                document.getElementById('status-tag').innerText = `[ AC ACHIEVED: ${(end-start).toFixed(2)}ms ]`;
+                document.getElementById('status-tag').innerText = `[ AC ACHIEVED: ${latency}ms ]`;
                 
-                // Read back solved data and ground the cells
+                // CRYSTALLIZATION: The Wave collapses into a Solid Sentinel
                 for (let i = 0; i < N * N; i++) {
                     const val = Number(heapData[i]);
                     const input = inputs[i];
@@ -179,10 +196,12 @@
                         input.value = val;
                         input.parentElement.classList.add('grounded');
                     }
+                    // Annihilate the cloud
                     document.getElementById(`cloud-${i}`).style.display = 'none';
                 }
             } else {
-                document.getElementById('target-status').innerText = "RAF OVERFLOW";
+                document.getElementById('raf-val').innerText = "OVERFLOW";
+                document.getElementById('target-status').innerText = "RAF ERROR";
                 document.getElementById('status-tag').innerText = "[ IMPOSSIBLE MANIFOLD ]";
             }
 
@@ -191,7 +210,7 @@
 
         function resetManifold() {
             initGrid();
-            document.getElementById('target-status').innerText = "WAITING...";
+            document.getElementById('status-tag').innerText = "[ ENGINE IDLE ]";
         }
 
         window.onload = initGrid;
