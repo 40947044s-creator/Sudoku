@@ -68,28 +68,44 @@
                 cell.appendChild(input); container.appendChild(cell);
             }
         }
-        async function startInference() {
-            if (typeof Module._malloc !== 'function') return alert("Engine initializing...");
-            const startTime = performance.now();
-            const inputs = document.querySelectorAll('.cell input');
-            const initialData = new BigUint64Array(N * N);
-            inputs.forEach((inp, i) => initialData[i] = BigInt(inp.value || 0));
-            const ptr = Module._malloc(N * N * 8);
-            (new BigUint64Array(Module.HEAPU8.buffer, ptr, N * N)).set(initialData);
-            const status = marilynEngine.solve(N, ptr);
-            const duration = ((performance.now() - startTime) / 1000).toFixed(3);
-            if (status === 1) {
-                acCount++; document.getElementById('ac-total').innerText = acCount;
-                document.getElementById('live-timer').innerText = duration + 's';
-                const log = document.getElementById('achievement-log');
-                const entry = document.createElement('div'); entry.className = 'log-entry';
-                entry.innerHTML = `[${new Date().toLocaleTimeString()}] <b>AC ACHIEVED</b>: N=${N} grounded in <b>${duration}s</b>.`;
-                log.insertBefore(entry, log.firstChild.nextSibling);
-                const resultData = new BigUint64Array(Module.HEAPU8.buffer, ptr, N * N);
-                inputs.forEach((inp, i) => { if(!inp.value) { inp.value = Number(resultData[i]); inp.parentElement.classList.add('grounded'); }});
-            } else { document.getElementById('status-tag').innerText = "[ RAF OVERFLOW ]"; }
-            Module._free(ptr);
-        }
+       /* Replace the script section in solution.html */
+let acCount = 0;
+Module.onRuntimeInitialized = () => {
+    marilynEngine = { solve: Module.cwrap('solve_manifold', 'number', ['number', 'number']) };
+    document.getElementById('status-tag').innerText = "[ CORE GROUNDED ]";
+};
+
+async function startInference() {
+    if (typeof Module._malloc !== 'function') return alert("Engine initializing...");
+    const startTime = performance.now();
+    const statusTag = document.getElementById('status-tag');
+    statusTag.innerText = "[ ANNIHILATING NOISE... ]";
+    
+    const inputs = document.querySelectorAll('.cell input');
+    const initialData = new BigUint64Array(N * N);
+    inputs.forEach((inp, i) => initialData[i] = BigInt(inp.value || 0));
+    
+    const ptr = Module._malloc(N * N * 8);
+    (new BigUint64Array(Module.HEAPU8.buffer, ptr, N * N)).set(initialData);
+    
+    const status = marilynEngine.solve(N, ptr);
+    const duration = ((performance.now() - startTime) / 1000).toFixed(3);
+    
+    if (status === 1) {
+        acCount++; document.getElementById('ac-total').innerText = acCount;
+        document.getElementById('live-timer').innerText = duration + 's';
+        statusTag.innerText = `[ AC ACHIEVED: ${duration}s ]`;
+        
+        const log = document.getElementById('achievement-log');
+        const entry = document.createElement('div'); entry.className = 'log-entry';
+        entry.innerHTML = `[${new Date().toLocaleTimeString()}] <b>AC ACHIEVED</b>: N=${N} grounded in <b>${duration}s</b>.`;
+        log.insertBefore(entry, log.firstChild.nextSibling);
+        
+        const resultData = new BigUint64Array(Module.HEAPU8.buffer, ptr, N * N);
+        inputs.forEach((inp, i) => { if(!inp.value) { inp.value = Number(resultData[i]); inp.parentElement.classList.add('grounded'); }});
+    } else { statusTag.innerText = "[ RAF OVERFLOW ]"; }
+    Module._free(ptr);
+}
         function resetManifold() { initGrid(); }
         window.onload = initGrid;
     </script>
