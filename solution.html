@@ -2,60 +2,66 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>libmarilynnp | Streamed Inference v7.2</title>
+    <title>libmarilynnp | Adelic Verifier v7.4</title>
     <style>
-        :root { --bg: #0a0b0d; --card: #14161a; --border: #2d333b; --ntnu-red: #e63946; --gold: #ffb703; --ground: #06d6a0; --text: #e1e4e8; }
+        :root { --bg: #0a0b0d; --card: #14161a; --border: #2d333b; --ntnu-red: #e63946; --gold: #ffb703; --ground: #06d6a0; --text: #e1e4e8; --cyan: #219ebc; }
         body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; margin: 0; display: flex; height: 100vh; }
         
-        /* Sidebar Metrics */
-        aside { width: 300px; background: var(--card); border-right: 1px solid var(--border); padding: 25px; display: flex; flex-direction: column; gap: 15px; flex-shrink: 0; }
+        aside { width: 320px; background: var(--card); border-right: 1px solid var(--border); padding: 25px; display: flex; flex-direction: column; gap: 15px; flex-shrink: 0; }
         .metric { background: #1c1f24; padding: 12px; border-radius: 6px; border: 1px solid var(--border); }
         .label { color: #8b949e; font-size: 0.65rem; text-transform: uppercase; }
         .val { color: var(--gold); font-family: monospace; font-size: 1.1rem; }
 
-        /* Main Workspace & Stream */
-        main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-        .toolbar { padding: 15px 30px; background: #14161a; border-bottom: 1px solid var(--border); display: flex; gap: 20px; align-items: center; }
+        main { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+        .toolbar { padding: 15px 30px; background: #14161a; border-bottom: 1px solid var(--border); display: flex; gap: 15px; align-items: center; }
         
-        #stream-container { flex: 1; overflow-y: auto; padding: 30px; display: flex; flex-direction: column; align-items: center; gap: 40px; scroll-behavior: smooth; }
+        #grid-container { flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px; }
+        .grid { display: grid; gap: 1px; background: var(--border); border: 3px solid var(--border); box-shadow: 0 15px 40px rgba(0,0,0,0.6); }
         
-        /* Grid Styling */
-        .solution-wrapper { background: var(--card); padding: 20px; border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.4); }
-        .grid { display: grid; gap: 1px; background: var(--border); border: 1px solid var(--border); }
-        .cell { background: var(--bg); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.8rem; }
-        .cell.initial { color: var(--gold); background: #161b22; }
-        
-        button { background: var(--ntnu-red); border: none; color: white; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        /* Input styling for "Planting" */
+        .cell { background: var(--bg); position: relative; display: flex; align-items: center; justify-content: center; }
+        .cell input { 
+            width: 100%; height: 100%; border: none; background: transparent; color: var(--gold); 
+            text-align: center; font-weight: bold; font-family: inherit; outline: none;
+        }
+        .cell.conflict { background: rgba(230, 57, 70, 0.3) !important; }
+        .cell.inferred { color: var(--ground); }
+        .cell.solved-text { color: var(--ground); font-weight: bold; }
+
+        button { background: var(--ntnu-red); border: none; color: white; padding: 10px 18px; border-radius: 6px; font-weight: bold; cursor: pointer; }
         button.secondary { background: #21262d; border: 1px solid var(--border); }
-        input { background: #0d1117; border: 1px solid var(--border); color: white; padding: 5px; width: 50px; border-radius: 4px; }
+        .status-tag { padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; border: 1px solid; }
     </style>
 </head>
 <body>
 
     <aside>
         <h2 style="color: var(--ntnu-red); margin: 0;">libmarilynnp</h2>
-        <div class="metric"><div class="label">Scale (N)</div><div class="val" id="n-display">10</div></div>
-        <div class="metric"><div class="label">Solutions Found</div><div class="val" id="sol-count">0</div></div>
-        <div class="metric"><div class="label">Last Latency</div><div class="val" id="timer">0.00ms</div></div>
-        <div style="margin-top: auto;">
-            <button style="width: 100%;" onclick="stopSearch = true">HALT INFERENCE</button>
+        
+        <div class="metric"><div class="label">Status</div><div id="status-tag" class="status-tag" style="color: var(--cyan); border-color: var(--cyan);">IDLE</div></div>
+        <div class="metric"><div class="label">Initial Validity</div><div id="valid-check" class="val">---</div></div>
+        <div class="metric"><div class="label">Inference Residue</div><div id="inf-count" class="val">0 Cells</div></div>
+        <div class="metric"><div class="label">Ground States</div><div id="sol-found" class="val">---</div></div>
+
+        <div style="margin-top: auto; display: flex; flex-direction: column; gap: 10px;">
+            <button class="secondary" onclick="runInference()">1. INFER CLOUD</button>
+            <button onclick="fullAudit()">2. FINAL AUDIT</button>
         </div>
     </aside>
 
     <main>
         <div class="toolbar">
-            <span class="label">Manifold Size:</span>
-            <input type="number" id="n-val" value="10" min="4" max="16">
-            <button onclick="startInference()">STREAM SOLUTIONS</button>
-            <button class="secondary" onclick="clearStream()">CLEAR STREAM</button>
+            <span class="label">N:</span>
+            <input type="number" id="n-val" value="9" min="4" max="16" style="width: 50px; background: #0d1117; color: white; border: 1px solid var(--border); padding: 5px;" onchange="initGrid()">
+            <button class="secondary" onclick="initGrid()">CLEAR / RESET</button>
+            <div id="result-msg" style="font-weight: bold; margin-left: auto;"></div>
         </div>
-        <div id="stream-container">
+        <div id="grid-container">
             </div>
     </main>
 
     <script>
-        let N, bR, bC, stopSearch = false, solFound = 0;
-        let initialGrid = [];
+        let N, bR, bC, grid = [];
 
         function getFactors(n) {
             let r = Math.floor(Math.sqrt(n));
@@ -63,60 +69,128 @@
             return [r, n / r];
         }
 
-        function clearStream() {
-            document.getElementById('stream-container').innerHTML = '';
-            solFound = 0;
-            document.getElementById('sol-count').innerText = 0;
-        }
-
-        async function startInference() {
+        function initGrid() {
             N = parseInt(document.getElementById('n-val').value);
             [bR, bC] = getFactors(N);
-            document.getElementById('n-display').innerText = `${N} (${bR}x${bC})`;
-            stopSearch = false;
+            const container = document.getElementById('grid-container');
+            container.innerHTML = '';
             
-            // Seed the initial manifold
-            initialGrid = Array.from({length: N}, () => Array(N).fill(0n));
-            for(let r=0; r<N; r++){
-                for(let c=0; c<N; c++){
-                    if(Math.random() < 0.25) {
-                        let val = BigInt(((r * bC + Math.floor(r/bR) + c) % N) + 1);
-                        initialGrid[r][c] = val;
-                    }
-                }
+            const gridEl = document.createElement('div');
+            gridEl.className = 'grid';
+            const cellSize = Math.min(45, Math.floor(600 / N));
+            gridEl.style.gridTemplateColumns = `repeat(${N}, ${cellSize}px)`;
+
+            for(let i=0; i<N*N; i++) {
+                let r = Math.floor(i / N), c = i % N;
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.style.width = cellSize + 'px';
+                cell.style.height = cellSize + 'px';
+                if ((Math.floor(r/bR) + Math.floor(c/bC)) % 2 == 0) cell.style.background = '#0d1117';
+
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.maxLength = 2;
+                input.dataset.idx = i;
+                input.style.fontSize = (cellSize * 0.5) + 'px';
+                input.addEventListener('input', validateInput);
+
+                cell.appendChild(input);
+                gridEl.appendChild(cell);
             }
-            
-            await solveAndStream(JSON.parse(JSON.stringify(initialGrid, (k,v) => typeof v === 'bigint' ? v.toString() : v)));
+            container.appendChild(gridEl);
+            updateStatus("READY", "var(--cyan)");
+            document.getElementById('result-msg').innerText = "";
+        }
+
+        function getGridState() {
+            const inputs = document.querySelectorAll('.cell input');
+            let state = Array.from({length: N}, () => Array(N).fill(0n));
+            inputs.forEach(input => {
+                if(input.value) {
+                    let idx = parseInt(input.dataset.idx);
+                    state[Math.floor(idx/N)][idx%N] = BigInt(input.value);
+                }
+            });
+            return state;
+        }
+
+        function validateInput() {
+            const state = getGridState();
+            const inputs = document.querySelectorAll('.cell input');
+            let hasConflict = false;
+
+            inputs.forEach(input => {
+                input.parentElement.classList.remove('conflict');
+                let idx = parseInt(input.dataset.idx);
+                let r = Math.floor(idx/N), c = idx%N;
+                let val = state[r][c];
+                
+                if(val > 0n) {
+                    state[r][c] = 0n; // Temp clear to check
+                    let mask = getSieve(r, c, state);
+                    if(!(mask & (1n << (val - 1n)))) {
+                        input.parentElement.classList.add('conflict');
+                        hasConflict = true;
+                    }
+                    state[r][c] = val;
+                }
+            });
+
+            document.getElementById('valid-check').innerText = hasConflict ? "INVALID" : "VERIFIED";
+            document.getElementById('valid-check').style.color = hasConflict ? "var(--ntnu-red)" : "var(--ground)";
         }
 
         function getSieve(r, c, g) {
             let mask = 0n;
             let b = Math.floor(r / bR) * bR + Math.floor(c / bC);
             for (let j = 0; j < N; j++) {
-                if (g[r][j]) mask |= (1n << (BigInt(g[r][j]) - 1n));
-                if (g[j][c]) mask |= (1n << (BigInt(g[j][c]) - 1n));
+                if (g[r][j]) mask |= (1n << (g[r][j] - 1n));
+                if (g[j][c]) mask |= (1n << (g[j][c] - 1n));
                 let boxR = Math.floor(b / bR) * bR + Math.floor(j / bC);
                 let boxC = (b % bR) * bC + (j % bC);
-                if (g[boxR][boxC]) mask |= (1n << (BigInt(g[boxR][boxC]) - 1n));
+                if (g[boxR][boxC]) mask |= (1n << (g[boxR][boxC] - 1n));
             }
             return (~mask) & ((1n << BigInt(N)) - 1n);
         }
 
-        async function solveAndStream(currentGrid) {
-            const start = performance.now();
-            
-            // Convert back to BigInt
-            let g = currentGrid.map(row => row.map(v => BigInt(v)));
+        function runInference() {
+            let g = getGridState();
+            let changed = true;
+            let infCount = 0;
+
+            while(changed) {
+                changed = false;
+                for(let i=0; i<N*N; i++) {
+                    let r = Math.floor(i/N), c = i%N;
+                    if(g[r][c] === 0n) {
+                        let mask = getSieve(r, c, g);
+                        let bits = [];
+                        for(let v=1n; v<=BigInt(N); v++) if(mask & (1n << (v-1n))) bits.push(v);
+                        
+                        if(bits.length === 1) {
+                            g[r][c] = bits[0];
+                            const input = document.querySelector(`input[data-idx="${i}"]`);
+                            input.value = bits[0];
+                            input.parentElement.classList.add('inferred');
+                            changed = true;
+                            infCount++;
+                        }
+                    }
+                }
+            }
+            document.getElementById('inf-count').innerText = `${infCount} Cells`;
+            updateStatus("INFERRED", "var(--ground)");
+        }
+
+        async function fullAudit() {
+            updateStatus("AUDITING...", "var(--gold)");
+            let g = getGridState();
+            let solutions = 0;
 
             async function backtrack(idx) {
-                if (stopSearch || solFound >= 20) return;
-                if (idx === N * N) {
-                    solFound++;
-                    document.getElementById('sol-count').innerText = solFound;
-                    document.getElementById('timer').innerText = (performance.now() - start).toFixed(2) + "ms";
-                    printGrid(g);
-                    return;
-                }
+                if (solutions >= 1) return; // We just need to know if it's possible
+                if (idx === N * N) { solutions++; return; }
 
                 let r = Math.floor(idx / N), c = idx % N;
                 if (g[r][c] !== 0n) return await backtrack(idx + 1);
@@ -125,42 +199,32 @@
                 for (let v = 1n; v <= BigInt(N); v++) {
                     if (mask & (1n << (v - 1n))) {
                         g[r][c] = v;
-                        // Yield to UI thread every few steps to prevent freeze
-                        if (idx % 10 === 0) await new Promise(r => setTimeout(r, 0));
                         await backtrack(idx + 1);
                         g[r][c] = 0n;
                     }
                 }
             }
+
             await backtrack(0);
-        }
-
-        function printGrid(g) {
-            const container = document.getElementById('stream-container');
-            const wrapper = document.createElement('div');
-            wrapper.className = 'solution-wrapper';
-            
-            const gridEl = document.createElement('div');
-            gridEl.className = 'grid';
-            const cellSize = Math.min(30, Math.floor(500 / N));
-            gridEl.style.gridTemplateColumns = `repeat(${N}, ${cellSize}px)`;
-
-            for(let r=0; r<N; r++) {
-                for(let c=0; c<N; c++) {
-                    const cell = document.createElement('div');
-                    cell.className = 'cell';
-                    cell.style.width = cellSize + 'px';
-                    cell.style.height = cellSize + 'px';
-                    cell.innerText = g[r][c];
-                    // Highlight clues
-                    if(initialGrid[r][c] !== 0n) cell.classList.add('initial');
-                    gridEl.appendChild(cell);
-                }
+            const msg = document.getElementById('result-msg');
+            if (solutions > 0) {
+                msg.innerText = "POSSIBLE (H=0 REACHABLE)";
+                msg.style.color = "var(--ground)";
+                document.getElementById('sol-found').innerText = "STABLE";
+            } else {
+                msg.innerText = "IMPOSSIBLE (RAF OVERFLOW)";
+                msg.style.color = "var(--ntnu-red)";
+                document.getElementById('sol-found').innerText = "UNSTABLE";
             }
-            wrapper.appendChild(gridEl);
-            container.appendChild(wrapper);
-            wrapper.scrollIntoView({ behavior: 'smooth' });
+            updateStatus("AUDIT COMPLETE", "var(--cyan)");
         }
+
+        function updateStatus(msg, color) {
+            const tag = document.getElementById('status-tag');
+            tag.innerText = msg; tag.style.color = color; tag.style.borderColor = color;
+        }
+
+        window.onload = initGrid;
     </script>
 </body>
 </html>
