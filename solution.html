@@ -99,6 +99,33 @@
     <script src="marilyn_engine.js"></script>
 
     <script>
+        // --- NUMBER HIGHLIGHTING LOGIC ---
+let activeHighlight = null;
+
+function toggleHighlight(val) {
+    const totalCells = N * N;
+    
+    // If clicking the same number, turn off the highlight
+    if (activeHighlight === val) {
+        activeHighlight = null;
+        for (let i = 0; i < totalCells; i++) cells[i].classList.remove('highlight-target');
+        document.querySelectorAll('.num-btn').forEach(b => b.classList.remove('active-num'));
+        return;
+    }
+
+    // Otherwise, highlight the target number
+    activeHighlight = val;
+    document.querySelectorAll('.num-btn').forEach(b => {
+        b.classList.toggle('active-num', b.innerText == val);
+    });
+
+    for (let i = 0; i < totalCells; i++) {
+        cells[i].classList.remove('highlight-target');
+        if (cells[i].innerText == val) {
+            cells[i].classList.add('highlight-target');
+        }
+    }
+}
         let n = 3, N = 9, cells = [];
         const canvas = document.getElementById('waveCanvas');
         const ctx = canvas.getContext('2d');
@@ -267,6 +294,17 @@
         }
 
         window.onload = initManifold;
+        // Add this to the end of initManifold()
+    const toolbar = document.getElementById('num-toolbar');
+    toolbar.innerHTML = ''; // Clear old buttons
+    for (let v = 1; v <= N; v++) {
+        let btn = document.createElement('button');
+        btn.className = 'num-btn';
+        btn.innerText = v;
+        btn.onclick = () => toggleHighlight(v);
+        toolbar.appendChild(btn);
+    }
+    activeHighlight = null;
         window.onresize = resizeCanvas;
     </script>
 </body>
