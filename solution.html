@@ -232,7 +232,18 @@
             logger.innerText = isGrounded ? "AC: HAMILTONIAN GROUNDED" : "FRICTION DETECTED";
             logger.style.color = isGrounded ? "var(--ground)" : "var(--friction)";
         }
-
+function auditMarilynResidues(ptr, length) {
+    // Accessing the 16-bit Adelic Heap directly
+    const residues = Module.HEAP16.subarray(ptr >> 1, (ptr >> 1) + length);
+    
+    residues.forEach((r, i) => {
+        // Count active bits: if more than 1 bit is set, it's an Inference Cloud
+        const bits = r.toString(2).split('1').length - 1;
+        if (bits > 1) {
+            console.log(`Cell ${i} maintains a Superposition of ${bits} outcomes: ${r.toString(2)}`);
+        }
+    });
+}
         function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = 100; }
         window.onload = initManifold;
         window.onresize = resizeCanvas;
