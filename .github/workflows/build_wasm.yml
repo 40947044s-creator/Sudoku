@@ -1,0 +1,26 @@
+name: Build Marilyn Engine
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Emscripten
+        uses: mymindstorm/setup-emsdk@v14
+
+      - name: Compile Adelic.c to WASM
+        run: |
+          emcc Adelic.c -o marilyn_engine.js \
+          -s WASM=1 \
+          -s EXPORTED_FUNCTIONS='["_solve_manifold", "_malloc", "_free"]' \
+          -s EXPORTED_RUNTIME_METHODS='["cwrap", "getValue", "setValue"]' \
+          -O3
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./
