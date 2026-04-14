@@ -4,7 +4,6 @@
 #include <time.h>
 #include <emscripten.h>
 
-// Universal Adelic Constants
 #define N_MAX 25 
 uint64_t manifold[N_MAX * N_MAX];
 uint64_t full_bits;
@@ -35,7 +34,6 @@ uint64_t get_sieve(int r, int c) {
     return (~mask) & full_bits;
 }
 
-// Tier 2.5: Deep Annihilation (Hidden Singles)
 int annihilate_noise() {
     int grounded = 0;
     for (int v = 1; v <= N; v++) {
@@ -46,10 +44,10 @@ int annihilate_noise() {
             for (int j = 0; j < N; j++) {
                 if (manifold[i * N + j] == 0) {
                     if (get_sieve(i, j) & v_bit) { r_count++; last_c = j; }
-                } else if (manifold[i * N + j] == (uint64_t)v) { r_count = -1; }
+                } else if (manifold[i * N + j] == (uint64_t)v) { r_count = -1; break; }
                 if (manifold[j * N + i] == 0) {
                     if (get_sieve(j, i) & v_bit) { c_count++; last_r = j; }
-                } else if (manifold[j * N + i] == (uint64_t)v) { c_count = -1; }
+                } else if (manifold[j * N + i] == (uint64_t)v) { c_count = -1; break; }
             }
             if (r_count == 1) { manifold[i * N + last_c] = (uint64_t)v; grounded = 1; }
             if (c_count == 1) { manifold[last_r * N + i] = (uint64_t)v; grounded = 1; }
@@ -90,8 +88,7 @@ int solve_internal() {
 
 EMSCRIPTEN_KEEPALIVE
 int solve_manifold(int n_val, uint64_t* external_grid) {
-    N = n_val;
-    get_factors(N, &bR, &bC);
+    N = n_val; get_factors(N, &bR, &bC);
     full_bits = (1ULL << N) - 1;
     int is_blank = 1;
     for(int i = 0; i < N * N; i++) {
