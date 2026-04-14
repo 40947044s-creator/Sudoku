@@ -2,104 +2,103 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Project NP | Adelic Hamiltonian Reconstructor</title>
+    <title>Project NP | Adelic Reconstructor</title>
     <style>
-        :root { --ntnu-red: #b31b1b; --gold: #d4af37; --bg: #050505; --accent: #00d4ff; --friction: #ff3333; --ground: #00ff00; }
-        body { background: var(--bg); color: #e0e0e0; font-family: 'Courier New', monospace; margin: 0; display: flex; flex-direction: column; align-items: center; }
-        
-        .dashboard { width: 100%; background: #111; padding: 20px; border-bottom: 2px solid var(--ntnu-red); display: flex; justify-content: space-around; align-items: center; flex-wrap: wrap; gap: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-        .metrics { font-size: 0.85rem; color: var(--gold); }
-        .metric-val { color: var(--ground); font-weight: bold; }
-        
-        #num-toolbar { display: flex; gap: 5px; margin: 15px auto; flex-wrap: wrap; justify-content: center; }
-        .num-btn { background: #222; border: 1px solid #444; color: #fff; padding: 10px 16px; cursor: pointer; font-weight: bold; transition: 0.2s; }
-        .num-btn:hover, .num-btn.active-num { background: var(--accent); color: #000; box-shadow: 0 0 10px var(--accent); }
-
-        #grid-wrapper { border: 4px solid var(--ntnu-red); background: #333; margin: 10px; max-width: 95vw; overflow: auto; }
-        #grid-container { display: grid; gap: 2px; padding: 10px; background: #222; }
-        
-        .cell { width: 38px; height: 38px; background: #000; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; font-weight: bold; transition: 0.1s; }
+        :root { --ntnu-red: #b31b1b; --gold: #d4af37; --bg: #050505; --accent: #00d4ff; --ground: #00ff00; }
+        body { background: var(--bg); color: #e0e0e0; font-family: 'Courier New', monospace; text-align: center; }
+        .dashboard { padding: 20px; border-bottom: 2px solid var(--ntnu-red); background: #111; display: flex; justify-content: space-around; }
+        #grid-container { display: grid; gap: 2px; padding: 10px; background: #222; margin: 20px auto; border: 4px solid var(--ntnu-red); width: fit-content; }
+        .cell { width: 40px; height: 40px; background: #000; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; }
         .cell.initial { color: var(--gold); }
-        .cell.solved { color: var(--ground); animation: crystallize 0.5s ease-out; }
-        .cell.highlight-target { background: var(--accent) !important; color: #000 !important; transform: scale(1.05); z-index: 2; }
-        .cell.friction { color: var(--friction); text-shadow: 0 0 8px var(--friction); }
-
-        @keyframes crystallize { from { transform: scale(1.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        
-        button { background: var(--ntnu-red); color: white; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; }
-        button:hover { background: #900; }
-        #solve-btn { background: var(--accent); color: #000; }
-        input { background: #000; color: #fff; border: 1px solid #444; padding: 5px; width: 50px; text-align: center; }
+        .cell.solved { color: var(--ground); animation: flash 0.5s; }
+        @keyframes flash { from { background: var(--accent); } to { background: #000; } }
+        button { background: var(--ntnu-red); color: #fff; border: none; padding: 10px; cursor: pointer; font-weight: bold; }
+        #status { color: var(--accent); font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <div class="dashboard">
-        <div>
-            <span>N-Size:</span> 
-            <input type="number" id="n-val" value="3" min="2" max="5">
-            <button onclick="initManifold()">RESET MANIFOLD</button>
-        </div>
-        <button id="solve-btn" onclick="executeWasmFold()">RECONSTRUCT H (O(N))</button>
-        <button onclick="verifyGrounding()">VERIFY GROUND STATE</button>
-        <div class="metrics">
-            TIME: <span id="timer" class="metric-val">0.00</span>ms | 
-            STATUS: <span id="status" style="color:var(--accent)">WASM PENDING</span>
-        </div>
-    </div>
+<div class="dashboard">
+    <button onclick="executeWasmFold()" id="solve-btn">RECONSTRUCT H (O(N))</button>
+    <div>STATUS: <span id="status">WASM LOADING...</span> | TIME: <span id="timer">0.00</span>ms</div>
+</div>
 
-    <div id="num-toolbar"></div>
+<div id="grid-container"></div>
 
-    <div id="grid-wrapper">
-        <div id="grid-container"></div>
-    </div>
+<script src="marilyn_engine.js"></script>
 
-    <script src="marilyn_engine.js"></script>
+<script>
+    let n = 3, N = 9, cells = [];
+    let engineReady = false;
 
-    <script>
-        let n = 3, N = 9, cells = [], activeHighlight = null;
-        let marilynEngineReady = false;
+    // Wait for the Wasm file to load from GitHub servers
+    Module.onRuntimeInitialized = () => {
+        engineReady = true;
+        document.getElementById('status').innerText = "ENGINE READY";
+        initGrid();
+    };
 
-        Module.onRuntimeInitialized = function() {
-            marilynEngineReady = true;
-            document.getElementById('status').innerText = "ENGINE READY";
-        };
+    function initGrid() {
+        const container = document.getElementById('grid-container');
+        container.style.gridTemplateColumns = `repeat(${N}, 40px)`;
+        container.innerHTML = '';
+        cells = [];
+        
+        // Sample Puzzle (Clues only)
+        let puzzle = [
+            [1,2,3,0,0,0,0,8,9],[0,0,0,6,7,0,0,0,0],[7,0,9,0,0,2,0,0,5],
+            [0,0,0,0,0,0,7,8,0],[5,6,7,0,0,0,1,0,3],[8,9,1,2,0,0,0,0,0],
+            [3,0,0,0,0,7,0,0,1],[6,0,0,0,0,1,0,4,5],[0,1,0,0,0,5,0,0,8]
+        ].flat();
 
-        function initManifold() {
-            n = parseInt(document.getElementById('n-val').value);
-            N = n * n;
-            const container = document.getElementById('grid-container');
-            container.style.gridTemplateColumns = `repeat(${N}, 38px)`;
-            container.innerHTML = '';
-            cells = [];
+        puzzle.forEach(val => {
+            let div = document.createElement('div');
+            div.className = 'cell' + (val ? ' initial' : '');
+            div.innerText = val || '';
+            container.appendChild(div);
+            cells.push(div);
+        });
+    }
 
-            // Adelic Seeding (Pattern Generation)
-            let seed = Array.from({length: N}, (v, r) => 
-                Array.from({length: N}, (v, c) => (Math.floor(r * n + r / n + c) % N) + 1)
-            );
+    function executeWasmFold() {
+        if(!engineReady) return;
+        const statusLabel = document.getElementById('status');
+        statusLabel.innerText = "COLLAPSING WAVEFUNCTION...";
+        
+        let gridData = cells.map(c => parseInt(c.innerText) || 0);
+        
+        // Prepare memory for Wasm
+        const ptr = Module._malloc(N * N * 4);
+        for(let i=0; i<N*N; i++) Module.setValue(ptr + (i*4), gridData[i], 'i32');
 
-            for(let i = 0; i < N * N; i++) {
-                let div = document.createElement('div');
-                div.className = 'cell';
-                let r = Math.floor(i / N), c = i % N;
-                if ((Math.floor(r / n) + Math.floor(c / n)) % 2 == 0) div.style.background = '#080808';
-                
-                if(Math.random() < 0.35) {
-                    div.innerText = seed[r][c];
-                    div.classList.add('initial');
+        const start = performance.now();
+        // Call the C function: solve_sudoku_marilyn(int* grid, int n)
+        const success = Module._solve_sudoku_marilyn(ptr, n);
+        const end = performance.now();
+
+        document.getElementById('timer').innerText = (end - start).toFixed(2);
+
+        if (success) {
+            let solvedCount = 0;
+            for(let i=0; i<N*N; i++) {
+                let val = Module.getValue(ptr + (i*4), 'i32');
+                if(val > 0) {
+                    if(!cells[i].classList.contains('initial')) {
+                        cells[i].innerText = val;
+                        cells[i].classList.add('solved');
+                    }
+                    solvedCount++;
                 }
-                container.appendChild(div);
-                cells.push(div);
             }
-
-            // Update Toolbar
-            const toolbar = document.getElementById('num-toolbar');
-            toolbar.innerHTML = ''; 
-            for (let v = 1; v <= N; v++) {
-                let btn = document.createElement('button');
-                btn.className = 'num-btn';
-                btn.innerText = v;
+            statusLabel.innerText = (solvedCount === 81) ? "AC: GROUND STATE (H=0)" : "PARTIAL COLLAPSE";
+        } else {
+            statusLabel.innerText = "STABILITY FAILURE";
+        }
+        Module._free(ptr);
+    }
+</script>
+</body>
+</html>
                 btn.onclick = () => toggleHighlight(v);
                 toolbar.appendChild(btn);
             }
