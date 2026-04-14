@@ -15,8 +15,12 @@
         #wave-container { width: 100%; height: 120px; background: #000; position: relative; border-bottom: 1px solid #222; }
         canvas { display: block; width: 100%; height: 100%; }
 
-        #grid-container { display: grid; gap: 2px; background: #333; margin: 20px auto; padding: 10px; border: 4px solid var(--ntnu-red); }
-        .cell { width: 42px; height: 42px; background: #000; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; font-weight: bold; transition: all 0.1s; border: 1px solid #111; }
+        /* Added a wrapper so massive N-dimensions can scroll horizontally and vertically */
+        #grid-wrapper { max-width: 95vw; max-height: 60vh; overflow: auto; margin: 20px auto; border: 4px solid var(--ntnu-red); background: #333; }
+        #grid-container { display: grid; gap: 2px; padding: 10px; }
+        
+        /* Adjusted cell size slightly to fit larger grids better */
+        .cell { width: 36px; height: 36px; background: #000; display: flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: bold; transition: all 0.1s; }
         .cell.scanning { outline: 2px solid var(--accent); z-index: 5; background: #111; }
         .cell.friction { color: var(--friction); text-shadow: 0 0 8px var(--friction); }
         .cell.solved { color: var(--ground); animation: crystallize 0.3s ease-out; }
@@ -35,7 +39,7 @@
     <div class="dashboard">
         <div>
             <span>N-Size (n x n blocks):</span> 
-            <input type="number" id="n-val" value="3" min="2" max="10">
+            <input type="number" id="n-val" value="3" min="2" max="15">
             <button onclick="initManifold()">RESET MANIFOLD</button>
         </div>
         <button id="solve-btn" onclick="executeWasmFold()">RECONSTRUCT H (O(N))</button>
@@ -50,7 +54,9 @@
         <canvas id="waveCanvas"></canvas>
     </div>
 
-    <div id="grid-container"></div>
+    <div id="grid-wrapper">
+        <div id="grid-container"></div>
+    </div>
 
     <script src="marilyn_engine.js"></script>
 
@@ -59,7 +65,6 @@
         const canvas = document.getElementById('waveCanvas');
         const ctx = canvas.getContext('2d');
 
-        // Check if WebAssembly Engine is loaded
         let marilynEngineReady = false;
         Module.onRuntimeInitialized = function() {
             console.log("Adelic Transition Engine (Wasm) Loaded Successfully.");
@@ -70,29 +75,31 @@
         function resizeCanvas() {
             canvas.width = document.getElementById('wave-container').clientWidth;
             canvas.height = document.getElementById('wave-container').clientHeight;
-            updateWave(canvas.width, false, 0); // Flat line = isolated MSB prefix
+            updateWave(canvas.width, false, 0); 
         }
 
         function initManifold() {
-            N = n * n;
+            n = parseInt(document.getElementById('n-val').value);
+            N = n * n; // Dimension of the full grid
             const container = document.getElementById('grid-container');
-            container.style.gridTemplateColumns = `repeat(${N}, 42px)`;
+            container.style.gridTemplateColumns = `repeat(${N}, 36px)`;
             container.innerHTML = '';
             cells = [];
             
-            // Seed a valid Ground State H
+            // Seed a valid Ground State H for arbitrary N
             let seed = Array.from({length: N}, (v, r) => 
                 Array.from({length: N}, (v, c) => (Math.floor(r * n + r / n + c) % N) + 1)
             );
 
             // Shuffle Manifold (Rows/Cols within blocks)
-            for(let i=0; i<N; i++) {
-                let r1 = Math.floor(Math.random() * n) + Math.floor(i/n)*n;
-                let r2 = Math.floor(Math.random() * n) + Math.floor(i/n)*n;
+            for(let i = 0; i < N; i++) {
+                let r1 = Math.floor(Math.random() * n) + Math.floor(i / n) * n;
+                let r2 = Math.floor(Math.random() * n) + Math.floor(i / n) * n;
                 [seed[r1], seed[r2]] = [seed[r2], seed[r1]];
             }
 
-            for(let i=0; i<N*N; i++) {
+            let totalCells = N * N;
+            for(let i = 0; i < totalCells; i++) {
                 let div = document.createElement('div');
                 div.className = 'cell';
                 let r = Math.floor(i / N), c = i % N;
@@ -110,67 +117,65 @@
             document.getElementById('status').style.color = "var(--accent)";
         }
 
-        // --- WASM BRIDGE LOGIC ---
+        // --- WASM BRIDGE LOGIC (DYNAMIC SCALING) ---
         function solveWithMarilyn(js_grid, base_n) {
-    if (!marilynEngineReady) {
-        alert("Wasm Engine still loading...");
-        return null;
-    }
+            if (!marilynEngineReady) {
+                alert("Wasm Engine still loading...");
+                return null;
+            }
 
-    const totalCells = base_n * base_n * base_n * base_n; // n^4
-    const bytesPerElement = 4;
-    const gridPointer = Module._malloc(totalCells * bytesPerElement);
+            const totalCells = base_n * base_n * base_n * base_n;
+            const bytesPerElement = 4;
+            const gridPointer = Module._malloc(totalCells * bytesPerElement);
 
-    for (let i = 0; i < totalCells; i++) {
-        Module.setValue(gridPointer + (i * bytesPerElement), js_grid[i], 'i32');
-    }
+            for (let i = 0; i < totalCells; i++) {
+                Module.setValue(gridPointer + (i * bytesPerElement), js_grid[i], 'i32');
+            }
 
-    // UPDATE: The C function now takes two parameters: (grid_pointer, base_n)
-    const solve_sudoku_marilyn = Module.cwrap('solve_sudoku_marilyn', 'number', ['number', 'number']);
-    
-    // Pass 'base_n' (the n value) directly into the Wasm engine
-    const success = solve_sudoku_marilyn(gridPointer, base_n);
+            const solve_sudoku_marilyn = Module.cwrap('solve_sudoku_marilyn', 'number', ['number', 'number']);
+            const success = solve_sudoku_marilyn(gridPointer, base_n);
 
-    let resultGrid = null;
-    if (success === 1) {
-        resultGrid = new Array(totalCells);
-        for (let i = 0; i < totalCells; i++) {
-            resultGrid[i] = Module.getValue(gridPointer + (i * bytesPerElement), 'i32');
+            let resultGrid = null;
+            if (success === 1) {
+                resultGrid = new Array(totalCells);
+                for (let i = 0; i < totalCells; i++) {
+                    resultGrid[i] = Module.getValue(gridPointer + (i * bytesPerElement), 'i32');
+                }
+            }
+
+            Module._free(gridPointer);
+            return resultGrid;
         }
-    }
 
-    Module._free(gridPointer);
-    return resultGrid;
-}
         // --- MAIN EXECUTION ---
         function executeWasmFold() {
             const logger = document.getElementById('status');
             logger.innerText = "EXECUTING MARILYN FOLD...";
             
-            // 1. Read DOM grid into flat JS array
-            let currentGrid = new Array(81).fill(0);
-            for(let i=0; i<81; i++) {
+            let totalCells = N * N; 
+            
+            let currentGrid = new Array(totalCells).fill(0);
+            for(let i = 0; i < totalCells; i++) {
                 let val = parseInt(cells[i].innerText);
                 if(!isNaN(val)) currentGrid[i] = val;
             }
 
-            // 2. Execute Hardware SIMD XOR Resonance (via Wasm)
             const start = performance.now();
-            let solvedGrid = solveWithMarilyn(currentGrid);
+            let solvedGrid = solveWithMarilyn(currentGrid, n);
             const end = performance.now();
 
             document.getElementById('timer').innerText = (end - start).toFixed(2);
 
-            // 3. Update DOM with results
             if (solvedGrid) {
-                for(let i=0; i<81; i++) {
+                for(let i = 0; i < totalCells; i++) {
                     if(!cells[i].classList.contains('initial')) {
                         cells[i].innerText = solvedGrid[i];
                         cells[i].classList.add('solved');
                     }
                 }
-                logger.innerText = "H-STATE CRYSTALLIZED: AC (O(N) AUDIT)";
+                logger.innerText = `H-STATE CRYSTALLIZED: AC (O(${totalCells}) AUDIT)`;
                 logger.style.color = "var(--ground)";
+                updateWave(canvas.width, false, 0); // Flatline wave indicates MSB isolation
             } else {
                 logger.innerText = "STABILITY FAILURE: COLLISION DETECTED";
                 logger.style.color = "var(--friction)";
@@ -186,8 +191,7 @@
             ctx.strokeStyle = friction ? 'var(--friction)' : 'var(--accent)';
             ctx.lineWidth = 2;
             
-            // If solving via Wasm, we draw a flat line representing the collapsed state
-            let amp = friction ? 25 : 0; 
+            let amp = friction ? 25 : (entropy * 3); 
             for(let i=0; i<x; i+=5) {
                 let y = 60 + Math.sin(i * 0.1) * amp;
                 ctx.lineTo(i, y);
@@ -217,7 +221,7 @@
 
             if (isGrounded && empty === 0) {
                 logger.style.color = "var(--ground)";
-                logger.innerText = "AC: HAMILTONIAN INVARIANT VERIFIED";
+                logger.innerText = `AC: O(${N*N}) INVARIANT VERIFIED`;
             } else {
                 logger.style.color = "var(--friction)";
                 logger.innerText = empty > 0 ? "STABILITY FAILURE" : "GHOSTS DETECTED";
