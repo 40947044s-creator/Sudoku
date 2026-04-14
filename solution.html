@@ -24,31 +24,19 @@
         .value { color: var(--cyan); font-size: 1.1rem; margin-top: 5px; }
 
         /* Main Workspace */
-        main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
+        main { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 20px; position: relative; overflow-y: auto; }
         
         .toolbar { 
-            position: absolute; top: 0; width: 100%; padding: 15px; background: rgba(10, 10, 10, 0.9);
-            display: flex; justify-content: center; gap: 20px; border-bottom: 1px solid var(--border); z-index: 10;
+            position: sticky; top: -20px; width: 100%; padding: 15px; background: rgba(5, 5, 5, 0.95);
+            display: flex; justify-content: center; gap: 20px; border-bottom: 1px solid var(--border); z-index: 10; margin-bottom: 40px;
         }
 
-        /* The Manifold Grid */
         #grid-container { 
             display: grid; gap: 1px; background: var(--border); border: 2px solid var(--border);
-            box-shadow: 0 0 50px rgba(0, 212, 255, 0.1); transition: transform 0.3s ease;
+            box-shadow: 0 0 50px rgba(0, 212, 255, 0.1); margin-bottom: 40px;
         }
 
-        .cell { 
-            background: var(--bg); position: relative; display: flex; 
-            align-items: center; justify-content: center; overflow: hidden;
-        }
-        
-        /* The "Phase Cloud" Styling */
-        .cloud {
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(8px, 1fr));
-            width: 100%; height: 100%; padding: 2px; opacity: 0.4; pointer-events: none;
-        }
-        .cloud span { font-size: 8px; color: var(--cyan); text-align: center; line-height: 1; }
-
+        .cell { background: var(--bg); position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; }
         .cell input {
             position: absolute; width: 100%; height: 100%; background: transparent;
             border: none; color: var(--gold); text-align: center; font-family: inherit;
@@ -56,10 +44,15 @@
         }
         .cell.grounded input { color: var(--ground); }
 
-        button { 
-            background: var(--ntnu-red); border: none; color: white; padding: 10px 20px; 
-            font-weight: bold; cursor: pointer; border-radius: 4px;
+        /* Achievement Log Styling */
+        #achievement-log { width: 100%; max-width: 600px; display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+        .log-entry { 
+            background: #0a0a0a; border-left: 3px solid var(--ground); padding: 10px; 
+            font-size: 0.85rem; color: #888; border: 1px solid #111;
         }
+        .log-entry b { color: var(--ground); }
+
+        button { background: var(--ntnu-red); border: none; color: white; padding: 10px 20px; font-weight: bold; cursor: pointer; border-radius: 4px; }
         button.secondary { background: #222; border: 1px solid var(--muted); }
     </style>
 </head>
@@ -67,6 +60,10 @@
 
     <aside>
         <h2 style="color: var(--ntnu-red); margin: 0;">libmarilynnp</h2>
+        <div class="metric-card">
+            <div class="label">Total AC Achievements</div>
+            <div id="achievement-count" class="value" style="color: var(--ground);">0</div>
+        </div>
         <div class="metric-card">
             <div class="label">Residue Friction (RAF)</div>
             <div id="raf-val" class="value">0.000</div>
@@ -94,17 +91,20 @@
         </div>
 
         <div id="grid-container"></div>
+        
+        <div id="achievement-log">
+            <div class="label" style="text-align: center; margin-bottom: 10px;">> Success Stream (History)</div>
+        </div>
     </main>
 
     <script src="marilyn_engine.js"></script>
 
     <script>
         let N, bR, bC, marilynEngine;
+        let acCount = 0;
 
-        // Initialize WASM
         Module.onRuntimeInitialized = () => {
             marilynEngine = {
-                // Link to the solve_manifold entry point in Adelic.c
                 solve: Module.cwrap('solve_manifold', 'number', ['number', 'number'])
             };
             document.getElementById('status-tag').innerText = "[ ADELIC CORE GROUNDED ]";
@@ -120,13 +120,11 @@
             N = parseInt(document.getElementById('n-val').value);
             [bR, bC] = getFactors(N);
             document.getElementById('complexity').innerText = `N^${N*N}`;
-            document.getElementById('raf-val').innerText = "0.000";
-            document.getElementById('target-status').innerText = "WAITING...";
             
             const container = document.getElementById('grid-container');
             container.innerHTML = '';
             
-            const totalSize = Math.min(window.innerWidth - 400, window.innerHeight - 150);
+            const totalSize = Math.min(window.innerWidth - 450, window.innerHeight - 250);
             const cellSize = Math.floor(totalSize / N);
             
             container.style.gridTemplateColumns = `repeat(${N}, ${cellSize}px)`;
@@ -141,20 +139,6 @@
 
                 const input = document.createElement('input');
                 input.dataset.idx = i;
-                
-                // POPULATING THE WAVE (Superposition Cloud)
-                const cloud = document.createElement('div');
-                cloud.className = 'cloud';
-                cloud.id = `cloud-${i}`;
-                
-                // Each cell starts in a state of all possible residues
-                for (let v = 1; v <= N; v++) {
-                    const span = document.createElement('span');
-                    span.innerText = v;
-                    cloud.appendChild(span);
-                }
-
-                cell.appendChild(cloud);
                 cell.appendChild(input);
                 container.appendChild(cell);
             }
@@ -162,46 +146,43 @@
 
         async function startInference() {
             if (!marilynEngine) return alert("WASM Engine loading...");
-            
             document.getElementById('status-tag').innerText = "[ ANNIHILATING NOISE... ]";
-            document.getElementById('target-status').innerText = "FOLDING...";
             
             const inputs = document.querySelectorAll('.cell input');
             const initialData = new BigUint64Array(N * N);
             inputs.forEach((inp, i) => initialData[i] = BigInt(inp.value || 0));
 
-            // WASM Memory Allocation
             const ptr = Module._malloc(N * N * 8);
             let heapData = new BigUint64Array(Module.HEAPU8.buffer, ptr, N * N);
             heapData.set(initialData);
 
             const start = performance.now();
-            
-            // THE MARILYN FOLD: Adelic Transition at Hardware Speed
             const status = marilynEngine.solve(N, ptr); 
-            
             const end = performance.now();
             const latency = (end - start).toFixed(2);
 
             if (status === 1) {
-                document.getElementById('raf-val').innerText = "0.000";
+                acCount++;
+                document.getElementById('achievement-count').innerText = acCount;
                 document.getElementById('target-status').innerText = "H=0 (STABLE)";
                 document.getElementById('status-tag').innerText = `[ AC ACHIEVED: ${latency}ms ]`;
                 
-                // CRYSTALLIZATION: The Wave collapses into a Solid Sentinel
+                // Add to Success Stream (Prints downward)
+                const log = document.getElementById('achievement-log');
+                const entry = document.createElement('div');
+                entry.className = 'log-entry';
+                entry.innerHTML = `[${new Date().toLocaleTimeString()}] <b>SUCCESSFUL AC</b>: N=${N} Manifold grounded in <b>${latency}ms</b>.`;
+                log.appendChild(entry);
+
                 for (let i = 0; i < N * N; i++) {
                     const val = Number(heapData[i]);
-                    const input = inputs[i];
-                    if (!input.value) {
-                        input.value = val;
-                        input.parentElement.classList.add('grounded');
+                    if (!inputs[i].value) {
+                        inputs[i].value = val;
+                        inputs[i].parentElement.classList.add('grounded');
                     }
-                    // Annihilate the cloud
-                    document.getElementById(`cloud-${i}`).style.display = 'none';
                 }
             } else {
-                document.getElementById('raf-val').innerText = "OVERFLOW";
-                document.getElementById('target-status').innerText = "RAF ERROR";
+                document.getElementById('target-status').innerText = "RAF OVERFLOW";
                 document.getElementById('status-tag').innerText = "[ IMPOSSIBLE MANIFOLD ]";
             }
 
