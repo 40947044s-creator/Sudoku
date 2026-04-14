@@ -4,9 +4,10 @@ on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
-    # CRITICAL: Grant permission to write to the repository
     permissions:
       contents: write
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -19,7 +20,8 @@ jobs:
           emcc Adelic.c -o marilyn_engine.js \
           -s WASM=1 \
           -s EXPORTED_FUNCTIONS='["_solve_manifold", "_malloc", "_free"]' \
-          -s EXPORTED_RUNTIME_METHODS='["cwrap", "getValue", "setValue"]' \
+          -s EXPORTED_RUNTIME_METHODS='["cwrap"]' \
+          -s ALLOW_MEMORY_GROWTH=1 \
           -O3
 
       - name: Deploy to GitHub Pages
