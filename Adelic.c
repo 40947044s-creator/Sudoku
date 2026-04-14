@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <emscripten.h>
+#include <stdlib.h> // For rand()
+
+
 
 // Universal Adelic Constants
 #define N_MAX 25 
@@ -109,10 +112,38 @@ int solve_manifold(int n_val, uint64_t* external_grid) {
     N = n_val;
     get_factors(N, &bR, &bC);
     full_bits = (1ULL << N) - 1;
-    for(int i = 0; i < N * N; i++) manifold[i] = external_grid[i];
     
+    int is_blank = 1;
+    for(int i = 0; i < N * N; i++) {
+        manifold[i] = external_grid[i];
+        if (manifold[i] != 0) is_blank = 0;
+    }
+
+    // STOCHASTIC INJECTION: Seed the blank manifold to create a signal
+    if (is_blank) {
+        srand(time(NULL)); 
+        for (int i = 0; i < N; i++) { // Inject N random cornerstone residues
+            int r = rand() % N;
+            int c = rand() % N;
+            uint64_t sieve = get_sieve(r, c);
+            if (sieve) {
+                // Pick a random bit from the available residues
+                int count = __builtin_popcountll(sieve);
+                int pick = rand() % count;
+                for (int v = 1; v <= N; v++) {
+                    if (sieve & (1ULL << (v - 1))) {
+                        if (pick-- == 0) {
+                            manifold[r * N + c] = (uint64_t)v;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     int result = solve_internal();
-    
+
     if (result == 1) {
         for(int i = 0; i < N * N; i++) external_grid[i] = manifold[i];
     }
