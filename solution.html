@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Project NP | Adelic Sudoku Reconstruction v2.0</title>
+    <title>Project NP | Adelic Sudoku Reconstruction v2.1</title>
     <style>
         :root { --ntnu-red: #b31b1b; --gold: #d4af37; --bg: #050505; --accent: #00d4ff; --friction: #ff3333; --ground: #00ff00; }
         body { background: var(--bg); color: #e0e0e0; font-family: 'Courier New', monospace; margin: 0; display: flex; flex-direction: column; align-items: center; overflow-x: hidden; }
@@ -12,28 +12,26 @@
         .metrics { font-size: 0.85rem; color: var(--gold); }
         .metric-val { color: var(--ground); font-weight: bold; }
         
-        #wave-container { width: 100%; height: 120px; background: #000; position: relative; border-bottom: 1px solid #222; }
+        #wave-container { width: 100%; height: 100px; background: #000; position: relative; border-bottom: 1px solid #222; }
         canvas { display: block; width: 100%; height: 100%; }
 
-        /* Verification Toolbar Styles */
         #num-toolbar { display: flex; gap: 5px; margin: 10px auto; flex-wrap: wrap; justify-content: center; max-width: 95vw; }
-        .num-btn { background: #222; border: 1px solid #444; color: #fff; padding: 8px 15px; cursor: pointer; font-weight: bold; border-radius: 3px; transition: 0.2s; }
+        .num-btn { background: #222; border: 1px solid #444; color: #fff; padding: 8px 12px; cursor: pointer; font-weight: bold; border-radius: 3px; transition: 0.2s; font-size: 0.8rem; }
         .num-btn:hover, .num-btn.active-num { background: var(--accent); color: #000; box-shadow: 0 0 10px var(--accent); }
-        .cell.highlight-target { background-color: var(--accent) !important; color: #000 !important; text-shadow: none; transform: scale(1.05); z-index: 10; }
 
-        /* Grid Styles */
-        #grid-wrapper { max-width: 95vw; max-height: 60vh; overflow: auto; margin: 20px auto; border: 4px solid var(--ntnu-red); background: #333; }
-        #grid-container { display: grid; gap: 2px; padding: 10px; }
+        #grid-wrapper { max-width: 95vw; max-height: 60vh; overflow: auto; margin: 10px auto; border: 4px solid var(--ntnu-red); background: #333; }
+        #grid-container { display: grid; gap: 2px; padding: 10px; background: #222; }
         
-        .cell { width: 36px; height: 36px; background: #000; display: flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: bold; transition: all 0.1s; }
-        .cell.scanning { outline: 2px solid var(--accent); z-index: 5; background: #111; }
+        .cell { width: 34px; height: 34px; background: #000; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; font-weight: bold; transition: all 0.1s; cursor: default; }
+        .cell.highlight-target { background-color: var(--accent) !important; color: #000 !important; transform: scale(1.05); z-index: 5; }
         .cell.friction { color: var(--friction); text-shadow: 0 0 8px var(--friction); }
-        .cell.solved { color: var(--ground); animation: crystallize 0.3s ease-out; }
+        .cell.solved { color: var(--ground); animation: crystallize 0.4s ease-out; }
         .cell.initial { color: var(--gold); }
-        @keyframes crystallize { from { transform: scale(1.3); opacity: 0.5; } to { transform: scale(1); opacity: 1; } }
+        
+        @keyframes crystallize { from { transform: scale(1.4); opacity: 0.4; } to { transform: scale(1); opacity: 1; } }
 
-        input[type="number"] { background: #000; color: #fff; border: 1px solid #444; padding: 5px; width: 40px; text-align: center; }
-        button { background: var(--ntnu-red); color: white; border: none; padding: 8px 15px; cursor: pointer; font-weight: bold; border-radius: 2px; transition: 0.2s; font-size: 0.8rem; }
+        input[type="number"] { background: #000; color: #fff; border: 1px solid #444; padding: 5px; width: 45px; text-align: center; }
+        button { background: var(--ntnu-red); color: white; border: none; padding: 8px 15px; cursor: pointer; font-weight: bold; border-radius: 2px; transition: 0.2s; }
         button:hover { background: #900; box-shadow: 0 0 10px var(--ntnu-red); }
         #solve-btn { background: var(--accent); color: #000; }
         #verify-btn { background: var(--gold); color: #000; }
@@ -43,15 +41,15 @@
 
     <div class="dashboard">
         <div>
-            <span>N-Size (n x n blocks):</span> 
-            <input type="number" id="n-val" value="3" min="2" max="15">
-            <button onclick="initManifold()">RESET MANIFOLD</button>
+            <span>N-Size:</span> 
+            <input type="number" id="n-val" value="3" min="2" max="10">
+            <button onclick="initManifold()">RESET</button>
         </div>
-        <button id="solve-btn" onclick="executeWasmFold()">RECONSTRUCT H (O(N))</button>
-        <button id="verify-btn" onclick="verifyGrounding()">VERIFY GROUND STATE</button>
+        <button id="solve-btn" onclick="executeWasmFold()">RECONSTRUCT H</button>
+        <button id="verify-btn" onclick="verifyGrounding()">VERIFY STATE</button>
         <div class="metrics">
-            TIME: <span id="timer" class="metric-val">0.00</span> | 
-            STATUS: <span id="status" style="color:var(--accent)">WASM PENDING</span>
+            LATENCY: <span id="timer" class="metric-val">0.00</span>ms | 
+            STATUS: <span id="status" style="color:var(--accent)">INITIATING...</span>
         </div>
     </div>
 
@@ -68,75 +66,38 @@
     <script src="marilyn_engine.js"></script>
 
     <script>
-        let n = 3, N = 9, cells = [];
-        let activeHighlight = null;
+        let n = 3, N = 9, cells = [], activeHighlight = null;
         const canvas = document.getElementById('waveCanvas');
         const ctx = canvas.getContext('2d');
-
         let marilynEngineReady = false;
+
         Module.onRuntimeInitialized = function() {
-            console.log("Adelic Transition Engine (Wasm) Loaded Successfully.");
-            document.getElementById('status').innerText = "ENGINE READY";
             marilynEngineReady = true;
+            document.getElementById('status').innerText = "ENGINE READY";
+            console.log("Adelic Hamiltonian Engine Online.");
         };
-
-        function resizeCanvas() {
-            canvas.width = document.getElementById('wave-container').clientWidth;
-            canvas.height = document.getElementById('wave-container').clientHeight;
-            updateWave(canvas.width, false, 0); 
-        }
-
-        // --- NUMBER HIGHLIGHTING LOGIC ---
-        function toggleHighlight(val) {
-            const totalCells = N * N;
-            
-            if (activeHighlight === val) {
-                activeHighlight = null;
-                for (let i = 0; i < totalCells; i++) cells[i].classList.remove('highlight-target');
-                document.querySelectorAll('.num-btn').forEach(b => b.classList.remove('active-num'));
-                return;
-            }
-
-            activeHighlight = val;
-            document.querySelectorAll('.num-btn').forEach(b => {
-                b.classList.toggle('active-num', b.innerText == val);
-            });
-
-            for (let i = 0; i < totalCells; i++) {
-                cells[i].classList.remove('highlight-target');
-                if (cells[i].innerText == val) {
-                    cells[i].classList.add('highlight-target');
-                }
-            }
-        }
 
         function initManifold() {
             n = parseInt(document.getElementById('n-val').value);
-            N = n * n; // Dimension of the full grid
+            N = n * n;
             const container = document.getElementById('grid-container');
-            container.style.gridTemplateColumns = `repeat(${N}, 36px)`;
+            container.style.gridTemplateColumns = `repeat(${N}, 34px)`;
             container.innerHTML = '';
             cells = [];
             
-            // Seed a valid Ground State H for arbitrary N
+            // Generate valid base pattern
             let seed = Array.from({length: N}, (v, r) => 
                 Array.from({length: N}, (v, c) => (Math.floor(r * n + r / n + c) % N) + 1)
             );
 
-            // Shuffle Manifold (Rows/Cols within blocks)
-            for(let i = 0; i < N; i++) {
-                let r1 = Math.floor(Math.random() * n) + Math.floor(i / n) * n;
-                let r2 = Math.floor(Math.random() * n) + Math.floor(i / n) * n;
-                [seed[r1], seed[r2]] = [seed[r2], seed[r1]];
-            }
-
-            let totalCells = N * N;
-            for(let i = 0; i < totalCells; i++) {
+            // Populate Grid
+            for(let i = 0; i < N * N; i++) {
                 let div = document.createElement('div');
                 div.className = 'cell';
                 let r = Math.floor(i / N), c = i % N;
                 if ((Math.floor(r / n) + Math.floor(c / n)) % 2 == 0) div.style.background = '#080808';
                 
+                // 30% clue density
                 if(Math.random() < 0.30) {
                     div.innerText = seed[r][c];
                     div.classList.add('initial');
@@ -144,11 +105,8 @@
                 container.appendChild(div);
                 cells.push(div);
             }
-            resizeCanvas();
-            document.getElementById('status').innerText = marilynEngineReady ? "SENTINEL READY" : "LOADING ENGINE...";
-            document.getElementById('status').style.color = "var(--accent)";
 
-            // Dynamically Generate the Toolbar
+            // Build Number Toolbar
             const toolbar = document.getElementById('num-toolbar');
             toolbar.innerHTML = ''; 
             for (let v = 1; v <= N; v++) {
@@ -159,124 +117,101 @@
                 toolbar.appendChild(btn);
             }
             activeHighlight = null;
+            resizeCanvas();
         }
 
-        // --- WASM BRIDGE LOGIC (DYNAMIC SCALING) ---
-        function solveWithMarilyn(js_grid, base_n) {
-            if (!marilynEngineReady) {
-                alert("Wasm Engine still loading...");
-                return null;
+        function toggleHighlight(val) {
+            if (activeHighlight === val) {
+                activeHighlight = null;
+                cells.forEach(c => c.classList.remove('highlight-target'));
+                document.querySelectorAll('.num-btn').forEach(b => b.classList.remove('active-num'));
+                return;
             }
+            activeHighlight = val;
+            document.querySelectorAll('.num-btn').forEach(b => b.classList.toggle('active-num', b.innerText == val));
+            cells.forEach(c => c.classList.toggle('highlight-target', c.innerText == val));
+        }
 
-            const totalCells = base_n * base_n * base_n * base_n;
+        // --- WASM BRIDGE ---
+        function solveWithMarilyn(js_grid, base_n) {
+            if (!marilynEngineReady) return null;
+
+            const totalCells = js_grid.length;
             const bytesPerElement = 4;
             const gridPointer = Module._malloc(totalCells * bytesPerElement);
 
+            // Copy JS array to Wasm memory
             for (let i = 0; i < totalCells; i++) {
                 Module.setValue(gridPointer + (i * bytesPerElement), js_grid[i], 'i32');
             }
 
-            const solve_sudoku_marilyn = Module.cwrap('solve_sudoku_marilyn', 'number', ['number', 'number']);
-            const success = solve_sudoku_marilyn(gridPointer, base_n);
+            // Call the C function from libmarilynnp
+            const solve_func = Module.cwrap('solve_sudoku_marilyn', 'number', ['number', 'number']);
+            const result = solve_func(gridPointer, base_n);
 
-            let resultGrid = null;
-            if (success === 1) {
-                resultGrid = new Array(totalCells);
+            let solvedArray = null;
+            if (result === 1) {
+                solvedArray = new Array(totalCells);
                 for (let i = 0; i < totalCells; i++) {
-                    resultGrid[i] = Module.getValue(gridPointer + (i * bytesPerElement), 'i32');
+                    solvedArray[i] = Module.getValue(gridPointer + (i * bytesPerElement), 'i32');
                 }
             }
 
             Module._free(gridPointer);
-            return resultGrid;
+            return solvedArray;
         }
 
-        // --- MAIN EXECUTION ---
         function executeWasmFold() {
-            const logger = document.getElementById('status');
-            logger.innerText = "EXECUTING MARILYN FOLD...";
+            const statusLabel = document.getElementById('status');
+            statusLabel.innerText = "FOLDING MANIFOLD...";
             
-            let totalCells = N * N; 
+            let gridData = cells.map(c => parseInt(c.innerText) || 0);
             
-            let currentGrid = new Array(totalCells).fill(0);
-            for(let i = 0; i < totalCells; i++) {
-                let val = parseInt(cells[i].innerText);
-                if(!isNaN(val)) currentGrid[i] = val;
-            }
-
             const start = performance.now();
-            let solvedGrid = solveWithMarilyn(currentGrid, n);
+            let result = solveWithMarilyn(gridData, n);
             const end = performance.now();
 
-            document.getElementById('timer').innerText = (end - start).toFixed(2) + " ms (Engine Only)";
+            document.getElementById('timer').innerText = (end - start).toFixed(2);
 
-            if (solvedGrid) {
-                for(let i = 0; i < totalCells; i++) {
-                    if(!cells[i].classList.contains('initial')) {
-                        cells[i].innerText = solvedGrid[i];
+            if (result) {
+                result.forEach((val, i) => {
+                    if (!cells[i].classList.contains('initial')) {
+                        cells[i].innerText = val;
                         cells[i].classList.add('solved');
                     }
-                }
-                logger.innerText = `H-STATE CRYSTALLIZED: AC (O(${totalCells}) AUDIT)`;
-                logger.style.color = "var(--ground)";
-                updateWave(canvas.width, false, 0); 
-                
-                // If a highlight is active, re-apply it to show the solved matrix spread
-                if(activeHighlight) {
-                    let temp = activeHighlight;
-                    activeHighlight = null;
-                    toggleHighlight(temp);
-                }
+                });
+                statusLabel.innerText = "H-STATE RECONSTRUCTED";
+                statusLabel.style.color = "var(--ground)";
             } else {
-                logger.innerText = "STABILITY FAILURE: COLLISION DETECTED";
-                logger.style.color = "var(--friction)";
-                updateWave(canvas.width, true);
+                statusLabel.innerText = "STABILITY FAILURE";
+                statusLabel.style.color = "var(--friction)";
             }
         }
 
-        function updateWave(x, friction, entropy = 5) {
-            ctx.clearRect(0,0,canvas.width, canvas.height);
-            ctx.strokeStyle = '#111';
-            ctx.beginPath(); ctx.moveTo(0, 60); ctx.lineTo(canvas.width, 60); ctx.stroke();
-            ctx.beginPath();
-            ctx.strokeStyle = friction ? 'var(--friction)' : 'var(--accent)';
-            ctx.lineWidth = 2;
-            
-            let amp = friction ? 25 : (entropy * 3); 
-            for(let i=0; i<x; i+=5) {
-                let y = 60 + Math.sin(i * 0.1) * amp;
-                ctx.lineTo(i, y);
-            }
-            ctx.stroke();
-            if(friction) { ctx.fillStyle = "var(--friction)"; ctx.fillRect(x-2, 40, 2, 40); }
-        }
-
-        async function verifyGrounding() {
-            const logger = document.getElementById('status');
+        function verifyGrounding() {
             let rows = Array.from({length: N}, () => new Set());
             let cols = Array.from({length: N}, () => new Set());
             let blocks = Array.from({length: N}, () => new Set());
-            let isGrounded = true, empty = 0;
+            let error = false;
 
-            for (let i = 0; i < N * N; i++) {
-                cells[i].classList.remove('friction');
-                let val = cells[i].innerText;
-                if (!val || val === "?") { empty++; isGrounded = false; continue; }
-                let r = Math.floor(i / N), c = i % N, b = Math.floor(r / n) * n + Math.floor(c / n);
+            cells.forEach((cell, i) => {
+                cell.classList.remove('friction');
+                let val = cell.innerText;
+                if (!val) return;
+                let r = Math.floor(i / N), c = i % N, b = Math.floor(r/n)*n + Math.floor(c/n);
                 if (rows[r].has(val) || cols[c].has(val) || blocks[b].has(val)) {
-                    cells[i].classList.add('friction');
-                    isGrounded = false;
+                    cell.classList.add('friction');
+                    error = true;
                 }
                 rows[r].add(val); cols[c].add(val); blocks[b].add(val);
-            }
+            });
 
-            if (isGrounded && empty === 0) {
-                logger.style.color = "var(--ground)";
-                logger.innerText = `AC: O(${N*N}) INVARIANT VERIFIED`;
-            } else {
-                logger.style.color = "var(--friction)";
-                logger.innerText = empty > 0 ? "STABILITY FAILURE" : "GHOSTS DETECTED";
-            }
+            document.getElementById('status').innerText = error ? "GHOSTS DETECTED" : "GROUND STATE VERIFIED";
+        }
+
+        function resizeCanvas() {
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
         }
 
         window.onload = initManifold;
