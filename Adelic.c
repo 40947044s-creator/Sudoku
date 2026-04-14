@@ -34,6 +34,7 @@ uint64_t get_sieve(int r, int c) {
     return (~mask) & full_bits;
 }
 
+// Tier 2.5: Destructive Interference (Hidden Singles)
 int annihilate_noise() {
     int grounded = 0;
     for (int v = 1; v <= N; v++) {
@@ -71,7 +72,7 @@ int find_sentinel() {
 }
 
 int solve_internal() {
-    while (annihilate_noise());
+    while (annihilate_noise()); // Force deterministic resonance
     int idx = find_sentinel();
     if (idx == -1) return 1; 
     if (idx == -2) return 0; 
@@ -90,27 +91,8 @@ EMSCRIPTEN_KEEPALIVE
 int solve_manifold(int n_val, uint64_t* external_grid) {
     N = n_val; get_factors(N, &bR, &bC);
     full_bits = (1ULL << N) - 1;
-    int is_blank = 1;
-    for(int i = 0; i < N * N; i++) {
-        manifold[i] = external_grid[i];
-        if (manifold[i] != 0) is_blank = 0;
-    }
-    if (is_blank) {
-        srand(time(NULL)); 
-        for (int i = 0; i < N; i++) {
-            int r = rand() % N, c = rand() % N;
-            uint64_t s = get_sieve(r, c);
-            if (s) {
-                int count = __builtin_popcountll(s);
-                int pick = rand() % count;
-                for (int v = 1; v <= N; v++) {
-                    if (s & (1ULL << (v - 1))) {
-                        if (pick-- == 0) { manifold[r * N + c] = (uint64_t)v; break; }
-                    }
-                }
-            }
-        }
-    }
+    for(int i = 0; i < N * N; i++) manifold[i] = external_grid[i];
+    
     int res = solve_internal();
     if (res == 1) for(int i = 0; i < N * N; i++) external_grid[i] = manifold[i];
     return res;
