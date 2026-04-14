@@ -4,13 +4,13 @@
 #include <time.h>
 #include <emscripten.h>
 
-// Universal Adelic Constants
+// Universal Constants
 #define N_MAX 25 
 uint64_t manifold[N_MAX * N_MAX];
 uint64_t full_bits;
 int N, bR, bC;
 
-// Adelic Factorization
+// --- Helper Functions ---
 void get_factors(int n, int *r, int *c) {
     int root = 1;
     for (int i = 1; i * i <= n; i++) {
@@ -36,7 +36,7 @@ uint64_t get_sieve(int r, int c) {
     return (~mask) & full_bits;
 }
 
-// Tier 2.5: Deep Annihilation (Hidden Singles)
+// --- Annihilation Logic (Hidden Singles) ---
 int annihilate_noise() {
     int grounded = 0;
     for (int v = 1; v <= N; v++) {
@@ -77,8 +77,9 @@ int find_sentinel() {
     return best_cell;
 }
 
+// --- The Unified Solver ---
 int solve_internal() {
-    while (annihilate_noise()); // Force deterministic collapse
+    while (annihilate_noise()); // Apply Annihilation first
 
     int idx = find_sentinel();
     if (idx == -1) return 1; 
@@ -107,6 +108,7 @@ int solve_manifold(int n_val, uint64_t* external_grid) {
         if (manifold[i] != 0) is_blank = 0;
     }
 
+    // Seed blank grids to trigger the "Wave"
     if (is_blank) {
         srand(time(NULL)); 
         for (int i = 0; i < N; i++) { 
