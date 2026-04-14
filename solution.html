@@ -2,45 +2,44 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Project NP | Universal Adelic Transition Engine</title>
+    <title>Project NP | Adelic Inference & Manifold Mapping</title>
     <style>
         :root { --ntnu-red: #b31b1b; --gold: #d4af37; --bg: #050505; --accent: #00d4ff; --friction: #ff3333; --ground: #00ff00; }
         body { background: var(--bg); color: #e0e0e0; font-family: 'Courier New', monospace; margin: 0; display: flex; flex-direction: column; align-items: center; }
         .dashboard { width: 100%; background: #111; padding: 15px; border-bottom: 2px solid var(--ntnu-red); display: flex; justify-content: space-around; align-items: center; flex-wrap: wrap; }
-        .metrics { font-size: 0.8rem; color: var(--gold); display: flex; gap: 10px; }
+        .metrics { font-size: 0.8rem; color: var(--gold); display: flex; gap: 15px; }
         .metric-val { color: var(--ground); font-weight: bold; }
         #grid-container { display: grid; gap: 1px; background: #333; margin: 20px auto; padding: 5px; border: 2px solid var(--ntnu-red); }
-        .cell { background: #000; display: flex; align-items: center; justify-content: center; border: 1px solid #111; font-weight: bold; }
-        .cell.initial { color: var(--gold); background: #0a0a0a; }
-        .cell.solved { color: var(--ground); }
-        .cell.friction { background: rgba(255, 51, 51, 0.2); color: var(--friction); }
+        .cell { background: #000; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; border: 1px solid #111; font-weight: bold; overflow: hidden; position: relative; }
+        .cell.initial { color: var(--gold); background: #0a0a0a; font-size: 1.2rem; }
+        .cell.solved { color: var(--ground); font-size: 1.2rem; }
+        /* Phase Cloud styling */
+        .cloud { font-size: 0.5rem; color: var(--accent); display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; line-height: 1; }
         button { background: var(--ntnu-red); color: white; border: none; padding: 8px 15px; cursor: pointer; font-weight: bold; }
-        #solve-btn { background: var(--accent); color: #000; }
-        #verify-btn { background: var(--gold); color: #000; }
+        #map-btn { background: var(--accent); color: #000; }
     </style>
 </head>
 <body>
 
     <div class="dashboard">
         <div>
-            <span>Arbitrary N:</span> 
-            <input type="number" id="n-val" value="10" min="4" max="25" onchange="initManifold()" style="background:#000; color:#fff; width:50px;">
+            <span>N:</span> 
+            <input type="number" id="n-val" value="9" min="4" max="16" onchange="initManifold()" style="background:#000; color:#fff; width:45px;">
             <button onclick="initManifold()">RESET</button>
         </div>
-        <button id="solve-btn" onclick="executeOneStream()">RECONSTRUCT H</button>
-        <button id="verify-btn" onclick="strictAudit()">STRICT AUDIT</button>
+        <button id="map-btn" onclick="inferManifold()">INFER ALL OUTCOMES</button>
         <div class="metrics">
+            <div>SOLUTIONS: <span id="sol-count" class="metric-val">0</span></div>
             <div>TIME: <span id="timer" class="metric-val">0.00</span>ms</div>
-            <div>STATUS: <span id="status" style="color:var(--accent)">SENTINEL IDLE</span></div>
+            <div>STATUS: <span id="status" style="color:var(--accent)">READY</span></div>
         </div>
     </div>
 
     <div id="grid-container"></div>
 
     <script>
-        let N, bR, bC, cells = [], grid = [];
+        let N, bR, bC, cells = [], grid = [], solutions = [], masterMask = [];
 
-        // Adelic Factorization: Finds the most balanced block R x C = N
         function getFactors(n) {
             let r = Math.floor(Math.sqrt(n));
             while (n % r !== 0) r--;
@@ -51,10 +50,12 @@
             N = parseInt(document.getElementById('n-val').value);
             [bR, bC] = getFactors(N);
             const container = document.getElementById('grid-container');
-            let size = Math.min(35, Math.floor(600 / N));
+            let size = Math.min(45, Math.floor(600 / N));
             container.style.gridTemplateColumns = `repeat(${N}, ${size}px)`;
             container.innerHTML = '';
-            grid = Array.from({length: N}, () => Array(N).fill(0));
+            grid = Array.from({length: N}, () => Array(N).fill(0n));
+            masterMask = Array(N * N).fill(0n);
+            solutions = [];
             cells = [];
 
             for(let i=0; i<N*N; i++) {
@@ -62,89 +63,100 @@
                 let div = document.createElement('div');
                 div.className = 'cell';
                 div.style.width = size + 'px'; div.style.height = size + 'px';
-                div.style.fontSize = (size * 0.5) + 'px';
                 if ((Math.floor(r / bR) + Math.floor(c / bC)) % 2 == 0) div.style.background = '#080808';
                 
-                // Seed grounded invariants (~20% to allow for complex manifolds)
-                if(Math.random() < 0.2) {
+                // Seed a few clues (approx 35%)
+                if(Math.random() < 0.35) {
                     let val = (Math.floor(r * bC + r / bR + c) % N) + 1;
                     div.innerText = val; div.classList.add('initial');
-                    grid[r][c] = val;
+                    grid[r][c] = BigInt(val);
                 }
                 container.appendChild(div); cells.push(div);
             }
-            document.getElementById('status').innerText = `SENTINEL READY (${N}x${N}, Block: ${bR}x${bC})`;
+            updateStatus("MANIFOLD READY");
         }
 
-        // The Hamiltonian Sieve: Using BigInt to prevent bit-overflow for N > 31
-        function getSieve(r, c) {
+        function getSieve(r, c, currentGrid) {
             let mask = 0n;
             let b = Math.floor(r / bR) * bR + Math.floor(c / bC);
             for (let j = 0; j < N; j++) {
-                if (grid[r][j]) mask |= (1n << BigInt(grid[r][j] - 1));
-                if (grid[j][c]) mask |= (1n << BigInt(grid[j][c] - 1));
+                if (currentGrid[r][j]) mask |= (1n << (currentGrid[r][j] - 1n));
+                if (currentGrid[j][c]) mask |= (1n << (currentGrid[j][c] - 1n));
                 let boxR = Math.floor(b / bR) * bR + Math.floor(j / bC);
                 let boxC = (b % bR) * bC + (j % bC);
-                if (grid[boxR][boxC]) mask |= (1n << BigInt(grid[boxR][boxC] - 1));
+                if (currentGrid[boxR][boxC]) mask |= (1n << (currentGrid[boxR][boxC] - 1n));
             }
             return (~mask) & ((1n << BigInt(N)) - 1n);
         }
 
-        async function executeOneStream() {
+        async function inferManifold() {
             const start = performance.now();
-            const empty = [];
-            for(let i=0; i<N*N; i++) if(!grid[Math.floor(i/N)][i%N]) empty.push(i);
+            updateStatus("FOLDING NOISE...");
+            solutions = [];
+            masterMask = Array(N * N).fill(0n);
+            
+            // Tier 3: Exhaustive search leveraging Tier 1/2 logic
+            // We use recursion to find ALL valid ground states
+            await solveRecursive(0);
 
-            // Entropy Mapping: Solve highest friction cells first
-            empty.sort((a, b) => {
-                const countBits = (m) => m.toString(2).split('1').length - 1;
-                return countBits(getSieve(Math.floor(a/N), a%N)) - countBits(getSieve(Math.floor(b/N), b%N));
-            });
-
-            async function solve(idx) {
-                if (idx === empty.length) return true;
-                let cellIdx = empty[idx], r = Math.floor(cellIdx/N), c = cellIdx%N;
-                let mask = getSieve(r, c);
-                for (let v = 1; v <= N; v++) {
-                    if (mask & (1n << BigInt(v - 1))) {
-                        grid[r][c] = v; cells[cellIdx].innerText = v;
-                        cells[cellIdx].classList.add('solved');
-                        if (await solve(idx + 1)) return true;
-                        grid[r][c] = 0; cells[cellIdx].innerText = "";
-                        cells[cellIdx].classList.remove('solved');
-                    }
-                }
-                return false;
-            }
-
-            document.getElementById('status').innerText = "COLLAPSING...";
-            if (await solve(0)) {
-                document.getElementById('status').innerText = "H-STATE ACHIEVED";
+            const end = performance.now();
+            document.getElementById('timer').innerText = (end - start).toFixed(2);
+            document.getElementById('sol-count').innerText = solutions.length;
+            
+            if (solutions.length > 0) {
+                renderMasterManifold();
+                updateStatus("AC: MANIFOLD INFERRED");
             } else {
-                document.getElementById('status').innerText = "RAF OVERFLOW";
+                updateStatus("RAF OVERFLOW: NO SOLUTIONS");
             }
-            document.getElementById('timer').innerText = (performance.now() - start).toFixed(2);
         }
 
-        function strictAudit() {
-            let errors = 0;
-            cells.forEach(c => c.classList.remove('friction'));
-            for(let i=0; i<N*N; i++) {
-                let r = Math.floor(i/N), c = i%N, val = grid[r][c];
-                if(!val) { errors++; continue; }
-                grid[r][c] = 0;
-                let mask = getSieve(r, c);
-                if(!(mask & (1n << BigInt(val - 1)))) {
-                    cells[i].classList.add('friction');
-                    errors++;
+        async function solveRecursive(cellIdx) {
+            if (solutions.length >= 500) return; // Safety cap for browser memory
+            if (cellIdx === N * N) {
+                // Ground state H=0 reached
+                let currentSol = grid.flat();
+                solutions.push(currentSol);
+                // Update Master Tensor
+                currentSol.forEach((val, i) => masterMask[i] |= (1n << (val - 1n)));
+                return;
+            }
+
+            let r = Math.floor(cellIdx / N), c = cellIdx % N;
+            if (grid[r][c] !== 0n) return solveRecursive(cellIdx + 1);
+
+            let mask = getSieve(r, c, grid);
+            for (let v = 1n; v <= BigInt(N); v++) {
+                if (mask & (1n << (v - 1n))) {
+                    grid[r][c] = v;
+                    await solveRecursive(cellIdx + 1);
+                    grid[r][c] = 0n; // Boolean Reverse
                 }
-                grid[r][c] = val;
             }
-            const status = document.getElementById('status');
-            status.innerText = errors === 0 ? "TRUE AC: AUDIT PASSED" : `STABILITY FAILURE: ${errors} ERRORS`;
-            status.style.color = errors === 0 ? "var(--ground)" : "var(--friction)";
         }
 
+        function renderMasterManifold() {
+            cells.forEach((cell, i) => {
+                if (cell.classList.contains('initial')) return;
+                let mask = masterMask[i];
+                let activeBits = [];
+                for(let v=1; v<=N; v++) if(mask & (1n << BigInt(v-1))) activeBits.push(v);
+
+                if (activeBits.length === 1) {
+                    cell.innerText = activeBits[0];
+                    cell.classList.add('solved');
+                } else if (activeBits.length > 1) {
+                    // Render Phase Cloud (The Superposition)
+                    cell.innerHTML = `<div class="cloud">${activeBits.slice(0, 9).join(' ')}</div>`;
+                    cell.style.border = "1px solid var(--accent)";
+                } else {
+                    cell.innerText = "?";
+                    cell.style.color = "var(--friction)";
+                }
+            });
+        }
+
+        function updateStatus(msg) { document.getElementById('status').innerText = msg; }
         window.onload = initManifold;
     </script>
 </body>
