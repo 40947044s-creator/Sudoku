@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <title>Project NP: Sudoku Architecture</title>
     <style>
+        // This is how your webpage "wakes up" the C code
+const response = await fetch('marilyn_engine.wasm');
+const buffer = await response.arrayBuffer();
+const module = await WebAssembly.instantiate(buffer);
+
+// Now, the Marilyn Fold is accessible via JS
+const result = module.instance.exports.solve_manifold(N, grid_pointer);
         body { background:#050505; color:#e0e0e0; font-family:'Courier New', monospace; text-align:center; padding-top:100px; }
         a { display:block; margin: 20px; text-decoration: none; font-size: 1.2rem; transition: 0.2s; }
         a:hover { text-shadow: 0 0 10px currentColor; }
@@ -16,4 +23,5 @@
     
     <a href="legacy.html" style="color:#ff3333;">> Launch Legacy Branching Solver (O(N!))</a>
 </body>
+    
 </html>
