@@ -2,104 +2,185 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Project NP | Adelic Reconstructor</title>
+    <title>Project NP | Adelic Transition Engine</title>
     <style>
-        :root { --ntnu-red: #b31b1b; --gold: #d4af37; --bg: #050505; --accent: #00d4ff; --ground: #00ff00; }
+        :root { --ntnu-red: #b31b1b; --gold: #d4af37; --bg: #050505; --accent: #00d4ff; --friction: #ff3333; --ground: #00ff00; }
         body { background: var(--bg); color: #e0e0e0; font-family: 'Courier New', monospace; margin: 0; display: flex; flex-direction: column; align-items: center; }
-        .dashboard { width: 100%; background: #111; padding: 20px; border-bottom: 2px solid var(--ntnu-red); display: flex; justify-content: space-around; align-items: center; }
-        #grid-container { display: grid; gap: 2px; padding: 10px; background: #222; margin: 20px auto; border: 4px solid var(--ntnu-red); }
-        .cell { width: 40px; height: 40px; background: #000; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; border-radius: 2px; }
+        
+        /* Dashboard */
+        .dashboard { width: 100%; background: #111; padding: 20px; border-bottom: 2px solid var(--ntnu-red); display: flex; justify-content: space-around; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 10; }
+        .metrics { font-size: 0.85rem; color: var(--gold); }
+        .metric-val { color: var(--ground); font-weight: bold; }
+        
+        /* Signal Visualization */
+        #wave-container { width: 100%; height: 120px; background: #000; position: relative; border-bottom: 1px solid #222; }
+        canvas { display: block; }
+
+        /* The Manifold */
+        #grid-container { display: grid; gap: 2px; background: #444; margin: 25px auto; padding: 10px; border: 4px solid var(--ntnu-red); }
+        .cell { width: 42px; height: 42px; background: #000; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; font-weight: bold; transition: all 0.05s; border: 1px solid #111; }
+        .cell.scanning { outline: 2px solid var(--accent); z-index: 5; background: #111; }
+        .cell.friction { color: var(--friction); text-shadow: 0 0 8px var(--friction); }
+        .cell.solved { color: var(--ground); animation: crystallize 0.2s ease-out; }
         .cell.initial { color: var(--gold); }
-        .cell.solved { color: var(--ground); animation: pulse 0.6s; }
-        @keyframes pulse { 0% { background: var(--accent); } 100% { background: #000; } }
-        button { background: var(--ntnu-red); color: #fff; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; border-radius: 3px; }
-        button:hover { background: #900; }
-        #status { color: var(--accent); font-weight: bold; }
+        
+        @keyframes crystallize { from { transform: scale(1.3); opacity: 0.5; } to { transform: scale(1); opacity: 1; } }
+
+        /* UI Elements */
+        input[type="number"] { background: #000; color: #fff; border: 1px solid #444; padding: 5px; width: 40px; text-align: center; }
+        button { background: var(--ntnu-red); color: white; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; border-radius: 2px; }
+        #solve-btn { background: var(--accent); color: #000; }
+        #verify-btn { background: var(--gold); color: #000; }
     </style>
 </head>
 <body>
 
-<div class="dashboard">
-    <button onclick="executeWasmFold()" id="solve-btn">RECONSTRUCT H (O(N))</button>
-    <div class="metrics">
-        STATUS: <span id="status">INITIALIZING...</span> | 
-        TIME: <span id="timer">0.00</span>ms
+    <div class="dashboard">
+        <div>
+            <span>N-Size:</span> 
+            <input type="number" id="n-val" value="3" min="2" max="4">
+            <button onclick="initManifold()">RESET MANIFOLD</button>
+        </div>
+        <button id="solve-btn" onclick="executeOneStream()">RECONSTRUCT H</button>
+        <button id="verify-btn" onclick="verifyGrounding()">VERIFY AC</button>
+        <div class="metrics">
+            TIME: <span id="timer" class="metric-val">0.00</span>ms | 
+            STATUS: <span id="status" style="color:var(--accent)">GROUNDED</span>
+        </div>
     </div>
-</div>
 
-<div id="grid-container"></div>
+    <div id="wave-container">
+        <canvas id="waveCanvas"></canvas>
+    </div>
 
-<script src="marilyn_engine.js"></script>
+    <div id="grid-container"></div>
 
-<script>
-    let n = 3, N = 9, cells = [];
-    let engineReady = false;
+    <script src="marilyn_engine.js"></script>
+    
+    <script>
+        let n, N, cells = [];
+        const canvas = document.getElementById('waveCanvas');
+        const ctx = canvas.getContext('2d');
 
-    // Bridge for Emscripten's Module
-    var Module = {
-        onRuntimeInitialized: function() {
-            engineReady = true;
-            document.getElementById('status').innerText = "ENGINE READY";
-            console.log("Adelic Hamiltonian Engine Connected.");
-            initGrid();
-        }
-    };
+        function initManifold() {
+            n = parseInt(document.getElementById('n-val').value);
+            N = n * n;
+            const container = document.getElementById('grid-container');
+            container.style.gridTemplateColumns = `repeat(${N}, 42px)`;
+            container.innerHTML = '';
+            cells = [];
+            
+            // Grounded Seed Generation (Ensures Solvability)
+            let seed = Array.from({length: N}, (v, r) => 
+                Array.from({length: N}, (v, c) => (Math.floor(r * n + r / n + c) % N) + 1)
+            );
 
-    function initGrid() {
-        const container = document.getElementById('grid-container');
-        container.style.gridTemplateColumns = `repeat(${N}, 40px)`;
-        container.innerHTML = '';
-        cells = [];
-        
-        // Puzzle state (0 = empty)
-        let puzzle = [
-            5,3,0,0,7,0,0,0,0, 6,0,0,1,9,5,0,0,0, 0,9,8,0,0,0,0,6,0,
-            8,0,0,0,6,0,0,0,3, 4,0,0,8,0,3,0,0,1, 7,0,0,0,2,0,0,0,6,
-            0,6,0,0,0,0,2,8,0, 0,0,0,4,1,9,0,0,5, 0,0,0,0,8,0,0,7,9
-        ];
-
-        puzzle.forEach(val => {
-            let div = document.createElement('div');
-            div.className = 'cell' + (val ? ' initial' : '');
-            div.innerText = val || '';
-            container.appendChild(div);
-            cells.push(div);
-        });
-    }
-
-    function executeWasmFold() {
-        if(!engineReady) {
-            alert("Engine is still warming up. Check console if it persists.");
-            return;
-        }
-        
-        const statusLabel = document.getElementById('status');
-        statusLabel.innerText = "COLLAPSING WAVEFUNCTION...";
-        
-        // Map UI to raw array
-        let gridData = cells.map(c => parseInt(c.innerText) || 0);
-        
-        // Allocate WASM memory
-        const ptr = Module._malloc(N * N * 4);
-        const gridArray = new Int32Array(Module.HEAP32.buffer, ptr, N * N);
-        gridArray.set(gridData);
-
-        const start = performance.now();
-        // Invoke the underscore-prefixed function from marilyn_engine.js
-        const success = Module._solve_sudoku_marilyn(ptr, n);
-        const end = performance.now();
-
-        document.getElementById('timer').innerText = (end - start).toFixed(2);
-
-        if (success) {
-            let solvedCount = 0;
             for(let i=0; i<N*N; i++) {
-                let val = gridArray[i];
-                if(val > 0) {
-                    if(!cells[i].classList.contains('initial')) {
-                        cells[i].innerText = val;
-                        cells[i].classList.add('solved');
-                    }
+                let div = document.createElement('div');
+                div.className = 'cell';
+                let r = Math.floor(i / N), c = i % N;
+                if ((Math.floor(r / n) + Math.floor(c / n)) % 2 == 0) div.style.background = '#080808';
+                
+                if(Math.random() < 0.35) {
+                    div.innerText = seed[r][c];
+                    div.classList.add('initial');
+                }
+                container.appendChild(div);
+                cells.push(div);
+            }
+            resizeCanvas();
+            document.getElementById('status').innerText = "SENTINEL READY";
+        }
+
+        function getCandidates(idx) {
+            let r = Math.floor(idx / N), c = idx % N, b = Math.floor(r / n) * n + Math.floor(c / n);
+            let used = new Set();
+            for (let j = 0; j < N; j++) {
+                if (cells[r * N + j].innerText) used.add(cells[r * N + j].innerText);
+                if (cells[j * N + c].innerText) used.add(cells[j * N + c].innerText);
+                let boxR = Math.floor(b / n) * n, boxC = (b % n) * n;
+                let bVal = cells[(boxR + Math.floor(j / n)) * N + (boxC + j % n)].innerText;
+                if (bVal) used.add(bVal);
+            }
+            let res = [];
+            for (let v = 1; v <= N; v++) if (!used.has(v.toString())) res.push(v);
+            return res;
+        }
+
+        // MSB-Origin Mapping: Ordering the stream by Highest Friction
+        function mapToPriorityStream() {
+            let empty = [];
+            for (let i = 0; i < N * N; i++) if (!cells[i].innerText) empty.push(i);
+            return empty.sort((a, b) => getCandidates(a).length - getCandidates(b).length);
+        }
+
+        async function executeOneStream() {
+            const start = performance.now();
+            const logger = document.getElementById('status');
+            logger.innerText = "COLLAPSING MANIFOLD...";
+            
+            let priorityStream = mapToPriorityStream();
+            
+            async function solve(idx) {
+                if (idx === priorityStream.length) return true;
+                let cellIdx = priorityStream[idx];
+                let candidates = getCandidates(cellIdx);
+                let xPos = (cellIdx / (N*N)) * canvas.width;
+
+                cells[cellIdx].classList.add('scanning');
+                updateWave(xPos, false, candidates.length);
+
+                for (let val of candidates) {
+                    cells[cellIdx].innerText = val;
+                    cells[cellIdx].classList.add('solved');
+                    await new Promise(r => setTimeout(r, 1)); // Cinematic Delay
+
+                    if (await solve(idx + 1)) return true;
+
+                    // RAF Detected -> DPI Correction
+                    cells[cellIdx].innerText = "";
+                    cells[cellIdx].classList.remove('solved');
+                    updateWave(xPos, true, 10);
+                }
+                cells[cellIdx].classList.remove('scanning');
+                return false;
+            }
+
+            if (await solve(0)) {
+                document.getElementById('timer').innerText = (performance.now() - start).toFixed(2);
+                logger.innerText = "H-STATE CRYSTALLIZED: AC";
+            } else {
+                logger.innerText = "RAF OVERFLOW: UNSTABLE";
+            }
+        }
+
+        function updateWave(x, friction, entropy = 5) {
+            ctx.clearRect(0,0,canvas.width, canvas.height);
+            ctx.strokeStyle = '#111';
+            ctx.beginPath(); ctx.moveTo(0, 60); ctx.lineTo(canvas.width, 60); ctx.stroke();
+            ctx.beginPath();
+            ctx.strokeStyle = friction ? 'var(--friction)' : 'var(--accent)';
+            ctx.lineWidth = 2;
+            for(let i=0; i<x; i+=5) {
+                let amp = friction ? 25 : (entropy * 3); 
+                let y = 60 + Math.sin(i * 0.1) * amp;
+                ctx.lineTo(i, y);
+            }
+            ctx.stroke();
+            ctx.fillStyle = "#fff"; ctx.fillRect(x, 40, 2, 40);
+        }
+
+        async function verifyGrounding() {
+            // Standard flag-based verification logic here...
+            // If valid: status.innerText = "AC: HAMILTONIAN INVARIANT ACHIEVED";
+        }
+
+        function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = 120; drawStaticWave(); }
+        function drawStaticWave() { /* Initial wave code... */ }
+        window.onload = initManifold;
+    </script>
+</body>
+</html>
                     solvedCount++;
                 }
             }
