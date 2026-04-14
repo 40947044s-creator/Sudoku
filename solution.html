@@ -111,35 +111,37 @@
         }
 
         // --- WASM BRIDGE LOGIC ---
-        function solveWithMarilyn(js_grid) {
-            if (!marilynEngineReady) {
-                alert("Wasm Engine still loading...");
-                return null;
-            }
+        function solveWithMarilyn(js_grid, base_n) {
+    if (!marilynEngineReady) {
+        alert("Wasm Engine still loading...");
+        return null;
+    }
 
-            const bytesPerElement = 4;
-            const arraySize = 81;
-            const gridPointer = Module._malloc(arraySize * bytesPerElement);
+    const totalCells = base_n * base_n * base_n * base_n; // n^4
+    const bytesPerElement = 4;
+    const gridPointer = Module._malloc(totalCells * bytesPerElement);
 
-            for (let i = 0; i < arraySize; i++) {
-                Module.setValue(gridPointer + (i * bytesPerElement), js_grid[i], 'i32');
-            }
+    for (let i = 0; i < totalCells; i++) {
+        Module.setValue(gridPointer + (i * bytesPerElement), js_grid[i], 'i32');
+    }
 
-            const solve_sudoku_marilyn = Module.cwrap('solve_sudoku_marilyn', 'number', ['number']);
-            const success = solve_sudoku_marilyn(gridPointer);
+    // UPDATE: The C function now takes two parameters: (grid_pointer, base_n)
+    const solve_sudoku_marilyn = Module.cwrap('solve_sudoku_marilyn', 'number', ['number', 'number']);
+    
+    // Pass 'base_n' (the n value) directly into the Wasm engine
+    const success = solve_sudoku_marilyn(gridPointer, base_n);
 
-            let resultGrid = null;
-            if (success === 1) {
-                resultGrid = new Array(81);
-                for (let i = 0; i < arraySize; i++) {
-                    resultGrid[i] = Module.getValue(gridPointer + (i * bytesPerElement), 'i32');
-                }
-            }
-
-            Module._free(gridPointer);
-            return resultGrid;
+    let resultGrid = null;
+    if (success === 1) {
+        resultGrid = new Array(totalCells);
+        for (let i = 0; i < totalCells; i++) {
+            resultGrid[i] = Module.getValue(gridPointer + (i * bytesPerElement), 'i32');
         }
+    }
 
+    Module._free(gridPointer);
+    return resultGrid;
+}
         // --- MAIN EXECUTION ---
         function executeWasmFold() {
             const logger = document.getElementById('status');
