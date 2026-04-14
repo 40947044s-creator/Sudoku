@@ -4,13 +4,12 @@
 #include <time.h>
 #include <emscripten.h>
 
-// Universal Constants
+// Universal Adelic Constants
 #define N_MAX 25 
 uint64_t manifold[N_MAX * N_MAX];
 uint64_t full_bits;
 int N, bR, bC;
 
-// --- Helper Functions ---
 void get_factors(int n, int *r, int *c) {
     int root = 1;
     for (int i = 1; i * i <= n; i++) {
@@ -29,14 +28,14 @@ uint64_t get_sieve(int r, int c) {
     for (int i = 0; i < N; i++) {
         if (manifold[r * N + i]) mask |= (1ULL << (manifold[r * N + i] - 1));
         if (manifold[i * N + c]) mask |= (1ULL << (manifold[i * N + c] - 1));
-        int box_r = (r / bR) * bR + (i / bC);
-        int box_c = (c / bC) * bC + (i % bC);
-        if (manifold[box_r * N + box_c]) mask |= (1ULL << (manifold[box_r * N + box_c] - 1));
+        int br = (r / bR) * bR + (i / bC);
+        int bc = (c / bC) * bC + (i % bC);
+        if (manifold[br * N + bc]) mask |= (1ULL << (manifold[br * N + bc] - 1));
     }
     return (~mask) & full_bits;
 }
 
-// --- Annihilation Logic (Hidden Singles) ---
+// Tier 2.5: Deep Annihilation (Hidden Singles)
 int annihilate_noise() {
     int grounded = 0;
     for (int v = 1; v <= N; v++) {
@@ -48,7 +47,6 @@ int annihilate_noise() {
                 if (manifold[i * N + j] == 0) {
                     if (get_sieve(i, j) & v_bit) { r_count++; last_c = j; }
                 } else if (manifold[i * N + j] == (uint64_t)v) { r_count = -1; }
-                
                 if (manifold[j * N + i] == 0) {
                     if (get_sieve(j, i) & v_bit) { c_count++; last_r = j; }
                 } else if (manifold[j * N + i] == (uint64_t)v) { c_count = -1; }
@@ -68,23 +66,17 @@ int find_sentinel() {
             uint64_t sieve = get_sieve(i / N, i % N);
             int entropy = __builtin_popcountll(sieve);
             if (entropy == 0) return -2; 
-            if (entropy < min_entropy) {
-                min_entropy = entropy;
-                best_cell = i;
-            }
+            if (entropy < min_entropy) { min_entropy = entropy; best_cell = i; }
         }
     }
     return best_cell;
 }
 
-// --- The Unified Solver ---
 int solve_internal() {
-    while (annihilate_noise()); // Apply Annihilation first
-
+    while (annihilate_noise());
     int idx = find_sentinel();
     if (idx == -1) return 1; 
     if (idx == -2) return 0; 
-
     uint64_t sieve = get_sieve(idx / N, idx % N);
     while (sieve) {
         int val = get_first_bit(sieve);
@@ -101,34 +93,28 @@ int solve_manifold(int n_val, uint64_t* external_grid) {
     N = n_val;
     get_factors(N, &bR, &bC);
     full_bits = (1ULL << N) - 1;
-    
     int is_blank = 1;
     for(int i = 0; i < N * N; i++) {
         manifold[i] = external_grid[i];
         if (manifold[i] != 0) is_blank = 0;
     }
-
-    // Seed blank grids to trigger the "Wave"
     if (is_blank) {
         srand(time(NULL)); 
-        for (int i = 0; i < N; i++) { 
+        for (int i = 0; i < N; i++) {
             int r = rand() % N, c = rand() % N;
-            uint64_t sieve = get_sieve(r, c);
-            if (sieve) {
-                int count = __builtin_popcountll(sieve);
+            uint64_t s = get_sieve(r, c);
+            if (s) {
+                int count = __builtin_popcountll(s);
                 int pick = rand() % count;
                 for (int v = 1; v <= N; v++) {
-                    if (sieve & (1ULL << (v - 1))) {
+                    if (s & (1ULL << (v - 1))) {
                         if (pick-- == 0) { manifold[r * N + c] = (uint64_t)v; break; }
                     }
                 }
             }
         }
     }
-
-    int result = solve_internal();
-    if (result == 1) {
-        for(int i = 0; i < N * N; i++) external_grid[i] = manifold[i];
-    }
-    return result;
+    int res = solve_internal();
+    if (res == 1) for(int i = 0; i < N * N; i++) external_grid[i] = manifold[i];
+    return res;
 }
