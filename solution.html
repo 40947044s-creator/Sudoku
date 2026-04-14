@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -31,6 +32,7 @@
         <div style="margin-top: auto;">
             <button style="width: 100%;" onclick="startInference()">RUN MARILYN FOLD</button>
             <button class="secondary" style="width: 100%; margin-top: 10px;" onclick="resetManifold()">RESET PLANTING</button>
+            <button class="secondary" onclick="randomVerifiedInject()">RANDOM SEED</button>
         </div>
     </aside>
     <main>
@@ -108,6 +110,55 @@ async function startInference() {
 }
         function resetManifold() { initGrid(); }
         window.onload = initGrid;
+            /* Add this function to the bottom of your <script> section */
+    
+    function randomVerifiedInject() {
+        if (!N) return alert("Initialize Manifold first.");
+        
+        // We inject N cornerstone residues to create the initial wave
+        let injectedCount = 0;
+        const inputs = document.querySelectorAll('.cell input');
+        
+        // Sieve logic translated to JS for pre-inference seeding
+        const getJsSieve = (idx) => {
+            let r = Math.floor(idx / N);
+            let c = idx % N;
+            let used = new Set();
+            
+            inputs.forEach((inp, i) => {
+                let ir = Math.floor(i / N);
+                let ic = i % N;
+                let val = parseInt(inp.value);
+                if (!val) return;
+                
+                // Row/Col check
+                if (ir === r || ic === c) used.add(val);
+                
+                // Box check
+                if (Math.floor(ir/bR) === Math.floor(r/bR) && 
+                    Math.floor(ic/bC) === Math.floor(c/bC)) used.add(val);
+            });
+            
+            let possible = [];
+            for (let v = 1; v <= N; v++) if (!used.has(v)) possible.push(v);
+            return possible;
+        };
+
+        for (let attempts = 0; attempts < N * 2 && injectedCount < N; attempts++) {
+            let randIdx = Math.floor(Math.random() * (N * N));
+            if (inputs[randIdx].value) continue;
+            
+            let validResidues = getJsSieve(randIdx);
+            if (validResidues.length > 0) {
+                let pick = validResidues[Math.floor(Math.random() * validResidues.length)];
+                inputs[randIdx].value = pick;
+                inputs[randIdx].parentElement.classList.add('grounded');
+                injectedCount++;
+            }
+        }
+        
+        document.getElementById('status-tag').innerText = `[ SEEDED: ${injectedCount} CORNERSTONES ]`;
+    }
     </script>
 </body>
 </html>
