@@ -134,35 +134,65 @@ async function executeOneStream() {
     let priorityStream = mapToPriorityStream();
     
     // 2. Recursive Waveeve Operator (Backtracking framed as DPI)
-    async function solve(streamIdx) {
-        if (streamIdx === priorityStream.length) return true;
+    // sudoku_solver.js
 
-        let cellIdx = priorityStream[streamIdx];
-        let candidates = getCandidates(cellIdx);
-        let xPos = (cellIdx / (N * N)) * canvas.width;
+// Wait for the WebAssembly module to load
+let marilynEngineReady = false;
+Module.onRuntimeInitialized = function() {
+    console.log("Adelic Transition Engine (Wasm) Loaded Successfully.");
+    marilynEngineReady = true;
+};
 
-        cells[cellIdx].classList.add('scanning');
-        updateWave(xPos, false, candidates.length);
-
-        for (let val of candidates) {
-            cells[cellIdx].innerText = val;
-            cells[cellIdx].classList.add('solved');
-            
-            // Allow browser to render the "Crystallization"
-            await new Promise(r => setTimeout(r, 1)); 
-
-            if (await solve(streamIdx + 1)) return true;
-
-            // RAF Detected -> Apply Boolean Reverse (Backtrack)
-            cells[cellIdx].innerText = "";
-            cells[cellIdx].classList.remove('solved');
-            updateWave(xPos, true, 10);
-        }
-
-        cells[cellIdx].classList.remove('scanning');
-        return false;
+/**
+ * Solves a 9x9 Sudoku using the O(N) Grandparent Sentinel.
+ * @param {Array} js_grid - A flat array of 81 integers (0 for empty cells).
+ * @returns {Array|null} - The solved array, or null if unresolvable.
+ */
+function solveWithMarilyn(js_grid) {
+    if (!marilynEngineReady) {
+        alert("Engine still loading...");
+        return null;
     }
 
+    console.time("Marilyn_Fold_Execution");
+
+    // 1. Allocate memory in the WebAssembly heap for the 81 integers (32 bytes each in Wasm)
+    const bytesPerElement = 4; // 32-bit int
+    const arraySize = 81;
+    const gridPointer = Module._malloc(arraySize * bytesPerElement);
+
+    // 2. Copy the JavaScript array data into the Wasm memory heap
+    for (let i = 0; i < arraySize; i++) {
+        Module.setValue(gridPointer + (i * bytesPerElement), js_grid[i], 'i32');
+    }
+
+    // 3. Call the exported C function from wasm_bridge.c
+    // Using cwrap to define the signature: returns number, takes number (pointer)
+    const solve_sudoku_marilyn = Module.cwrap('solve_sudoku_marilyn', 'number', ['number']);
+    
+    // EXECUTE THE FOLD
+    const success = solve_sudoku_marilyn(gridPointer);
+
+    let resultGrid = null;
+
+    if (success === 1) {
+        console.log("Invariant Confirmed! Extracted in O(N) time.");
+        resultGrid = new Array(81);
+        // 4. Read the solved data back from the Wasm memory heap
+        for (let i = 0; i < arraySize; i++) {
+            resultGrid[i] = Module.getValue(gridPointer + (i * bytesPerElement), 'i32');
+        }
+    } else {
+        console.error("Destructive interference. Puzzle invalid or unresolvable.");
+    }
+
+    console.timeEnd("Marilyn_Fold_Execution");
+
+    // 5. Free the allocated memory to prevent browser memory leaks
+    Module._free(gridPointer);
+
+    return resultGrid;
+}
     if (await solve(0)) {
         document.getElementById('timer').innerText = (performance.now() - start).toFixed(2);
         logger.innerText = "H-STATE CRYSTALLIZED: AC";
