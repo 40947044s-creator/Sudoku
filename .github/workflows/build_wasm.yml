@@ -1,21 +1,14 @@
 name: Build Marilyn Engine
 on: [push]
-
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Setup Emscripten
-        uses: mymindstorm/setup-emsdk@v14
-
-      - name: Compile Adelic.c to WASM
+      - uses: actions/checkout@v4
+      - uses: mymindstorm/setup-emsdk@v14
+      - name: Compile
         run: |
           emcc Adelic.c -o marilyn_engine.js \
           -s WASM=1 \
@@ -23,9 +16,7 @@ jobs:
           -s EXPORTED_RUNTIME_METHODS='["cwrap"]' \
           -s ALLOW_MEMORY_GROWTH=1 \
           -O3
-
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+      - uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./
