@@ -5,10 +5,12 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@v4
       - uses: mymindstorm/setup-emsdk@v14
-      - name: Compile
+      - name: Compile Adelic Engine
         run: |
           emcc Adelic.c -o marilyn_engine.js \
           -s WASM=1 \
