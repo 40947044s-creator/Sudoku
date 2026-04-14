@@ -34,8 +34,8 @@
 
     <div class="dashboard">
         <div>
-            <span>N-Size (Force 3 for Wasm):</span> 
-            <input type="number" id="n-val" value="3" min="3" max="3" disabled>
+            <span>N-Size (n x n blocks):</span> 
+            <input type="number" id="n-val" value="3" min="2" max="10">
             <button onclick="initManifold()">RESET MANIFOLD</button>
         </div>
         <button id="solve-btn" onclick="executeWasmFold()">RECONSTRUCT H (O(N))</button>
