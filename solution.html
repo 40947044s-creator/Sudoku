@@ -2,198 +2,165 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>libmarilynnp | Adelic Console v7.1</title>
+    <title>libmarilynnp | Streamed Inference v7.2</title>
     <style>
-        :root { 
-            --bg: #0a0b0d; --card: #14161a; --border: #2d333b;
-            --ntnu-red: #e63946; --gold: #ffb703; --cyan: #219ebc;
-            --ground: #06d6a0; --text: #e1e4e8; --muted: #8b949e;
-        }
-        body { 
-            background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; 
-            margin: 0; display: flex; height: 100vh; overflow: hidden;
-        }
-        aside { 
-            width: 320px; background: var(--card); border-right: 1px solid var(--border);
-            display: flex; flex-direction: column; padding: 25px; gap: 20px; flex-shrink: 0;
-        }
-        .metric-card { background: #1c1f24; padding: 15px; border-radius: 8px; border: 1px solid var(--border); }
-        .label { color: var(--muted); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; }
-        .value { color: var(--gold); font-family: 'Courier New', monospace; font-size: 1.2rem; margin-top: 5px; }
-        main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; padding: 40px; }
-        .toolbar { 
-            position: absolute; top: 0; left: 0; right: 0; padding: 15px 30px; 
-            background: rgba(20, 22, 26, 0.9); backdrop-filter: blur(10px);
-            display: flex; align-items: center; gap: 20px; border-bottom: 1px solid var(--border); z-index: 100;
-        }
-        #grid-container { 
-            display: grid; gap: 2px; padding: 10px; background: var(--border); 
-            border-radius: 4px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            max-width: 90%; max-height: 85vh; overflow: auto;
-        }
-        .cell { 
-            background: var(--bg); display: flex; align-items: center; justify-content: center;
-            border-radius: 2px; font-weight: 600; transition: background 0.3s; color: var(--text);
-            user-select: none;
-        }
+        :root { --bg: #0a0b0d; --card: #14161a; --border: #2d333b; --ntnu-red: #e63946; --gold: #ffb703; --ground: #06d6a0; --text: #e1e4e8; }
+        body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; margin: 0; display: flex; height: 100vh; }
+        
+        /* Sidebar Metrics */
+        aside { width: 300px; background: var(--card); border-right: 1px solid var(--border); padding: 25px; display: flex; flex-direction: column; gap: 15px; flex-shrink: 0; }
+        .metric { background: #1c1f24; padding: 12px; border-radius: 6px; border: 1px solid var(--border); }
+        .label { color: #8b949e; font-size: 0.65rem; text-transform: uppercase; }
+        .val { color: var(--gold); font-family: monospace; font-size: 1.1rem; }
+
+        /* Main Workspace & Stream */
+        main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .toolbar { padding: 15px 30px; background: #14161a; border-bottom: 1px solid var(--border); display: flex; gap: 20px; align-items: center; }
+        
+        #stream-container { flex: 1; overflow-y: auto; padding: 30px; display: flex; flex-direction: column; align-items: center; gap: 40px; scroll-behavior: smooth; }
+        
+        /* Grid Styling */
+        .solution-wrapper { background: var(--card); padding: 20px; border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.4); }
+        .grid { display: grid; gap: 1px; background: var(--border); border: 1px solid var(--border); }
+        .cell { background: var(--bg); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.8rem; }
         .cell.initial { color: var(--gold); background: #161b22; }
-        .cell.solved { color: var(--ground); }
-        .cloud { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; width: 100%; height: 100%; gap: 1px; padding: 2px; }
-        .cloud span { font-size: 0.55rem; color: var(--cyan); opacity: 0.8; width: 30%; text-align: center; }
-        input, button { background: #21262d; border: 1px solid var(--border); color: white; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; }
-        button:hover { background: #30363d; }
-        .btn-primary { background: var(--ntnu-red); border: none; }
-        .btn-primary:hover { background: #ff4d5a; }
-        #status-indicator { font-size: 0.8rem; font-weight: bold; }
+        
+        button { background: var(--ntnu-red); border: none; color: white; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        button.secondary { background: #21262d; border: 1px solid var(--border); }
+        input { background: #0d1117; border: 1px solid var(--border); color: white; padding: 5px; width: 50px; border-radius: 4px; }
     </style>
 </head>
 <body>
+
     <aside>
-        <h2 style="color: var(--ntnu-red); margin: 0; font-size: 1.4rem;">libmarilynnp</h2>
-        <div class="metric-card">
-            <div class="label">Hamiltonian Potential (Φ)</div>
-            <div id="h-energy" class="value">---</div>
-        </div>
-        <div class="metric-card">
-            <div class="label">Ground States (H=0)</div>
-            <div id="sol-count" class="value">0</div>
-        </div>
-        <div class="metric-card">
-            <div class="label">Audit Latency</div>
-            <div id="timer" class="value">0.00ms</div>
-        </div>
+        <h2 style="color: var(--ntnu-red); margin: 0;">libmarilynnp</h2>
+        <div class="metric"><div class="label">Scale (N)</div><div class="val" id="n-display">10</div></div>
+        <div class="metric"><div class="label">Solutions Found</div><div class="val" id="sol-count">0</div></div>
+        <div class="metric"><div class="label">Last Latency</div><div class="val" id="timer">0.00ms</div></div>
         <div style="margin-top: auto;">
-            <div class="label" style="margin-bottom: 10px;">Inference Display</div>
-            <button style="width: 100%;" onclick="toggleCloud()">Toggle Phase Clouds</button>
+            <button style="width: 100%;" onclick="stopSearch = true">HALT INFERENCE</button>
         </div>
     </aside>
+
     <main>
         <div class="toolbar">
-            <span class="label">Scale (N):</span>
-            <input type="number" id="n-val" value="9" min="4" max="16" onchange="initManifold()">
-            <button class="btn-primary" onclick="inferManifold()">INFER TARGET</button>
-            <button onclick="initManifold()">RESET</button>
-            <div id="status-indicator" style="margin-left: auto;">IDLE</div>
+            <span class="label">Manifold Size:</span>
+            <input type="number" id="n-val" value="10" min="4" max="16">
+            <button onclick="startInference()">STREAM SOLUTIONS</button>
+            <button class="secondary" onclick="clearStream()">CLEAR STREAM</button>
         </div>
-        <div id="grid-container"></div>
+        <div id="stream-container">
+            </div>
     </main>
+
     <script>
-        let N, bR, bC, grid = [], masterMask = [], solutions = [], showClouds = false;
+        let N, bR, bC, stopSearch = false, solFound = 0;
+        let initialGrid = [];
+
         function getFactors(n) {
             let r = Math.floor(Math.sqrt(n));
             while (n % r !== 0) r--;
             return [r, n / r];
         }
-        function initManifold() {
-            N = parseInt(document.getElementById('n-val').value);
-            if (isNaN(N) || N < 4) N = 9;
-            [bR, bC] = getFactors(N);
-            const container = document.getElementById('grid-container');
-            container.innerHTML = '';
-            
-            // Fixed display logic: Use a fixed container size and calculate cell size
-            const containerSize = Math.min(window.innerWidth - 450, window.innerHeight - 150);
-            const cellSize = Math.floor((containerSize - (N * 2)) / N);
-            
-            container.style.gridTemplateColumns = `repeat(${N}, ${cellSize}px)`;
-            grid = Array.from({length: N}, () => Array(N).fill(0n));
-            masterMask = Array(N * N).fill(0n);
-            solutions = [];
 
-            for(let i=0; i < N*N; i++) {
-                let r = Math.floor(i / N), c = i % N;
-                let div = document.createElement('div');
-                div.className = 'cell';
-                div.style.width = cellSize + 'px';
-                div.style.height = cellSize + 'px';
-                div.style.fontSize = (cellSize * 0.5) + 'px';
-                if ((Math.floor(r / bR) + Math.floor(c / bC)) % 2 == 0) div.style.background = '#0d1117';
-                
-                // Deterministic Seeding for Research
-                if ((r + c * 3) % 7 === 0 && Math.random() < 0.4) {
-                    let val = ((r * bC + Math.floor(r / bR) + c) % N) + 1;
-                    div.innerText = val;
-                    div.classList.add('initial');
-                    grid[r][c] = BigInt(val);
-                }
-                container.appendChild(div);
-            }
-            updateStatus("READY", "var(--cyan)");
+        function clearStream() {
+            document.getElementById('stream-container').innerHTML = '';
+            solFound = 0;
+            document.getElementById('sol-count').innerText = 0;
         }
-        function getSieve(r, c, currentGrid) {
+
+        async function startInference() {
+            N = parseInt(document.getElementById('n-val').value);
+            [bR, bC] = getFactors(N);
+            document.getElementById('n-display').innerText = `${N} (${bR}x${bC})`;
+            stopSearch = false;
+            
+            // Seed the initial manifold
+            initialGrid = Array.from({length: N}, () => Array(N).fill(0n));
+            for(let r=0; r<N; r++){
+                for(let c=0; c<N; c++){
+                    if(Math.random() < 0.25) {
+                        let val = BigInt(((r * bC + Math.floor(r/bR) + c) % N) + 1);
+                        initialGrid[r][c] = val;
+                    }
+                }
+            }
+            
+            await solveAndStream(JSON.parse(JSON.stringify(initialGrid, (k,v) => typeof v === 'bigint' ? v.toString() : v)));
+        }
+
+        function getSieve(r, c, g) {
             let mask = 0n;
             let b = Math.floor(r / bR) * bR + Math.floor(c / bC);
             for (let j = 0; j < N; j++) {
-                if (currentGrid[r][j]) mask |= (1n << (currentGrid[r][j] - 1n));
-                if (currentGrid[j][c]) mask |= (1n << (currentGrid[j][c] - 1n));
+                if (g[r][j]) mask |= (1n << (BigInt(g[r][j]) - 1n));
+                if (g[j][c]) mask |= (1n << (BigInt(g[j][c]) - 1n));
                 let boxR = Math.floor(b / bR) * bR + Math.floor(j / bC);
                 let boxC = (b % bR) * bC + (j % bC);
-                if (currentGrid[boxR][boxC]) mask |= (1n << (currentGrid[boxR][boxC] - 1n));
+                if (g[boxR][boxC]) mask |= (1n << (BigInt(g[boxR][boxC]) - 1n));
             }
             return (~mask) & ((1n << BigInt(N)) - 1n);
         }
-        async function inferManifold() {
+
+        async function solveAndStream(currentGrid) {
             const start = performance.now();
-            updateStatus("FOLDING...", "var(--ntnu-red)");
-            solutions = [];
-            masterMask = Array(N * N).fill(0n);
             
-            // Triple-Moduli Sieve Simulation via Recursive Grounding
-            await solveRecursive(0);
-            
-            document.getElementById('timer').innerText = (performance.now() - start).toFixed(2) + "ms";
-            document.getElementById('sol-count').innerText = solutions.length;
-            document.getElementById('h-energy').innerText = (solutions.length > 0) ? "0.00" : "∞ (UNSTABLE)";
-            
-            renderManifold();
-            updateStatus(solutions.length > 0 ? "AC ACHIEVED" : "RAF ERROR", solutions.length > 0 ? "var(--ground)" : "var(--ntnu-red)");
-        }
-        async function solveRecursive(cellIdx) {
-            if (solutions.length >= 100) return;
-            if (cellIdx === N * N) {
-                let sol = grid.flat();
-                solutions.push(sol);
-                sol.forEach((v, i) => masterMask[i] |= (1n << (v - 1n)));
-                return;
-            }
-            let r = Math.floor(cellIdx / N), c = cellIdx % N;
-            if (grid[r][c] !== 0n) return solveRecursive(cellIdx + 1);
-            let mask = getSieve(r, c, grid);
-            for (let v = 1n; v <= BigInt(N); v++) {
-                if (mask & (1n << (v - 1n))) {
-                    grid[r][c] = v;
-                    await solveRecursive(cellIdx + 1);
-                    grid[r][c] = 0n;
+            // Convert back to BigInt
+            let g = currentGrid.map(row => row.map(v => BigInt(v)));
+
+            async function backtrack(idx) {
+                if (stopSearch || solFound >= 20) return;
+                if (idx === N * N) {
+                    solFound++;
+                    document.getElementById('sol-count').innerText = solFound;
+                    document.getElementById('timer').innerText = (performance.now() - start).toFixed(2) + "ms";
+                    printGrid(g);
+                    return;
                 }
-            }
-        }
-        function renderManifold() {
-            const cells = document.querySelectorAll('.cell');
-            cells.forEach((cell, i) => {
-                if (cell.classList.contains('initial')) return;
-                let mask = masterMask[i];
-                let bits = [];
-                for(let v=1; v<=N; v++) if(mask & (1n << BigInt(v-1))) bits.push(v);
-                if (bits.length === 1) {
-                    cell.innerHTML = bits[0];
-                    cell.classList.add('solved');
-                } else if (bits.length > 1) {
-                    if (showClouds) {
-                        cell.innerHTML = `<div class="cloud">${bits.slice(0, 12).map(b => `<span>${b}</span>`).join('')}</div>`;
-                    } else {
-                        cell.innerHTML = `<span style="color: var(--cyan); font-size: 1.5rem;">•</span>`;
+
+                let r = Math.floor(idx / N), c = idx % N;
+                if (g[r][c] !== 0n) return await backtrack(idx + 1);
+
+                let mask = getSieve(r, c, g);
+                for (let v = 1n; v <= BigInt(N); v++) {
+                    if (mask & (1n << (v - 1n))) {
+                        g[r][c] = v;
+                        // Yield to UI thread every few steps to prevent freeze
+                        if (idx % 10 === 0) await new Promise(r => setTimeout(r, 0));
+                        await backtrack(idx + 1);
+                        g[r][c] = 0n;
                     }
-                } else {
-                    cell.innerHTML = '<span style="color: var(--ntnu-red)">×</span>';
                 }
-            });
+            }
+            await backtrack(0);
         }
-        function toggleCloud() { showClouds = !showClouds; renderManifold(); }
-        function updateStatus(msg, color) {
-            const s = document.getElementById('status-indicator');
-            s.innerText = msg; s.style.color = color;
+
+        function printGrid(g) {
+            const container = document.getElementById('stream-container');
+            const wrapper = document.createElement('div');
+            wrapper.className = 'solution-wrapper';
+            
+            const gridEl = document.createElement('div');
+            gridEl.className = 'grid';
+            const cellSize = Math.min(30, Math.floor(500 / N));
+            gridEl.style.gridTemplateColumns = `repeat(${N}, ${cellSize}px)`;
+
+            for(let r=0; r<N; r++) {
+                for(let c=0; c<N; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.style.width = cellSize + 'px';
+                    cell.style.height = cellSize + 'px';
+                    cell.innerText = g[r][c];
+                    // Highlight clues
+                    if(initialGrid[r][c] !== 0n) cell.classList.add('initial');
+                    gridEl.appendChild(cell);
+                }
+            }
+            wrapper.appendChild(gridEl);
+            container.appendChild(wrapper);
+            wrapper.scrollIntoView({ behavior: 'smooth' });
         }
-        window.onload = initManifold;
     </script>
 </body>
 </html>
