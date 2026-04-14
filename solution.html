@@ -1,51 +1,99 @@
-<script>
-    function executeWasmFold() {
-        const logger = document.getElementById('status');
-        logger.innerText = "COLLAPSING WAVEFUNCTION...";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project NP | Adelic Hamiltonian Reconstructor</title>
+    <style>
+        :root { --ntnu-red: #b31b1b; --gold: #d4af37; --bg: #050505; --accent: #00d4ff; --friction: #ff3333; --ground: #00ff00; }
+        body { background: var(--bg); color: #e0e0e0; font-family: 'Courier New', monospace; margin: 0; display: flex; flex-direction: column; align-items: center; }
         
-        // 1. Convert current grid to 0-9 integers
-        let currentGrid = cells.map(c => parseInt(c.innerText) || 0);
+        .dashboard { width: 100%; background: #111; padding: 20px; border-bottom: 2px solid var(--ntnu-red); display: flex; justify-content: space-around; align-items: center; flex-wrap: wrap; gap: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        .metrics { font-size: 0.85rem; color: var(--gold); }
+        .metric-val { color: var(--ground); font-weight: bold; }
+        
+        #num-toolbar { display: flex; gap: 5px; margin: 15px auto; flex-wrap: wrap; justify-content: center; }
+        .num-btn { background: #222; border: 1px solid #444; color: #fff; padding: 10px 16px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .num-btn:hover, .num-btn.active-num { background: var(--accent); color: #000; box-shadow: 0 0 10px var(--accent); }
 
-        // 2. Call the Bedrock Engine (The Hamiltonian Fold)
-        const start = performance.now();
-        let solvedGrid = solveWithMarilyn(currentGrid, n); 
-        const end = performance.now();
+        #grid-wrapper { border: 4px solid var(--ntnu-red); background: #333; margin: 10px; max-width: 95vw; overflow: auto; }
+        #grid-container { display: grid; gap: 2px; padding: 10px; background: #222; }
+        
+        .cell { width: 38px; height: 38px; background: #000; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; font-weight: bold; transition: 0.1s; }
+        .cell.initial { color: var(--gold); }
+        .cell.solved { color: var(--ground); animation: crystallize 0.5s ease-out; }
+        .cell.highlight-target { background: var(--accent) !important; color: #000 !important; transform: scale(1.05); z-index: 2; }
+        .cell.friction { color: var(--friction); text-shadow: 0 0 8px var(--friction); }
 
-        document.getElementById('timer').innerText = (end - start).toFixed(2);
+        @keyframes crystallize { from { transform: scale(1.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        
+        button { background: var(--ntnu-red); color: white; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #900; }
+        #solve-btn { background: var(--accent); color: #000; }
+        input { background: #000; color: #fff; border: 1px solid #444; padding: 5px; width: 50px; text-align: center; }
+    </style>
+</head>
+<body>
 
-        if (solvedGrid) {
-            let solvedCount = 0;
-            solvedGrid.forEach((val, i) => {
-                if (val > 0) {
-                    cells[i].innerText = val;
-                    if (!cells[i].classList.contains('initial')) {
-                        cells[i].classList.add('solved');
-                    }
-                    solvedCount++;
-                }
-            });
+    <div class="dashboard">
+        <div>
+            <span>N-Size:</span> 
+            <input type="number" id="n-val" value="3" min="2" max="5">
+            <button onclick="initManifold()">RESET MANIFOLD</button>
+        </div>
+        <button id="solve-btn" onclick="executeWasmFold()">RECONSTRUCT H (O(N))</button>
+        <button onclick="verifyGrounding()">VERIFY GROUND STATE</button>
+        <div class="metrics">
+            TIME: <span id="timer" class="metric-val">0.00</span>ms | 
+            STATUS: <span id="status" style="color:var(--accent)">WASM PENDING</span>
+        </div>
+    </div>
 
-            // 3. Logic Check: Did we reach the Ground State (81/81)?
-            if (solvedCount === N * N) {
-                logger.innerText = "AC: GROUND STATE REACHED (H=0)";
-                logger.style.color = "var(--ground)";
-            } else {
-                logger.innerText = "PARTIAL COLLAPSE: ENTROPY REMAINING";
-                logger.style.color = "var(--gold)";
-            }
-        } else {
-            logger.innerText = "STABILITY FAILURE: HAMILTONIAN COLLISION";
-            logger.style.color = "var(--friction)";
-        }
-    }
-</script>
+    <div id="num-toolbar"></div>
+
+    <div id="grid-wrapper">
+        <div id="grid-container"></div>
+    </div>
+
+    <script src="marilyn_engine.js"></script>
+
+    <script>
+        let n = 3, N = 9, cells = [], activeHighlight = null;
+        let marilynEngineReady = false;
+
+        Module.onRuntimeInitialized = function() {
+            marilynEngineReady = true;
+            document.getElementById('status').innerText = "ENGINE READY";
+        };
+
+        function initManifold() {
+            n = parseInt(document.getElementById('n-val').value);
+            N = n * n;
+            const container = document.getElementById('grid-container');
+            container.style.gridTemplateColumns = `repeat(${N}, 38px)`;
+            container.innerHTML = '';
+            cells = [];
+
+            // Adelic Seeding (Pattern Generation)
+            let seed = Array.from({length: N}, (v, r) => 
+                Array.from({length: N}, (v, c) => (Math.floor(r * n + r / n + c) % N) + 1)
+            );
+
+            for(let i = 0; i < N * N; i++) {
+                let div = document.createElement('div');
+                div.className = 'cell';
+                let r = Math.floor(i / N), c = i % N;
+                if ((Math.floor(r / n) + Math.floor(c / n)) % 2 == 0) div.style.background = '#080808';
+                
+                if(Math.random() < 0.35) {
+                    div.innerText = seed[r][c];
                     div.classList.add('initial');
                 }
                 container.appendChild(div);
                 cells.push(div);
             }
 
-            // Build Number Toolbar
+            // Update Toolbar
             const toolbar = document.getElementById('num-toolbar');
             toolbar.innerHTML = ''; 
             for (let v = 1; v <= N; v++) {
@@ -56,7 +104,6 @@
                 toolbar.appendChild(btn);
             }
             activeHighlight = null;
-            resizeCanvas();
         }
 
         function toggleHighlight(val) {
@@ -71,35 +118,76 @@
             cells.forEach(c => c.classList.toggle('highlight-target', c.innerText == val));
         }
 
-        // --- WASM BRIDGE ---
         function solveWithMarilyn(js_grid, base_n) {
             if (!marilynEngineReady) return null;
+            const total = js_grid.length;
+            const ptr = Module._malloc(total * 4);
+            for (let i = 0; i < total; i++) Module.setValue(ptr + (i * 4), js_grid[i], 'i32');
 
-            const totalCells = js_grid.length;
-            const bytesPerElement = 4;
-            const gridPointer = Module._malloc(totalCells * bytesPerElement);
-
-            // Copy JS array to Wasm memory
-            for (let i = 0; i < totalCells; i++) {
-                Module.setValue(gridPointer + (i * bytesPerElement), js_grid[i], 'i32');
-            }
-
-            // Call the C function from libmarilynnp
             const solve_func = Module.cwrap('solve_sudoku_marilyn', 'number', ['number', 'number']);
-            const result = solve_func(gridPointer, base_n);
+            const success = solve_func(ptr, base_n);
 
-            let solvedArray = null;
-            if (result === 1) {
-                solvedArray = new Array(totalCells);
-                for (let i = 0; i < totalCells; i++) {
-                    solvedArray[i] = Module.getValue(gridPointer + (i * bytesPerElement), 'i32');
-                }
+            let res = null;
+            if (success === 1) {
+                res = new Array(total);
+                for (let i = 0; i < total; i++) res[i] = Module.getValue(ptr + (i * 4), 'i32');
             }
-
-            Module._free(gridPointer);
-            return solvedArray;
+            Module._free(ptr);
+            return res;
         }
 
+        function executeWasmFold() {
+            const logger = document.getElementById('status');
+            logger.innerText = "COLLAPSING WAVEFUNCTION...";
+            let currentGrid = cells.map(c => parseInt(c.innerText) || 0);
+
+            const start = performance.now();
+            let solvedGrid = solveWithMarilyn(currentGrid, n); 
+            const end = performance.now();
+
+            document.getElementById('timer').innerText = (end - start).toFixed(2);
+
+            if (solvedGrid) {
+                let solvedCount = 0;
+                solvedGrid.forEach((val, i) => {
+                    if (val > 0) {
+                        cells[i].innerText = val;
+                        if (!cells[i].classList.contains('initial')) cells[i].classList.add('solved');
+                        solvedCount++;
+                    }
+                });
+
+                if (solvedCount === N * N) {
+                    logger.innerText = "AC: GROUND STATE REACHED (H=0)";
+                    logger.style.color = "var(--ground)";
+                } else {
+                    logger.innerText = "PARTIAL COLLAPSE: ENTROPY REMAINING";
+                    logger.style.color = "var(--gold)";
+                }
+            } else {
+                logger.innerText = "STABILITY FAILURE: HAMILTONIAN COLLISION";
+                logger.style.color = "var(--friction)";
+            }
+        }
+
+        function verifyGrounding() {
+            let rows = Array.from({length: N}, () => new Set()), cols = Array.from({length: N}, () => new Set()), blocks = Array.from({length: N}, () => new Set());
+            let error = false;
+            cells.forEach((cell, i) => {
+                cell.classList.remove('friction');
+                let val = cell.innerText;
+                if (!val) return;
+                let r = Math.floor(i / N), c = i % N, b = Math.floor(r/n)*n + Math.floor(c/n);
+                if (rows[r].has(val) || cols[c].has(val) || blocks[b].has(val)) { cell.classList.add('friction'); error = true; }
+                rows[r].add(val); cols[c].add(val); blocks[b].add(val);
+            });
+            document.getElementById('status').innerText = error ? "GHOSTS DETECTED" : "GROUND STATE VERIFIED";
+        }
+
+        window.onload = initManifold;
+    </script>
+</body>
+</html>
         function executeWasmFold() {
             const statusLabel = document.getElementById('status');
             statusLabel.innerText = "FOLDING MANIFOLD...";
