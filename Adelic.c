@@ -1,7 +1,58 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <emscripten.h>
+#include <emscripten.h>
 
+// Tier 2.5: Deep Annihilation (Hidden Singles)
+// This kills the "Too Long" lag by forcing residues into their only possible homes.
+int annihilate_noise() {
+    int grounded = 0;
+    for (int v = 1; v <= N; v++) {
+        uint64_t v_bit = (1ULL << (v - 1));
+        for (int r = 0; r < N; r++) {
+            int count = 0, last_c = -1;
+            for (int c = 0; c < N; c++) {
+                if (manifold[r * N + c] == 0) {
+                    if (get_sieve(r, c) & v_bit) { count++; last_c = c; }
+                } else if (manifold[r * N + c] == (uint64_t)v) { count = -1; break; }
+            }
+            if (count == 1) { manifold[r * N + last_c] = (uint64_t)v; grounded = 1; }
+        }
+        // Repeat for Columns
+        for (int c = 0; c < N; c++) {
+            int count = 0, last_r = -1;
+            for (int r = 0; r < N; r++) {
+                if (manifold[r * N + c] == 0) {
+                    if (get_sieve(r, c) & v_bit) { count++; last_r = r; }
+                } else if (manifold[r * N + c] == (uint64_t)v) { count = -1; break; }
+            }
+            if (count == 1) { manifold[last_r * N + c] = (uint64_t)v; grounded = 1; }
+        }
+    }
+    return grounded;
+}
+
+// The Final solve_internal: Loops Annihilation until Crystallization
+int solve_internal() {
+    // 1. Force all Hidden Invariants (The "Snap")
+    while (annihilate_noise());
+
+    // 2. Use the Sentinel to find the most fixed cell
+    int idx = find_sentinel();
+    if (idx == -1) return 1; // AC achieved
+    if (idx == -2) return 0; // RAF Overflow
+
+    // 3. Minimal Superposition Branching
+    uint64_t sieve = get_sieve(idx / N, idx % N);
+    while (sieve) {
+        int val = get_first_bit(sieve);
+        manifold[idx] = (uint64_t)val;
+        if (solve_internal()) return 1;
+        manifold[idx] = 0;
+        sieve &= ~(1ULL << (val - 1));
+    }
+    return 0;
+}
 // Universal Adelic Constants
 #define N_MAX 25 
 uint64_t manifold[N_MAX * N_MAX];
