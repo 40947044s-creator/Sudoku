@@ -2,30 +2,18 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Project NP: Sudoku Bypass</title>
-    </head>
+    <title>Project NP: Sudoku Architecture</title>
+    <style>
+        body { background:#050505; color:#e0e0e0; font-family:'Courier New', monospace; text-align:center; padding-top:100px; }
+        a { display:block; margin: 20px; text-decoration: none; font-size: 1.2rem; transition: 0.2s; }
+        a:hover { text-shadow: 0 0 10px currentColor; }
+    </style>
+</head>
 <body>
-    <h1>Adelic Transition Sudoku Solver</h1>
+    <h1>Project NP: Sudoku Implementations</h1>
     
-    <button onclick="triggerSolve()">Solve with Marilyn Fold (O(N))</button>
-
-    <script src="marilyn_engine.js"></script>
+    <a href="solution.html" style="color:#00d4ff;">> Launch Adelic Transition Engine (O(N) Wasm)</a>
     
-    <script src="sudoku_solver.js"></script>
-    <script>
-        function triggerSolve() {
-            // Assume getGridFromUI() reads your inputs into an 81-length array
-            let currentGrid = getGridFromUI(); 
-            
-            let solvedGrid = solveWithMarilyn(currentGrid);
-            
-            if (solvedGrid) {
-                // Assume updateUIToShowGrid() pushes the array back to the DOM
-                updateUIToShowGrid(solvedGrid); 
-            } else {
-                alert("The Marilyn Fold collapsed. No solution exists.");
-            }
-        }
-    </script>
+    <a href="legacy.html" style="color:#ff3333;">> Launch Legacy Branching Solver (O(N!))</a>
 </body>
 </html>
