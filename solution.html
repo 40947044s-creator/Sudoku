@@ -2,251 +2,157 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Project NP | Hamiltonian Ground State Engine</title>
+    <title>Project NP | Scalable Adelic Transition Engine</title>
     <style>
         :root { --ntnu-red: #b31b1b; --gold: #d4af37; --bg: #050505; --accent: #00d4ff; --friction: #ff3333; --ground: #00ff00; }
-        body { background: var(--bg); color: #e0e0e0; font-family: 'Courier New', monospace; margin: 0; display: flex; flex-direction: column; align-items: center; overflow-x: hidden; }
+        body { background: var(--bg); color: #e0e0e0; font-family: 'Courier New', monospace; margin: 0; display: flex; flex-direction: column; align-items: center; }
         
-        /* Dashboard & Proof Utilities */
-        .dashboard { width: 100%; background: #111; padding: 15px; border-bottom: 2px solid var(--ntnu-red); display: flex; justify-content: space-around; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 10; flex-wrap: wrap; }
+        .dashboard { width: 100%; background: #111; padding: 15px; border-bottom: 2px solid var(--ntnu-red); display: flex; justify-content: space-around; align-items: center; flex-wrap: wrap; gap: 10px; }
         .metrics { font-size: 0.8rem; color: var(--gold); display: flex; gap: 15px; }
         .metric-val { color: var(--ground); font-weight: bold; }
         
-        /* Hamiltonian Wave Visualization */
-        #wave-container { width: 100%; height: 100px; background: #000; position: relative; border-bottom: 1px solid #222; }
+        #wave-container { width: 100%; height: 80px; background: #000; position: relative; border-bottom: 1px solid #222; }
         canvas { display: block; }
 
-        /* The Manifold Grid */
-        #grid-container { display: grid; gap: 2px; background: #333; margin: 20px auto; padding: 8px; border: 4px solid var(--ntnu-red); box-shadow: 0 0 20px rgba(179,27,27,0.3); }
-        .cell { width: 38px; height: 38px; background: #000; display: flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: bold; transition: all 0.05s; border: 1px solid #111; }
-        .cell.scanning { outline: 2px solid var(--accent); z-index: 5; background: #111; }
-        .cell.friction { color: var(--friction); text-shadow: 0 0 8px var(--friction); }
-        .cell.solved { color: var(--ground); animation: crystallize 0.2s ease-out; }
+        #grid-container { display: grid; gap: 1px; background: #333; margin: 20px auto; padding: 5px; border: 2px solid var(--ntnu-red); }
+        .cell { background: #000; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 1px solid #111; }
         .cell.initial { color: var(--gold); background: #0a0a0a; }
+        .cell.solved { color: var(--ground); transition: color 0.2s; }
+        .cell.friction { color: var(--friction); text-shadow: 0 0 5px var(--friction); }
         
-        @keyframes crystallize { from { transform: scale(1.3); opacity: 0.5; } to { transform: scale(1); opacity: 1; } }
-
-        /* Control Panel */
-        .controls { margin-bottom: 10px; }
-        input[type="number"] { background: #000; color: #fff; border: 1px solid #444; padding: 5px; width: 45px; text-align: center; }
-        button { background: var(--ntnu-red); color: white; border: none; padding: 8px 15px; cursor: pointer; font-weight: bold; border-radius: 2px; transition: 0.2s; font-size: 0.75rem; }
-        button:hover { background: #900; box-shadow: 0 0 10px var(--ntnu-red); }
+        button { background: var(--ntnu-red); color: white; border: none; padding: 8px 12px; cursor: pointer; font-weight: bold; font-size: 0.7rem; }
         #solve-btn { background: var(--accent); color: #000; }
-        #verify-btn { background: var(--gold); color: #000; }
     </style>
 </head>
 <body>
 
     <div class="dashboard">
-        <div class="controls">
-            <span>DIM:</span> 
-            <select id="grid-size" onchange="initManifold()" style="background:#000; color:#fff; border:1px solid #444;">
-                <option value="9">9x9 (N=3)</option>
-                <option value="10" selected>10x10 (Hamiltonian)</option>
-            </select>
+        <div>
+            <span>N:</span> 
+            <input type="number" id="n-size" value="10" min="4" max="25" onchange="initManifold()" style="background:#000; color:#fff; width:45px;">
             <button onclick="initManifold()">RESET</button>
         </div>
-        
         <button id="solve-btn" onclick="executeOneStream()">RECONSTRUCT H</button>
-        <button id="verify-btn" onclick="verifyGrounding()">VERIFY AC</button>
-
         <div class="metrics">
             <div>TIME: <span id="timer" class="metric-val">0.00</span>ms</div>
-            <div>REVERSALS: <span id="reversals" class="metric-val">0</span></div>
-            <div>STATUS: <span id="status" style="color:var(--accent)">GROUNDED</span></div>
+            <div>STATUS: <span id="status" style="color:var(--accent)">READY</span></div>
         </div>
     </div>
 
-    <div id="wave-container">
-        <canvas id="waveCanvas"></canvas>
-    </div>
-
+    <div id="wave-container"><canvas id="waveCanvas"></canvas></div>
     <div id="grid-container"></div>
 
-    <script src="marilyn_engine.js"></script>
-
     <script>
-        let N, n_rows, n_cols, cells = [], grid = [];
-        let phaseReversals = 0;
+        let N, bR, bC, cells = [], grid = [];
         const canvas = document.getElementById('waveCanvas');
         const ctx = canvas.getContext('2d');
 
-        function initManifold() {
-            N = parseInt(document.getElementById('grid-size').value);
-            // 10x10 uses 2x5 blocks; 9x9 uses 3x3
-            n_rows = (N === 10) ? 2 : 3;
-            n_cols = (N === 10) ? 5 : 3;
-            
-            const container = document.getElementById('grid-container');
-            container.style.gridTemplateColumns = `repeat(${N}, 40px)`;
-            container.innerHTML = '';
-            cells = [];
-            grid = Array.from({length: N}, () => Array(N).fill(0));
-            phaseReversals = 0;
-            document.getElementById('reversals').innerText = "0";
-
-            // Generate Solvable Base (Rotational Symmetry)
-            for(let r=0; r<N; r++) {
-                for(let c=0; c<N; c++) {
-                    let div = document.createElement('div');
-                    div.className = 'cell';
-                    if ((Math.floor(r / n_rows) + Math.floor(c / n_cols)) % 2 == 0) div.style.background = '#080808';
-                    
-                    // Simple valid seed to ensure Ground State H exists
-                    let val = (Math.floor(r * n_cols + r / n_rows + c) % N) + 1;
-                    if(Math.random() < 0.35) {
-                        div.innerText = val;
-                        div.classList.add('initial');
-                        grid[r][c] = val;
-                    }
-                    container.appendChild(div);
-                    cells.push(div);
-                }
-            }
-            resizeCanvas();
-            document.getElementById('status').innerText = "SENTINEL READY";
-            document.getElementById('status').style.color = "var(--accent)";
+        function findBlockFactors(n) {
+            // Lemma: Blocks should be as "square" as possible
+            let r = Math.floor(Math.sqrt(n));
+            while (n % r !== 0) r--;
+            return [r, n / r]; // returns [rows, cols]
         }
 
-        // --- Hamiltonian Bit-Sieve Architecture ---
+        function initManifold() {
+            N = parseInt(document.getElementById('n-size').value);
+            [bR, bC] = findBlockFactors(N);
+            
+            const container = document.getElementById('grid-container');
+            // Responsive cell sizing
+            let cellSize = Math.min(40, Math.floor(600 / N));
+            container.style.gridTemplateColumns = `repeat(${N}, ${cellSize}px)`;
+            container.innerHTML = '';
+            
+            grid = Array.from({length: N}, () => Array(N).fill(0));
+            cells = [];
+
+            for(let i=0; i<N*N; i++) {
+                let r = Math.floor(i / N), c = i % N;
+                let div = document.createElement('div');
+                div.className = 'cell';
+                div.style.width = cellSize + 'px';
+                div.style.height = cellSize + 'px';
+                div.style.fontSize = (cellSize * 0.5) + 'px';
+                
+                // Checkerboard blocks
+                if ((Math.floor(r / bR) + Math.floor(c / bC)) % 2 == 0) div.style.background = '#080808';
+                
+                // Grounding ~25% of the bitstream
+                if(Math.random() < 0.25) {
+                    let val = (Math.floor(r * bC + r / bR + c) % N) + 1;
+                    div.innerText = val;
+                    div.classList.add('initial');
+                    grid[r][c] = val;
+                }
+                container.appendChild(div);
+                cells.push(div);
+            }
+            resizeCanvas();
+        }
 
         function getHamiltonianMask(idx) {
             const r = Math.floor(idx / N), c = idx % N;
-            const b = Math.floor(r / n_rows) * n_rows + Math.floor(c / n_cols);
+            const b = Math.floor(r / bR) * bR + Math.floor(c / bC);
             let mask = 0;
-            
             for (let j = 0; j < N; j++) {
-                // Row/Col Bit-Sieve
-                if (grid[r][j]) mask |= (1 << (grid[r][j] - 1));
-                if (grid[j][c]) mask |= (1 << (grid[j][c] - 1));
+                if (grid[r][j]) mask |= (1n << BigInt(grid[r][j] - 1));
+                if (grid[j][c]) mask |= (1n << BigInt(grid[j][c] - 1));
                 
-                // Block Bit-Sieve (Tensor Spatial Rule)
-                const boxR = Math.floor(b / n_rows) * n_rows + Math.floor(j / n_cols);
-                const boxC = (b % n_rows) * n_cols + (j % n_cols);
-                if (grid[boxR][boxC]) mask |= (1 << (grid[boxR][boxC] - 1));
+                const boxR = Math.floor(b / bR) * bR + Math.floor(j / bC);
+                const boxC = (b % bR) * bC + (j % bC);
+                if (grid[boxR][boxC]) mask |= (1n << BigInt(grid[boxR][boxC] - 1));
             }
-            // Return ground state candidates (inverse of friction mask)
-            return (~mask) & ((1 << N) - 1);
-        }
-
-        function mapToPriorityStream() {
-            let empty = [];
-            for (let i = 0; i < N * N; i++) {
-                if (!cells[i].innerText) {
-                    let mask = getHamiltonianMask(i);
-                    let count = 0;
-                    for(let b=0; b<N; b++) if(mask & (1 << b)) count++;
-                    empty.push({ idx: i, weight: count });
-                }
-            }
-            // Solve most-constrained (least candidates) first
-            return empty.sort((a, b) => a.weight - b.weight).map(x => x.idx);
+            return (~mask) & ((1n << BigInt(N)) - 1n);
         }
 
         async function executeOneStream() {
             const start = performance.now();
-            const logger = document.getElementById('status');
-            logger.innerText = "TUNING RESONATOR...";
-            
-            const priorityStream = mapToPriorityStream();
-            
+            const empty = [];
+            for(let i=0; i<N*N; i++) if(!grid[Math.floor(i/N)][i%N]) empty.push(i);
+
+            // Entropy Mapping: Highest Friction First
+            empty.sort((a, b) => {
+                const countBits = (m) => m.toString(2).split('1').length - 1;
+                return countBits(getHamiltonianMask(a)) - countBits(getHamiltonianMask(b));
+            });
+
             async function solve(idx) {
-                if (idx === priorityStream.length) return true;
-                
-                const cellIdx = priorityStream[idx];
+                if (idx === empty.length) return true;
+                const cellIdx = empty[idx];
                 const r = Math.floor(cellIdx / N), c = cellIdx % N;
-                let possiblePhases = getHamiltonianMask(cellIdx);
-                
-                cells[cellIdx].classList.add('scanning');
-                updateWave((cellIdx / (N*N)) * canvas.width, false);
+                let mask = getHamiltonianMask(cellIdx);
 
                 for (let v = 1; v <= N; v++) {
-                    if (possiblePhases & (1 << (v - 1))) {
+                    if (mask & (1n << BigInt(v - 1))) {
                         grid[r][c] = v;
                         cells[cellIdx].innerText = v;
                         cells[cellIdx].classList.add('solved');
-
+                        
                         if (await solve(idx + 1)) return true;
 
-                        // Boolean Reverse (DPI)
                         grid[r][c] = 0;
                         cells[cellIdx].innerText = "";
                         cells[cellIdx].classList.remove('solved');
-                        phaseReversals++;
-                        document.getElementById('reversals').innerText = phaseReversals;
-                        updateWave((cellIdx / (N*N)) * canvas.width, true);
                     }
                 }
-                cells[cellIdx].classList.remove('scanning');
                 return false;
             }
 
+            const status = document.getElementById('status');
+            status.innerText = "COLLAPSING...";
             if (await solve(0)) {
-                document.getElementById('timer').innerText = (performance.now() - start).toFixed(2);
-                logger.innerText = "H-STATE ACHIEVED";
-                logger.style.color = "var(--ground)";
+                status.innerText = "AC: H ACHIEVED";
+                status.style.color = "var(--ground)";
             } else {
-                logger.innerText = "RAF OVERFLOW: UNSTABLE";
-                logger.style.color = "var(--friction)";
+                status.innerText = "RAF ERROR";
+                status.style.color = "var(--friction)";
             }
+            document.getElementById('timer').innerText = (performance.now() - start).toFixed(2);
         }
 
-        // --- Visual & Proof Utilities ---
-
-        function updateWave(x, friction) {
-            ctx.clearRect(0,0,canvas.width, canvas.height);
-            ctx.strokeStyle = '#222';
-            ctx.beginPath(); ctx.moveTo(0, 50); ctx.lineTo(canvas.width, 50); ctx.stroke();
-            
-            ctx.beginPath();
-            ctx.strokeStyle = friction ? 'var(--friction)' : 'var(--accent)';
-            ctx.lineWidth = 2;
-            for(let i=0; i<x; i+=5) {
-                let amp = friction ? 20 : 8;
-                let y = 50 + Math.sin(i * 0.1) * amp;
-                ctx.lineTo(i, y);
-            }
-            ctx.stroke();
-            ctx.fillStyle = "#fff"; ctx.fillRect(x, 35, 2, 30);
-        }
-
-        function verifyGrounding() {
-            const logger = document.getElementById('status');
-            let isGrounded = true;
-            for(let i=0; i<N*N; i++) {
-                cells[i].classList.remove('friction');
-                let r = Math.floor(i / N), c = i % N;
-                let val = grid[r][c];
-                if (!val) { isGrounded = false; continue; }
-                
-                // Temporarily clear to check collision
-                grid[r][c] = 0;
-                let mask = getHamiltonianMask(i);
-                if (!(mask & (1 << (val - 1)))) {
-                    cells[i].classList.add('friction');
-                    isGrounded = false;
-                }
-                grid[r][c] = val;
-            }
-            logger.innerText = isGrounded ? "AC: HAMILTONIAN GROUNDED" : "FRICTION DETECTED";
-            logger.style.color = isGrounded ? "var(--ground)" : "var(--friction)";
-        }
-function auditMarilynResidues(ptr, length) {
-    // Accessing the 16-bit Adelic Heap directly
-    const residues = Module.HEAP16.subarray(ptr >> 1, (ptr >> 1) + length);
-    
-    residues.forEach((r, i) => {
-        // Count active bits: if more than 1 bit is set, it's an Inference Cloud
-        const bits = r.toString(2).split('1').length - 1;
-        if (bits > 1) {
-            console.log(`Cell ${i} maintains a Superposition of ${bits} outcomes: ${r.toString(2)}`);
-        }
-    });
-}
-        function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = 100; }
+        function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = 80; }
         window.onload = initManifold;
-        window.onresize = resizeCanvas;
     </script>
 </body>
 </html>
