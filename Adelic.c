@@ -78,3 +78,28 @@ int solve_manifold(int n_val, uint64_t* external_grid) {
     }
     return result;
 }
+// Tier 2.5: Hidden Single Audit
+// Checks if a value MUST go in a cell because it's the only option for that row/col/block
+int hidden_single_audit() {
+    for (int v = 1; v <= N; v++) {
+        uint64_t val_bit = (1ULL << (v - 1));
+        for (int r = 0; r < N; r++) {
+            int count = 0, last_c = -1;
+            for (int c = 0; c < N; c++) {
+                if (manifold[r * N + c] == 0) {
+                    if (get_sieve(r, c) & val_bit) {
+                        count++;
+                        last_c = c;
+                    }
+                } else if (manifold[r * N + c] == v) {
+                    count = -1; break; // Value already grounded in this row
+                }
+            }
+            if (count == 1) { // Hidden Single found
+                manifold[r * N + last_c] = v;
+                return 1; // Signal that a grounding occurred
+            }
+        }
+    }
+    return 0; 
+}
