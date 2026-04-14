@@ -2,81 +2,30 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Project NP | Open Algorithm Proof</title>
-    <style>
-        :root { --ntnu-red: #b31b1b; --gold: #d4af37; --bg: #0a0a0a; --text: #e0e0e0; --accent: #00d4ff; }
-        body { background: var(--bg); color: var(--text); font-family: 'Inter', -apple-system, sans-serif; line-height: 1.6; margin: 0; padding: 0; }
-        header { padding: 80px 20px; text-align: center; border-bottom: 1px solid #333; background: radial-gradient(circle at center, #1a1a1a 0%, #0a0a0a 100%); }
-        h1 { font-size: 3rem; color: var(--ntnu-red); margin: 0; letter-spacing: 2px; }
-        .subtitle { font-style: italic; color: var(--gold); margin-bottom: 20px; }
-        .container { max-width: 900px; margin: 50px auto; padding: 0 30px; }
-        section { margin-bottom: 60px; border-bottom: 1px solid #222; padding-bottom: 40px; }
-        h2 { border-left: 4px solid var(--ntnu-red); padding-left: 15px; color: var(--accent); text-transform: uppercase; font-size: 1.3rem; }
-        .logic-box { background: #111; padding: 25px; border-radius: 8px; border: 1px dashed #444; font-family: 'Courier New', monospace; margin: 20px 0; position: relative; }
-        .logic-box::before { content: "TERMINAL RECONSTRUCTION"; position: absolute; top: -10px; left: 20px; background: var(--bg); padding: 0 10px; font-size: 0.7rem; color: #666; }
-        .highlight { color: var(--gold); font-weight: bold; }
-        .btn { display: inline-block; background: var(--ntnu-red); color: white; padding: 15px 40px; text-decoration: none; border-radius: 4px; font-weight: bold; transition: all 0.3s; margin-top: 30px; }
-        .btn:hover { background: transparent; border: 1px solid var(--ntnu-red); color: var(--ntnu-red); box-shadow: 0 0 20px var(--ntnu-red); }
-        .ref { font-size: 0.8rem; color: #777; margin-top: 10px; }
-    </style>
-</head>
+    <title>Project NP: Sudoku Bypass</title>
+    </head>
 <body>
+    <h1>Adelic Transition Sudoku Solver</h1>
+    
+    <button onclick="triggerSolve()">Solve with Marilyn Fold (O(N))</button>
 
-<header>
-    <h1>PROJECT NP</h1>
-    <div class="subtitle">Resolution of NP-Complete State Manifolds via Adelic Transition Engines</div>
-    <div style="font-size: 0.8rem; opacity: 0.6;">Marilyn Hsiao | NTNU Computer Science | April 2026</div>
-</header>
-
-<div class="container">
-    <section id="abstract">
-        <h2>I. The Proof of Open Algorithm</h2>
-        <p>Traditional computer science views NP-complete problems through the lens of non-deterministic search. <strong>Project NP</strong> refutes this by demonstrating that the transition from an unordered state to a grounded <span class="highlight">Hamiltonian Invariant (H)</span> is a signal-processing task. By mapping the manifold to the <strong>Quaternary Bedrock</strong>, we prove that complexity collapses to linear time.</p>
-    </section>
-
-    <section id="marilyn-fold">
-        <h2>II. The Marilyn Fold Identity</h2>
-        <p>The <strong>Marilyn Fold</strong> is a hardware-level modular reduction technique. It functions as an identity filter that rejects "Certain False" propositions instantly by detecting <span class="highlight">Residual Arithmetic Friction (RAF)</span>, also known as a Ghost Carry.</p>
-        <div class="logic-box">
-            // Consensus Identity Filter <br>
-            R ≡ H (mod M<sub>p</sub>) <br><br>
-            // Ghost Carry Detection <br>
-            If (Residual != 0) { <br>
-            &nbsp;&nbsp;Execute_Boolean_Reverse(); // Destructive Phase Interference <br>
-            &nbsp;&nbsp;Neutralize_Liar_Signal(); <br>
+    <script src="marilyn_engine.js"></script>
+    
+    <script src="sudoku_solver.js"></script>
+    <script>
+        function triggerSolve() {
+            // Assume getGridFromUI() reads your inputs into an 81-length array
+            let currentGrid = getGridFromUI(); 
+            
+            let solvedGrid = solveWithMarilyn(currentGrid);
+            
+            if (solvedGrid) {
+                // Assume updateUIToShowGrid() pushes the array back to the DOM
+                updateUIToShowGrid(solvedGrid); 
+            } else {
+                alert("The Marilyn Fold collapsed. No solution exists.");
             }
-        </div>
-        <div class="ref">Ref: Definition 1 (Projective Bit-Sieving), Hsiao 2026.</div>
-    </section>
-
-    <section id="sentinel">
-        <h2>III. Grandparent Sentinel (G)</h2>
-        <p>To resolve the "Long-Distance Dependency" of Sudoku and other NP problems, we establish the <strong>Grandparent Sentinel (G)</strong> at the Most Significant Bit (MSB). This acts as the absolute anchor of truth. As the engine shifts from the MSB-Origin toward the LSB, the solution crystallizes without the need for branching or backtracking.</p>
-        <div class="logic-box">
-            // 2-Adic Valuation Wave <br>
-            W = Waveeve(G_Sentinel_MSB); <br>
-            For (bit_i in Stream) { <br>
-            &nbsp;&nbsp;Shift_Sentinel(i); <br>
-            &nbsp;&nbsp;Stabilize_Kummer_Adelic(Consensus_CRT); <br>
-            }
-        </div>
-    </section>
-
-    <section id="hardware">
-        <h2>IV. ARM64 Darwin Implementation</h2>
-        <p>The proof is realized on the <strong>Darwin ARM64 architecture</strong>. By utilizing register-level `LSR` (Logical Shift Right) and `AND` operations, the engine achieves <span class="highlight">O(N) Complexity</span>. This bypasses the Algebrization barrier by grounding the verification in physical p-adic overflow properties of hardware registers.</p>
-    </section>
-
-    <div style="text-align: center; margin-top: 50px;">
-        <p>Demonstration: Solving Generalized Sudoku in Polynomial Time.</p>
-        <a href="solution.html" class="btn">ENTER SOLUTION ENGINE</a>
-    </div>
-</div>
-
-<footer style="text-align: center; padding: 40px; color: #444; font-size: 0.8rem; border-top: 1px solid #222;">
-    Open Experiment Portal | Ground State H achieved.
-</footer>
-
+        }
+    </script>
 </body>
 </html>
