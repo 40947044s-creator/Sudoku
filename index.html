@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project NP | Adelic Path Oracle v3.1</title>
+    <style>
+        :root { --ntnu-red: #b31b1b; --gold: #d4af37; --bg: #050505; --accent: #00d4ff; --ground: #00ff00; --friction: #ff3333; }
+        body { background: var(--bg); color: #e0e0e0; font-family: 'Courier New', monospace; margin: 0; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        
+        .header { width: 100%; max-width: 600px; border-bottom: 2px solid var(--ntnu-red); padding-bottom: 10px; text-align: center; }
+        .metrics { font-size: 0.75rem; color: var(--gold); margin-top: 5px; }
+
+        .config { display: flex; gap: 15px; margin: 20px 0; background: #111; padding: 15px; border: 1px solid #333; border-radius: 4px; }
+        .config input { background: #000; color: var(--accent); border: 1px solid #444; padding: 5px; width: 60px; }
+
+        #lattice { display: grid; border: 2px solid var(--accent); background: rgba(0, 212, 255, 0.05); margin-bottom: 20px; box-shadow: 0 0 20px rgba(0, 212, 255, 0.1); }
+        .cell { border: 0.5px solid rgba(0, 212, 255, 0.2); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; color: #fff; cursor: crosshair; }
+        .cell:focus { background: rgba(0, 212, 255, 0.15); outline: none; }
+
+        #console { width: 100%; max-width: 600px; height: 120px; background: #000; border: 1px dashed var(--accent); padding: 10px; font-size: 0.7rem; overflow-y: auto; margin-bottom: 20px; box-sizing: border-box; }
+        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; max-width: 600px; }
+        .btn { background: #111; border: 1px solid var(--accent); color: var(--accent); padding: 15px; cursor: pointer; text-transform: uppercase; font-weight: bold; font-family: inherit; }
+        .btn:active { background: var(--accent); color: #000; }
+        
+        /* Specialized Buttons */
+        .path-btn { border-color: var(--gold); color: var(--gold); }
+        .purge-btn { border-color: var(--friction); color: var(--friction); grid-column: span 2; }
+        .purge-btn:active { background: var(--friction); color: #fff; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <strong>PROJECT NP: ADELIC PATH ORACLE</strong>
+        <div class="metrics">GUARD: 1855-BIT | NOISE: e=0 | STATUS: <span id="sys-status">SINGULARITY</span></div>
+    </div>
+
+    <div class="config">
+        <div>DIM (n): <input type="number" id="subgrid-n" value="3" min="2" max="4"></div>
+        <div>PATH ID: <input type="number" id="path-id" value="0" min="0"></div>
+        <button class="btn" style="padding:5px 10px" onclick="deploy()">RE-DEPLOY</button>
+    </div>
+
+    <div id="lattice"></div>
+
+    <div id="console">> [SENTINEL] System Loaded.</div>
+
+    <div class="controls">
+        <button class="btn path-btn" onclick="nextInference()">Next Inference</button>
+        <button class="btn" onclick="executeFold()">Snap Fold</button>
+        <button class="btn purge-btn" onclick="purgeManifold()">Purge Manifold (Clean Up)</button>
+    </div>
+
+    <script>
+        let N, n, cells = [];
+        const consoleLog = document.getElementById('console');
+        const lattice = document.getElementById('lattice');
+        const sysStatus = document.getElementById('sys-status');
+
+        function log(msg, color = 'var(--accent)') {
+            consoleLog.innerHTML = `<div style="color:${color}">> ${msg}</div>` + consoleLog.innerHTML;
+        }
+
+        function deploy() {
+            n = parseInt(document.getElementById('subgrid-n').value);
+            N = n * n;
+            lattice.innerHTML = '';
+            lattice.style.gridTemplateColumns = `repeat(${N}, 1fr)`;
+            lattice.style.width = `min(90vw, ${N * 45}px)`;
+            lattice.style.height = lattice.style.width;
+            cells = [];
+            for (let i = 0; i < N * N; i++) {
+                const c = document.createElement('div');
+                c.className = 'cell';
+                c.contentEditable = "true";
+                let r = Math.floor(i / N), col = i % N;
+                if ((Math.floor(r / n) + Math.floor(c / n)) % 2 === 0) c.style.background = "rgba(255,255,255,0.03)";
+                lattice.appendChild(c);
+                cells.push(c);
+            }
+            log(`MANIFOLD DEPLOYED: ${N}x${N} Sub-Lattice.`);
+            sysStatus.innerText = "READY";
+            sysStatus.style.color = "var(--accent)";
+        }
+
+        // The Clean Up Button: Deep Reset of Adelic Trace
+        function purgeManifold() {
+            // 1. Clear UI
+            cells.forEach(c => {
+                c.innerText = "";
+                c.style.color = "#fff";
+            });
+            // 2. Reset Path Discriminator
+            document.getElementById('path-id').value = 0;
+            // 3. Flush Console
+            consoleLog.innerHTML = "> [SENTINEL] Manifold Purged. Returning to Singularity Mode 0.";
+            // 4. Update Status
+            sysStatus.innerText = "SINGULARITY";
+            sysStatus.style.color = "var(--gold)";
+            log("State is now 0. Awaiting MSB Injection.");
+        }
+
+        function nextInference() {
+            let pInput = document.getElementById('path-id');
+            pInput.value = parseInt(pInput.value) + 1;
+            executeFold();
+        }
+
+        function executeFold() {
+            const start = performance.now();
+            const pathID = parseInt(document.getElementById('path-id').value);
+            
+            log(`INJECTING SEED [PATH: ${pathID}]...`, 'var(--gold)');
+            sysStatus.innerText = "INFERRING";
+            sysStatus.style.color = "var(--gold)";
+            
+            const board = Array.from({length: N}, (_, r) => cells.slice(r*N, (r+1)*N).map(c => parseInt(c.innerText) || 0));
+            
+            if (solve(board, pathID)) {
+                board.flat().forEach((v, i) => {
+                    if(!cells[i].innerText) {
+                        cells[i].innerText = v;
+                        cells[i].style.color = "var(--accent)"; // Colorize inferred bits
+                    }
+                });
+                const time = (performance.now() - start).toFixed(4);
+                log(`H-STATE RECONSTRUCTED. [SNAP TIME: ${time}ms]`, 'var(--ground)');
+                sysStatus.innerText = "GROUNDED";
+                sysStatus.style.color = "var(--ground)";
+            } else {
+                log("STABILITY FAILURE: LIAR PARADOX.", 'var(--friction)');
+                sysStatus.innerText = "FRICTION";
+                sysStatus.style.color = "var(--friction)";
+            }
+        }
+
+        function solve(board, seed) {
+            for (let r = 0; r < N; r++) {
+                for (let c = 0; c < N; c++) {
+                    if (board[r][c] === 0) {
+                        let nums = Array.from({length: N}, (_, i) => i + 1);
+                        pseudoShuffle(nums, seed + r + c);
+                        for (let nVal of nums) {
+                            if (isSafe(board, r, c, nVal)) {
+                                board[r][c] = nVal;
+                                if (solve(board, seed)) return true;
+                                board[r][c] = 0; 
+                            }
+                        }
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        function isSafe(b, r, c, v) {
+            for (let i = 0; i < N; i++) if (b[r][i] === v || b[i][c] === v) return false;
+            let sr = Math.floor(r/n)*n, sc = Math.floor(c/n)*n;
+            for (let i=0; i<n; i++) for (let j=0; j<n; j++) if (b[sr+i][sc+j] === v) return false;
+            return true;
+        }
+
+        function pseudoShuffle(arr, seed) {
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.abs(Math.sin(seed + i)) * (i + 1) | 0;
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+        }
+
+        deploy();
+    </script>
+</body>
+</html>
