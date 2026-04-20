@@ -1,1 +1,3 @@
 The Oracle WorkflowTo see the full power of the Project NP architecture, follow this sequence:Deploy: Set your $n$ (e.g., 3 for a standard $9 \times 9$) and hit Re-Deploy.Seed (Optional): Enter a few digits if you want to restrict the manifold's degrees of freedom.Snap Fold: Watch the engine perform the initial 2-adic Complex Lift and ground the system at $\Psi = 8.00 - 3.00i$.Next Inference: Click this to "walk right" across the bit-horizon and see how different Path IDs result in different H-state reconstructions.Purge: When the "Friction" becomes too high or you want to scale to $N=16$ or $N=25$, hit Purge to reset the manifold to a noiseless vacuum.
+
+https://40947044s-creator.github.io/Sudoku/
