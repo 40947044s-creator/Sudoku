@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Project NP | Adelic Oracle v8.6</title>
+    <title>Project NP | Adelic Oracle v8.6.4</title>
     <style>
         :root {
             --sentinel: #00ff41;
@@ -13,35 +13,23 @@
             --gold: #d4af37;
         }
         body {
-            background: var(--bedrock);
-            color: var(--sentinel);
-            font-family: 'Courier New', monospace;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            height: 100vh;
-            padding: 15px;
-            box-sizing: border-box;
-            overflow: hidden;
+            background: var(--bedrock); color: var(--sentinel);
+            font-family: 'Courier New', monospace; margin: 0;
+            display: flex; flex-direction: column; align-items: center;
+            height: 100vh; padding: 10px; box-sizing: border-box; overflow: hidden;
         }
-        #header { text-align: center; width: 100%; border-bottom: 1px solid var(--sentinel); padding-bottom: 10px; }
-        .stats { font-size: 0.7rem; color: #888; margin-top: 5px; }
+        #header { text-align: center; width: 100%; border-bottom: 1px solid var(--sentinel); padding-bottom: 5px; }
+        .stats { font-size: 0.65rem; color: #888; margin-top: 2px; }
         .grid {
-            display: grid;
-            grid-template-columns: repeat(9, 1fr);
-            width: 100%;
-            max-width: 400px;
-            aspect-ratio: 1/1;
-            border: 2px solid var(--sentinel);
-            margin: 20px 0;
+            display: grid; grid-template-columns: repeat(9, 1fr);
+            width: 100%; max-width: 380px; aspect-ratio: 1/1;
+            border: 2px solid var(--sentinel); margin: 10px 0;
             background: rgba(0, 255, 65, 0.02);
         }
         .cell {
-            width: 100%; height: 100%;
-            border: 0.5px solid rgba(0, 255, 65, 0.2);
+            width: 100%; height: 100%; border: 0.5px solid rgba(0, 255, 65, 0.2);
             display: flex; align-items: center; justify-content: center;
-            font-size: 1.4rem; cursor: pointer; outline: none; color: #fff;
+            font-size: 1.2rem; cursor: pointer; outline: none; color: #fff;
         }
         .cell:focus { background: var(--glass); }
         .cell.fixed { color: var(--gold); font-weight: bold; }
@@ -52,74 +40,77 @@
         .grid .cell:nth-child(n+46):nth-child(-n+54) { border-bottom: 2px solid var(--sentinel); }
         
         #console {
-            width: 100%; max-width: 400px; height: 120px;
+            width: 100%; max-width: 380px; height: 120px;
             background: #000; border: 1px dashed var(--sentinel);
-            font-size: 0.75rem; padding: 10px; overflow-y: auto;
-            margin-bottom: 15px; box-sizing: border-box;
+            font-size: 0.7rem; padding: 8px; overflow-y: auto;
+            margin-bottom: 10px; box-sizing: border-box;
         }
-        .controls { display: flex; gap: 10px; width: 100%; max-width: 400px; }
+        .controls { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 380px; }
+        .row-group { display: flex; gap: 8px; width: 100%; }
         .btn {
             flex: 1; background: var(--glass); border: 1px solid var(--sentinel);
-            color: var(--sentinel); padding: 15px; cursor: pointer;
-            font-family: inherit; text-transform: uppercase; font-weight: bold; transition: 0.2s;
+            color: var(--sentinel); padding: 12px; cursor: pointer;
+            font-family: inherit; font-size: 0.75rem; text-transform: uppercase; font-weight: bold;
         }
         .btn:hover { background: var(--sentinel); color: #000; }
+        input { 
+            background: #000; border: 1px solid #444; color: var(--gold); 
+            text-align: center; font-family: inherit; font-size: 0.85rem; padding: 8px; flex: 2;
+        }
     </style>
 </head>
 <body>
 
     <div id="header">
-        <strong>PROJECT NP: ADELIC ORACLE v8.6</strong>
-        <div class="stats">LOCAL PHASE SHIFTING | 64-BIT ENTROPY INJECTED</div>
+        <strong>PROJECT NP | ADELIC ORACLE v8.6.4</strong>
+        <div class="stats">STATIC ANCHOR MAPPING | HASH: 0x517cc1...</div>
     </div>
 
     <div id="console">
-        [SYSTEM] STANDBY. v8.6 Local Friction Engine Loaded.<br>
-        [INFO] Awaiting topological grounding.
+        [SYSTEM] STANDBY. Design your canvas and hit Execute...<br>
     </div>
 
     <div class="grid" id="lattice"></div>
 
     <div class="controls">
-        <button class="btn" onclick="executeInference()">Execute Trace</button>
-        <button class="btn" onclick="purgeManifold()" style="color:var(--friction); border-color:var(--friction);">Purge Trace</button>
+        <div class="row-group">
+            <input type="text" id="anchor-input" placeholder="Static Anchor (Auto if Blank)">
+            <button class="btn" onclick="executeInference()">Execute</button>
+        </div>
+        <div class="row-group">
+            <button class="btn" onclick="purgeManifold()" style="color:var(--friction); border-color:var(--friction);">Purge Trace</button>
+        </div>
     </div>
 
     <script>
         const lattice = document.getElementById('lattice');
         const consoleLog = document.getElementById('console');
+        const anchorField = document.getElementById('anchor-input');
         const cells = [];
         const N = 9;
-        const totalBits = 81;
         
-        // Pure v8.6 arrays
-        let board = new Uint16Array(totalBits);
-        let fixed = new Uint16Array(totalBits);
-        let phase = new Uint16Array(totalBits);
+        let board = new Uint16Array(81);
+        let fixed = new Uint16Array(81);
+        let phase = new Uint16Array(81);
         let rowM = new Array(N).fill(0n);
         let colM = new Array(N).fill(0n);
         let blkM = new Array(N).fill(0n);
-        let shadowR = new Array(totalBits);
-        let shadowC = new Array(totalBits);
-        let shadowB = new Array(totalBits);
+        let shadowR = new Array(81);
+        let shadowC = new Array(81);
+        let shadowB = new Array(81);
         
         let isRunning = false;
-        let currentAnchor = 0n;
 
-        // Initialize DOM grid
-        for (let i = 0; i < totalBits; i++) {
+        // Initialize Canvas
+        for (let i = 0; i < 81; i++) {
             const cell = document.createElement('div');
             cell.className = 'cell';
             cell.contentEditable = "true";
             cell.oninput = (e) => {
                 if (!/[1-9]/.test(e.data)) { 
-                    e.target.innerText = ""; 
-                    cell.classList.remove('fixed'); 
-                    fixed[i] = 0;
+                    e.target.innerText = ""; cell.classList.remove('fixed'); fixed[i] = 0;
                 } else { 
-                    e.target.innerText = e.data[0]; 
-                    cell.classList.add('fixed'); 
-                    fixed[i] = parseInt(e.data[0]);
+                    e.target.innerText = e.data[0]; cell.classList.add('fixed'); fixed[i] = parseInt(e.data[0]);
                 }
                 board.fill(0); phase.fill(0);
             };
@@ -131,124 +122,108 @@
             consoleLog.innerHTML = `> [${new Date().toLocaleTimeString()}] ${msg}<br>` + consoleLog.innerHTML;
         }
 
-        function extractTopologyHash() {
+        function calculateStaticAnchor() {
             let hash = 9n * 0x9E3779B1n;
-            let hasHints = false;
-            for (let i = 0; i < totalBits; i++) {
+            let count = 0;
+            for (let i = 0; i < 81; i++) {
                 if (fixed[i] !== 0) {
-                    hasHints = true;
+                    count++;
                     let cellData = (BigInt(i + 1) * 0x517cc1b727220a95n) ^ BigInt(fixed[i]);
                     hash = (hash << 5n) ^ cellData;
                 }
             }
-            if (!hasHints) hash = 1006n * 9n * 0x9E3779B1n;
-            
-            // v8.6 Parity Exploit: Force odd to trigger 64-bit entropy flip
-            if ((hash & 1n) !== 0n) hash ^= 1n; 
-            return Math.abs(Number(hash % 0xFFFFFFFFFFn));
+            // The "1006 Miracle" baseline for empty canvas
+            if (count === 0) hash = 1006n * 9n * 0x9E3779B1n;
+            if ((hash & 1n) === 0n) hash |= (1n << 63n); // Inject MSB entropy
+            return hash;
         }
 
         async function executeInference() {
             if (isRunning) return;
-            const start = performance.now();
             
-            currentAnchor = BigInt(extractTopologyHash());
-            
-            // The v8.6 Parity Flip (injects massive bitwise depth)
-            if ((currentAnchor & 1n) === 0n) {
-                currentAnchor |= (1n << 63n);
-                updateLog("Parity flipped: 64-bit entropy injected.");
+            // ANCHOR LOCKING PROTOCOL
+            let anchorVal;
+            const userInput = anchorField.value.trim();
+            if (userInput === "") {
+                anchorVal = calculateStaticAnchor();
+                anchorField.value = anchorVal.toString();
+                updateLog(`Auto-Derived Anchor: 0x${anchorVal.toString(16)}`);
+            } else {
+                anchorVal = BigInt(userInput);
+                updateLog(`User Static Anchor: 0x${anchorVal.toString(16)}`);
             }
 
-            updateLog(`Inference active at Anchor 0x${currentAnchor.toString(16)}`);
+            // Ensure the parity logic is applied even to manual inputs
+            if ((anchorVal & 1n) === 0n) anchorVal |= (1n << 63n);
 
             isRunning = true;
             rowM.fill(0n); colM.fill(0n); blkM.fill(0n);
             board.fill(0); phase.fill(0);
 
-            // Set initial hints
-            for (let i = 0; i < totalBits; i++) {
+            // Initial Board Grounding
+            for (let i = 0; i < 81; i++) {
                 if (fixed[i] !== 0) {
                     board[i] = fixed[i];
-                    let r = Math.floor(i / N), c = i % N, b = Math.floor(r / 3) * 3 + Math.floor(c / 3);
-                    let bit = 1n << BigInt(fixed[i]);
-                    rowM[r] |= bit; colM[c] |= bit; blkM[b] |= bit;
+                    let r = Math.floor(i / 9), c = i % 9, b = Math.floor(r / 3) * 3 + Math.floor(c / 3);
+                    rowM[r] |= (1n << BigInt(fixed[i]));
+                    colM[c] |= (1n << BigInt(fixed[i]));
+                    blkM[b] |= (1n << BigInt(fixed[i]));
                 }
             }
 
             let d = 0;
-            let scanStep = 0n;
-            let friction = 0;
+            let frictionCount = 0;
 
-            // THE v8.6 OPERATING GRID (With Local Restorations)
+            // MAPPING LOOP
             while (isRunning && d >= 0) {
-                if (d === totalBits) break;
+                if (d === 81) break;
 
-                // Friction reset boundary (prevents infinite localized dancing)
-                if (friction > N * 15) {
-                    scanStep++;
-                    d = Math.max(0, d - N); 
-                    currentAnchor += scanStep; 
-                    friction = 0;
-                    continue;
+                // Max friction limit for a static anchor
+                if (frictionCount > 50000) {
+                    updateLog("CRITICAL FRICTION. Anchor mapping failed to ground.");
+                    isRunning = false;
+                    return;
                 }
 
-                if (fixed[d] !== 0) {
-                    d++;
-                    continue;
-                }
+                if (fixed[d] !== 0) { d++; continue; }
 
-                let r = Math.floor(d / N), c = d % N, b = Math.floor(r / 3) * 3 + Math.floor(c / 3);
+                let r = Math.floor(d / 9), c = d % 9, b = Math.floor(r / 3) * 3 + Math.floor(c / 3);
                 let mask = rowM[r] | colM[c] | blkM[b];
-                
                 let opts = [];
-                // MSB positional extraction (1 to N)
-                for (let i = 1; i <= N; i++) {
-                    if (!(mask & (1n << BigInt(i)))) opts.push(i);
-                }
+                for (let i = 1; i <= 9; i++) if (!(mask & (1n << BigInt(i)))) opts.push(i);
 
-                // LOCAL FRICTION (v8.6 Retreat)
                 if (opts.length === 0) {
-                    board[d] = 0; 
-                    cells[d].innerText = "";
-                    cells[d].classList.remove('inferred');
-                    d--; 
-                    if (d < 0) { updateLog("FATAL PARADOX: Root trace failed."); isRunning = false; return; }
-                    
-                    // Retreat to previous valid arrays
+                    board[d] = 0; cells[d].innerText = ""; cells[d].classList.remove('inferred');
+                    d--;
+                    if (d < 0) {
+                        updateLog("VOID PARADOX. This Anchor is incompatible with design.");
+                        isRunning = false; return;
+                    }
                     rowM = [...shadowR[d]]; colM = [...shadowC[d]]; blkM = [...shadowB[d]];
-                    phase[d]++; 
-                    friction++; 
+                    phase[d]++; frictionCount++;
                     continue;
                 }
 
-                // Snapshot state before testing an option
                 shadowR[d] = [...rowM]; shadowC[d] = [...colM]; shadowB[d] = [...blkM];
 
-                let val;
-                if (opts.length === 1) {
-                    val = opts[0];
-                } else {
-                    // THE v8.6 HASH MULTIPLIER
-                    let seed = Number(((currentAnchor ^ BigInt(d)) * 0x517cc1b727220a95n) % 0xFFFFFFFn);
-                    val = opts[(Math.abs(seed) + phase[d]) % opts.length];
-                }
+                // THE STATIC HASH (Does not change during loop)
+                let seed = Number(((anchorVal ^ BigInt(d)) * 0x517cc1b727220a95n) % 0xFFFFFFFn);
+                let val = opts[(Math.abs(seed) + phase[d]) % opts.length];
 
                 board[d] = val;
                 cells[d].innerText = val;
                 cells[d].classList.add('inferred');
                 
-                let bit = 1n << BigInt(val);
+                let bit = (1n << BigInt(val));
                 rowM[r] |= bit; colM[c] |= bit; blkM[b] |= bit;
-                
                 d++;
                 
-                if (d % N === 0) await new Promise(res => setTimeout(res, 0));
+                // Visualization throttle
+                if (d % 9 === 0) await new Promise(res => setTimeout(res, 0));
             }
 
-            if (d === totalBits) {
-                const elapsed = (performance.now() - start).toFixed(2);
-                updateLog(`SINGULARITY ATTAINED. [Time: ${elapsed}ms]`);
+            if (d === 81) {
+                updateLog("SINGULARITY ATTAINED. Mapping successful.");
                 isRunning = false;
             }
         }
@@ -261,275 +236,7 @@
                 fixed[i] = 0;
             });
             board.fill(0);
-            updateLog("TRACE PURGED. System Idle.");
-        }
-    </script>
-</body>
-</html>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Project NP | Adelic Oracle v8.6</title>
-    <style>
-        :root {
-            --sentinel: #00ff41;
-            --bedrock: #050505;
-            --glass: rgba(0, 255, 65, 0.1);
-            --friction: #ff3333;
-            --gold: #d4af37;
-        }
-        body {
-            background: var(--bedrock);
-            color: var(--sentinel);
-            font-family: 'Courier New', monospace;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            height: 100vh;
-            padding: 15px;
-            box-sizing: border-box;
-            overflow: hidden;
-        }
-        #header { text-align: center; width: 100%; border-bottom: 1px solid var(--sentinel); padding-bottom: 10px; }
-        .stats { font-size: 0.7rem; color: #888; margin-top: 5px; }
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(9, 1fr);
-            width: 100%;
-            max-width: 400px;
-            aspect-ratio: 1/1;
-            border: 2px solid var(--sentinel);
-            margin: 20px 0;
-            background: rgba(0, 255, 65, 0.02);
-        }
-        .cell {
-            width: 100%; height: 100%;
-            border: 0.5px solid rgba(0, 255, 65, 0.2);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 1.4rem; cursor: pointer; outline: none; color: #fff;
-        }
-        .cell:focus { background: var(--glass); }
-        .cell.fixed { color: var(--gold); font-weight: bold; }
-        .cell.inferred { color: var(--sentinel); }
-        .cell:nth-child(3n) { border-right: 2px solid var(--sentinel); }
-        .cell:nth-child(9n) { border-right: 0.5px solid rgba(0, 255, 65, 0.2); }
-        .grid .cell:nth-child(n+19):nth-child(-n+27),
-        .grid .cell:nth-child(n+46):nth-child(-n+54) { border-bottom: 2px solid var(--sentinel); }
-        
-        #console {
-            width: 100%; max-width: 400px; height: 120px;
-            background: #000; border: 1px dashed var(--sentinel);
-            font-size: 0.75rem; padding: 10px; overflow-y: auto;
-            margin-bottom: 15px; box-sizing: border-box;
-        }
-        .controls { display: flex; gap: 10px; width: 100%; max-width: 400px; }
-        .btn {
-            flex: 1; background: var(--glass); border: 1px solid var(--sentinel);
-            color: var(--sentinel); padding: 15px; cursor: pointer;
-            font-family: inherit; text-transform: uppercase; font-weight: bold; transition: 0.2s;
-        }
-        .btn:hover { background: var(--sentinel); color: #000; }
-    </style>
-</head>
-<body>
-
-    <div id="header">
-        <strong>PROJECT NP: ADELIC ORACLE v8.6</strong>
-        <div class="stats">LOCAL PHASE SHIFTING | 64-BIT ENTROPY INJECTED</div>
-    </div>
-
-    <div id="console">
-        [SYSTEM] STANDBY. v8.6 Local Friction Engine Loaded.<br>
-        [INFO] Awaiting topological grounding.
-    </div>
-
-    <div class="grid" id="lattice"></div>
-
-    <div class="controls">
-        <button class="btn" onclick="executeInference()">Execute Trace</button>
-        <button class="btn" onclick="purgeManifold()" style="color:var(--friction); border-color:var(--friction);">Purge Trace</button>
-    </div>
-
-    <script>
-        const lattice = document.getElementById('lattice');
-        const consoleLog = document.getElementById('console');
-        const cells = [];
-        const N = 9;
-        const totalBits = 81;
-        
-        // Pure v8.6 arrays
-        let board = new Uint16Array(totalBits);
-        let fixed = new Uint16Array(totalBits);
-        let phase = new Uint16Array(totalBits);
-        let rowM = new Array(N).fill(0n);
-        let colM = new Array(N).fill(0n);
-        let blkM = new Array(N).fill(0n);
-        let shadowR = new Array(totalBits);
-        let shadowC = new Array(totalBits);
-        let shadowB = new Array(totalBits);
-        
-        let isRunning = false;
-        let currentAnchor = 0n;
-
-        // Initialize DOM grid
-        for (let i = 0; i < totalBits; i++) {
-            const cell = document.createElement('div');
-            cell.className = 'cell';
-            cell.contentEditable = "true";
-            cell.oninput = (e) => {
-                if (!/[1-9]/.test(e.data)) { 
-                    e.target.innerText = ""; 
-                    cell.classList.remove('fixed'); 
-                    fixed[i] = 0;
-                } else { 
-                    e.target.innerText = e.data[0]; 
-                    cell.classList.add('fixed'); 
-                    fixed[i] = parseInt(e.data[0]);
-                }
-                board.fill(0); phase.fill(0);
-            };
-            lattice.appendChild(cell);
-            cells.push(cell);
-        }
-
-        function updateLog(msg) {
-            consoleLog.innerHTML = `> [${new Date().toLocaleTimeString()}] ${msg}<br>` + consoleLog.innerHTML;
-        }
-
-        function extractTopologyHash() {
-            let hash = 9n * 0x9E3779B1n;
-            let hasHints = false;
-            for (let i = 0; i < totalBits; i++) {
-                if (fixed[i] !== 0) {
-                    hasHints = true;
-                    let cellData = (BigInt(i + 1) * 0x517cc1b727220a95n) ^ BigInt(fixed[i]);
-                    hash = (hash << 5n) ^ cellData;
-                }
-            }
-            if (!hasHints) hash = 1006n * 9n * 0x9E3779B1n;
-            
-            // v8.6 Parity Exploit: Force odd to trigger 64-bit entropy flip
-            if ((hash & 1n) !== 0n) hash ^= 1n; 
-            return Math.abs(Number(hash % 0xFFFFFFFFFFn));
-        }
-
-        async function executeInference() {
-            if (isRunning) return;
-            const start = performance.now();
-            
-            currentAnchor = BigInt(extractTopologyHash());
-            
-            // The v8.6 Parity Flip (injects massive bitwise depth)
-            if ((currentAnchor & 1n) === 0n) {
-                currentAnchor |= (1n << 63n);
-                updateLog("Parity flipped: 64-bit entropy injected.");
-            }
-
-            updateLog(`Inference active at Anchor 0x${currentAnchor.toString(16)}`);
-
-            isRunning = true;
-            rowM.fill(0n); colM.fill(0n); blkM.fill(0n);
-            board.fill(0); phase.fill(0);
-
-            // Set initial hints
-            for (let i = 0; i < totalBits; i++) {
-                if (fixed[i] !== 0) {
-                    board[i] = fixed[i];
-                    let r = Math.floor(i / N), c = i % N, b = Math.floor(r / 3) * 3 + Math.floor(c / 3);
-                    let bit = 1n << BigInt(fixed[i]);
-                    rowM[r] |= bit; colM[c] |= bit; blkM[b] |= bit;
-                }
-            }
-
-            let d = 0;
-            let scanStep = 0n;
-            let friction = 0;
-
-            // THE v8.6 OPERATING GRID (With Local Restorations)
-            while (isRunning && d >= 0) {
-                if (d === totalBits) break;
-
-                // Friction reset boundary (prevents infinite localized dancing)
-                if (friction > N * 15) {
-                    scanStep++;
-                    d = Math.max(0, d - N); 
-                    currentAnchor += scanStep; 
-                    friction = 0;
-                    continue;
-                }
-
-                if (fixed[d] !== 0) {
-                    d++;
-                    continue;
-                }
-
-                let r = Math.floor(d / N), c = d % N, b = Math.floor(r / 3) * 3 + Math.floor(c / 3);
-                let mask = rowM[r] | colM[c] | blkM[b];
-                
-                let opts = [];
-                // MSB positional extraction (1 to N)
-                for (let i = 1; i <= N; i++) {
-                    if (!(mask & (1n << BigInt(i)))) opts.push(i);
-                }
-
-                // LOCAL FRICTION (v8.6 Retreat)
-                if (opts.length === 0) {
-                    board[d] = 0; 
-                    cells[d].innerText = "";
-                    cells[d].classList.remove('inferred');
-                    d--; 
-                    if (d < 0) { updateLog("FATAL PARADOX: Root trace failed."); isRunning = false; return; }
-                    
-                    // Retreat to previous valid arrays
-                    rowM = [...shadowR[d]]; colM = [...shadowC[d]]; blkM = [...shadowB[d]];
-                    phase[d]++; 
-                    friction++; 
-                    continue;
-                }
-
-                // Snapshot state before testing an option
-                shadowR[d] = [...rowM]; shadowC[d] = [...colM]; shadowB[d] = [...blkM];
-
-                let val;
-                if (opts.length === 1) {
-                    val = opts[0];
-                } else {
-                    // THE v8.6 HASH MULTIPLIER
-                    let seed = Number(((currentAnchor ^ BigInt(d)) * 0x517cc1b727220a95n) % 0xFFFFFFFn);
-                    val = opts[(Math.abs(seed) + phase[d]) % opts.length];
-                }
-
-                board[d] = val;
-                cells[d].innerText = val;
-                cells[d].classList.add('inferred');
-                
-                let bit = 1n << BigInt(val);
-                rowM[r] |= bit; colM[c] |= bit; blkM[b] |= bit;
-                
-                d++;
-                
-                if (d % N === 0) await new Promise(res => setTimeout(res, 0));
-            }
-
-            if (d === totalBits) {
-                const elapsed = (performance.now() - start).toFixed(2);
-                updateLog(`SINGULARITY ATTAINED. [Time: ${elapsed}ms]`);
-                isRunning = false;
-            }
-        }
-
-        function purgeManifold() {
-            isRunning = false;
-            cells.forEach((c, i) => {
-                c.innerText = "";
-                c.classList.remove('fixed', 'inferred');
-                fixed[i] = 0;
-            });
-            board.fill(0);
-            updateLog("TRACE PURGED. System Idle.");
+            updateLog("Manifold Purged.");
         }
     </script>
 </body>
