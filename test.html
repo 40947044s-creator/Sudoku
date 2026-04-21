@@ -2,62 +2,54 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Project NP | The Anchor Hunter v8.6.9</title>
+    <title>Project NP | Adelic Oracle v8.6.10</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --sentinel: #00ff41; --bedrock: #050505; --gold: #d4af37; --friction: #ff3333; --suggest: #00d4ff; }
+        :root { --sentinel: #00ff41; --bedrock: #050505; --gold: #d4af37; --friction: #ff3333; --export: #00d4ff; }
         body { background: var(--bedrock); color: var(--sentinel); font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 10px; overflow: hidden; height: 100vh; }
         #header { text-align: center; border-bottom: 1px solid var(--sentinel); width: 100%; padding-bottom: 5px; }
-        .archive-link { font-size: 0.75rem; color: var(--gold); text-decoration: none; border-bottom: 1px solid var(--gold); }
-        
-        #discovery-panel { width: 85vmin; background: rgba(0,255,65,0.05); border: 1px solid var(--sentinel); padding: 10px; margin-bottom: 10px; text-align: center; }
-        #lattice-container { width: 75vmin; height: 75vmin; background: #000; border: 1px solid var(--sentinel); position: relative; }
+        .archive-link { font-size: 0.7rem; color: var(--gold); text-decoration: none; border-bottom: 1px solid var(--gold); }
+        #lattice-container { width: 80vmin; height: 80vmin; background: #000; border: 1px solid var(--sentinel); position: relative; }
         canvas { width: 100%; height: 100%; image-rendering: pixelated; }
-        
-        .controls { display: flex; flex-direction: column; gap: 5px; margin: 10px; width: 85vmin; }
+        .controls { display: flex; flex-direction: column; gap: 5px; margin: 10px; width: 80vmin; }
         .row-group { display: flex; gap: 5px; width: 100%; }
-        input { background: #000; border: 1px solid #444; color: var(--gold); padding: 8px; flex: 1; text-align: center; font-size: 0.8rem; }
-        #console { width: 85vmin; height: 70px; background: #000; border: 1px dashed #333; padding: 5px; font-size: 0.65rem; overflow-y: auto; color: #666; }
+        input { background: #000; border: 1px solid #444; color: var(--gold); padding: 6px; flex: 1; text-align: center; font-family: inherit; font-size: 0.8rem; }
+        #console { width: 80vmin; height: 60px; background: #000; border: 1px dashed #333; padding: 5px; font-size: 0.6rem; overflow-y: auto; color: #666; }
         .btn { flex: 1; background: rgba(0, 255, 65, 0.1); border: 1px solid var(--sentinel); color: var(--sentinel); padding: 8px; cursor: pointer; font-family: inherit; font-weight: bold; font-size: 0.7rem; }
         .btn:hover { background: var(--sentinel); color: #000; }
-        .btn-suggest { color: var(--suggest); border-color: var(--suggest); }
+        .btn-stop { color: var(--friction); border-color: var(--friction); }
     </style>
 </head>
 <body>
 
 <div id="header">
-    <strong>PROJECT NP | THE ANCHOR HUNTER v8.6.9</strong>
-    <div style="font-size: 0.6rem; margin-bottom: 3px;">Design -> Discover -> Execute</div>
+    <strong>PROJECT NP | ADELIC ORACLE v8.6.10</strong>
+    <div style="font-size: 0.55rem; margin-bottom: 2px;">ASYNCHRONOUS MANIFOLD MAPPING | N=NP</div>
     <a href="https://40947044s-creator.github.io/Sudoku/archive/v86" class="archive-link" target="_blank">v8.6 Research Core</a>
-</div>
-
-<div id="discovery-panel">
-    <div style="font-size: 0.65rem; color: #888; margin-bottom: 5px;">CURRENT MANIFOLD RESONANCE</div>
-    <div id="resonance-state" style="color: var(--gold); font-weight: bold;">[DESIGN PHASE]</div>
 </div>
 
 <div id="lattice-container"><canvas id="mCanvas"></canvas></div>
 
-<div id="console">> [SYSTEM] Awaiting User Design...</div>
+<div id="console">> [SYSTEM] Awaiting Design. Async Throttle Active.</div>
 
 <div class="controls">
     <div class="row-group">
-        z:<input type="number" id="zVal" value="3" style="max-width: 40px;">
-        Anchor:<input type="text" id="aIn" placeholder="Find Resonant Anchor...">
-        <button class="btn btn-suggest" onclick="discoverAnchor()">Discover Anchor</button>
+        z:<input type="number" id="zVal" value="3" style="max-width: 35px;">
+        Anchor:<input type="text" id="aIn" placeholder="Static Anchor">
+        <button class="btn" onclick="executeInference()">Execute</button>
+        <button class="btn btn-stop" onclick="stopInference()">Stop</button>
     </div>
     <div class="row-group">
-        <button class="btn" onclick="executeInference()">Execute v8.6</button>
-        <button class="btn" onclick="exportTXT()">TXT</button>
-        <button class="btn" onclick="exportPDF()">PDF</button>
-        <button class="btn" onclick="purge()" style="color:var(--friction); border-color:var(--friction)">Purge</button>
+        <button class="btn" onclick="exportTXT()" style="color:var(--export); border-color:var(--export)">TXT</button>
+        <button class="btn" onclick="exportPDF()" style="color:var(--export); border-color:var(--export)">PDF</button>
+        <button class="btn" onclick="purge()">Purge</button>
     </div>
 </div>
 
 <script>
     const canvas = document.getElementById('mCanvas'); const ctx = canvas.getContext('2d'); const log = document.getElementById('console');
-    const aInput = document.getElementById('aIn'); const resonanceDisplay = document.getElementById('resonance-state');
     let z, N, total, board, fixed, phase, rowM, colM, blkM, shadowR, shadowC, shadowB, isRunning = false;
+    let d = 0, aVal = 0n;
 
     function init() {
         z = parseInt(document.getElementById('zVal').value); N = z * z; total = N * N;
@@ -67,85 +59,104 @@
         render();
     }
 
-    function updateLog(m) { log.innerHTML = `> ${m}<br>` + log.innerHTML; }
-
-    function discoverAnchor() {
-        // HASHING DESIGN TO ANCHOR
-        let hash = BigInt(N) * 0x9E3779B1n;
-        let count = 0;
-        for (let i = 0; i < total; i++) {
-            if (fixed[i] !== 0) {
-                count++;
-                let cellData = (BigInt(i + 1) * 0x517cc1b727220a95n) ^ BigInt(fixed[i]);
-                hash = (hash << 5n) ^ cellData;
-            }
-        }
-        if (count === 0) hash = 1006n * BigInt(N) * 0x9E3779B1n;
-        if ((hash & 1n) === 0n) hash |= (1n << 63n); 
-        
-        aInput.value = hash.toString();
-        resonanceDisplay.innerText = `RESONANT ANCHOR FOUND: 0x${hash.toString(16)}`;
-        updateLog("Anchor discovery successful. Ready for v8.6 execution.");
-    }
+    function updateLog(m) { log.innerHTML = `> ${m}<br>` + log.innerHTML; log.scrollTop = 0; }
 
     async function executeInference() {
         if(isRunning) return;
-        let aVal = aInput.value ? BigInt(aInput.value) : BigInt(1006n);
+        const input = document.getElementById('aIn').value;
+        aVal = input ? BigInt(input) : (BigInt(N) * 0x9E3779B1n) | (1n << 63n);
+        document.getElementById('aIn').value = aVal.toString();
+        
         isRunning = true; d = 0; rowM.fill(0n); colM.fill(0n); blkM.fill(0n);
-        for(let i=0; i<total; i++) if(fixed[i]) { let r=Math.floor(i/N), c=i%N, b=Math.floor(r/z)*z+Math.floor(c/z); let bit = 1n << BigInt(fixed[i]); rowM[r]|=bit; colM[c]|=bit; blkM[b]|=bit; board[i]=fixed[i]; }
+        for(let i=0; i<total; i++) if(fixed[i]) { let r=Math.floor(i/N), c=i%N, b=Math.floor(r/z)*z+Math.floor(c/z); let bit=1n<<BigInt(fixed[i]); rowM[r]|=bit; colM[c]|=bit; blkM[b]|=bit; board[i]=fixed[i]; }
+        
+        updateLog("Executing Static Mapping...");
+        requestAnimationFrame(inferenceStep); // Start the async cycle
+    }
 
-        while(isRunning && d < total) {
-            if(d < 0) { updateLog("VOID PARADOX: Divergence detected."); isRunning=false; return; }
+    function inferenceStep() {
+        if(!isRunning) return;
+
+        let batchSize = 100; // Process 100 cells per animation frame
+        for(let i=0; i < batchSize; i++) {
+            if(d >= total) { isRunning = false; updateLog("SINGULARITY ATTAINED."); render(); return; }
+            if(d < 0) { isRunning = false; updateLog("VOID PARADOX: Anchor Failure."); return; }
+
             if(fixed[d]) { d++; continue; }
+
             let r=Math.floor(d/N), c=d%N, b=Math.floor(r/z)*z+Math.floor(c/z);
-            let mask = rowM[r] | colM[c] | blkM[b]; let opts = [];
-            for(let i=1; i<=N; i++) if(!(mask & (1n << BigInt(i)))) opts.push(i);
+            let mask = rowM[r] | colM[c] | blkM[b];
+            let opts = [];
+            for(let j=1; j<=N; j++) if(!(mask & (1n << BigInt(j)))) opts.push(j);
 
             if(opts.length === 0) {
                 board[d]=0; d--; 
-                if(d >= 0) { for(let i=0; i<N; i++) { rowM[i] = shadowR[d*N+i]; colM[i] = shadowC[d*N+i]; blkM[i] = shadowB[d*N+i]; } phase[d]++; }
+                if(d >= 0) {
+                    for(let j=0; j<N; j++) { rowM[j]=shadowR[d*N+j]; colM[j]=shadowC[d*N+j]; blkM[j]=shadowB[d*N+j]; }
+                    phase[d]++;
+                }
                 continue;
             }
-            for(let i=0; i<N; i++) { shadowR[d*N+i] = rowM[i]; shadowC[d*N+i] = colM[i]; shadowB[d*N+i] = blkM[i]; }
+
+            for(let j=0; j<N; j++) { shadowR[d*N+j]=rowM[j]; shadowC[d*N+j]=colM[j]; shadowB[d*N+j]=blkM[j]; }
+
             let seed = Number(((aVal ^ BigInt(d)) * 0x517cc1b727220a95n) % 0xFFFFFFFn);
             let val = opts[(Math.abs(seed) + phase[d]) % opts.length];
-            board[d] = val; let bit = 1n << BigInt(val); rowM[r]|=bit; colM[c]|=bit; blkM[b]|=bit; d++;
-            if(d % (N*2) === 0) { render(); await new Promise(r=>setTimeout(r,0)); }
+            board[d] = val; 
+            let bit = 1n << BigInt(val); rowM[r]|=bit; colM[c]|=bit; blkM[b]|=bit;
+            d++;
         }
-        updateLog("SINGULARITY ATTAINED."); render(); isRunning = false;
+
+        render();
+        if(isRunning) requestAnimationFrame(inferenceStep);
     }
 
     function render() {
-        canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight; const s = canvas.width / N; ctx.clearRect(0,0,canvas.width, canvas.height);
+        canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
+        const s = canvas.width / N; ctx.clearRect(0,0,canvas.width, canvas.height);
         for(let i=0; i<total; i++) {
-            let x = (i%N)*s, y = Math.floor(i/N)*s; ctx.strokeStyle = "rgba(0,255,65,0.08)"; ctx.strokeRect(x,y,s,s);
-            if(board[i]) { ctx.fillStyle = fixed[i] ? "var(--gold)" : "var(--sentinel)"; ctx.font = `${s*0.6}px monospace`; ctx.textAlign="center"; ctx.fillText(board[i], x+s/2, y+s*0.75); }
+            let x = (i%N)*s, y = Math.floor(i/N)*s;
+            ctx.strokeStyle = "rgba(0,255,65,0.05)"; ctx.strokeRect(x,y,s,s);
+            if(board[i]) {
+                ctx.fillStyle = fixed[i] ? "var(--gold)" : "var(--sentinel)";
+                ctx.font = `${s*0.6}px monospace`; ctx.textAlign="center";
+                ctx.fillText(board[i], x+s/2, y+s*0.75);
+            }
         }
     }
 
+    function stopInference() { isRunning = false; updateLog("Trace Aborted."); }
+
     function exportTXT() {
-        let content = `PROJECT NP | ANCHOR: ${aInput.value}\n\n`;
+        let content = `ADELIC ORACLE v8.6.10\nANCHOR: ${aVal}\n\n`;
         const pad = N.toString().length + 1;
-        for(let r=0;r<N;r++) { let line=""; for(let c=0;c<N;c++) line += (board[r*N+c]||".").toString().padStart(pad," "); content+=line+"\n"; }
-        const b = new Blob([content],{type:"text/plain"}); const a=document.createElement("a"); a.href=URL.createObjectURL(b); a.download="adelic_solution.txt"; a.click();
+        for(let r=0; r<N; r++) {
+            let line = "";
+            for(let c=0; c<N; c++) line += (board[r*N+c]||".").toString().padStart(pad, " ");
+            content += line + "\n";
+        }
+        const b = new Blob([content], {type: "text/plain"});
+        const a = document.createElement("a"); a.href=URL.createObjectURL(b); a.download="solution.txt"; a.click();
     }
 
     function exportPDF() {
         const { jsPDF } = window.jspdf; const doc = new jsPDF();
-        doc.setFont("courier","bold"); doc.text(`ADELIC SOLUTION | N=${N}`,20,20);
-        doc.setFontSize(8); doc.text(`Anchor: ${aInput.value}`,20,28);
-        let s=160/N; doc.setFontSize(s > 10 ? 10 : 5);
-        for(let r=0;r<N;r++) for(let c=0;c<N;c++) doc.text((board[r*N+c]||".").toString(), 20+c*s, 40+r*s);
+        doc.setFont("courier","bold"); doc.text(`ADELIC SOLUTION N=${N}`, 20, 20);
+        doc.setFontSize(8); doc.text(`Anchor: ${aVal}`, 20, 26);
+        let s = 160/N; doc.setFontSize(s > 8 ? 8 : 4);
+        for(let r=0; r<N; r++) for(let c=0; c<N; c++) doc.text((board[r*N+c]||".").toString(), 20+c*s, 40+r*s);
         doc.save("solution.pdf");
     }
 
     canvas.addEventListener('mousedown', (e) => {
+        if(isRunning) return;
         const rect = canvas.getBoundingClientRect(); const s = canvas.width / N;
         const i = Math.floor((e.clientY - rect.top)/s)*N + Math.floor((e.clientX - rect.left)/s);
-        let v = prompt(`Cell ${i}:`, fixed[i]||""); fixed[i] = parseInt(v)||0; board[i]=fixed[i]; render();
+        let v = prompt(`Cell ${i}:`, fixed[i]||"");
+        fixed[i] = parseInt(v)||0; board[i]=fixed[i]; render();
     });
 
-    function purge() { board.fill(0); fixed.fill(0); phase.fill(0); resonanceDisplay.innerText="[DESIGN PHASE]"; render(); updateLog("Purged."); }
+    function purge() { isRunning = false; board.fill(0); fixed.fill(0); phase.fill(0); render(); updateLog("Manifold Purged."); }
     document.getElementById('zVal').onchange = init; init();
 </script>
 </body>
