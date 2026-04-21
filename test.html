@@ -3,14 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Project NP | Adelic Oracle v8.6.4</title>
+    <title>Project NP | Adelic Oracle v8.6.5</title>
     <style>
         :root {
-            --sentinel: #00ff41;
-            --bedrock: #050505;
-            --glass: rgba(0, 255, 65, 0.1);
-            --friction: #ff3333;
-            --gold: #d4af37;
+            --sentinel: #00ff41; --bedrock: #050505; --glass: rgba(0, 255, 65, 0.1);
+            --friction: #ff3333; --gold: #d4af37;
         }
         body {
             background: var(--bedrock); color: var(--sentinel);
@@ -20,32 +17,22 @@
         }
         #header { text-align: center; width: 100%; border-bottom: 1px solid var(--sentinel); padding-bottom: 5px; }
         .stats { font-size: 0.65rem; color: #888; margin-top: 2px; }
-        .grid {
-            display: grid; grid-template-columns: repeat(9, 1fr);
-            width: 100%; max-width: 380px; aspect-ratio: 1/1;
-            border: 2px solid var(--sentinel); margin: 10px 0;
-            background: rgba(0, 255, 65, 0.02);
-        }
-        .cell {
-            width: 100%; height: 100%; border: 0.5px solid rgba(0, 255, 65, 0.2);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 1.2rem; cursor: pointer; outline: none; color: #fff;
-        }
-        .cell:focus { background: var(--glass); }
-        .cell.fixed { color: var(--gold); font-weight: bold; }
-        .cell.inferred { color: var(--sentinel); }
-        .cell:nth-child(3n) { border-right: 2px solid var(--sentinel); }
-        .cell:nth-child(9n) { border-right: 0.5px solid rgba(0, 255, 65, 0.2); }
-        .grid .cell:nth-child(n+19):nth-child(-n+27),
-        .grid .cell:nth-child(n+46):nth-child(-n+54) { border-bottom: 2px solid var(--sentinel); }
         
+        /* Scalable Manifold Lattice */
+        #lattice-container {
+            width: 100%; max-width: 600px; aspect-ratio: 1/1;
+            margin: 10px 0; overflow: hidden; position: relative;
+            background: rgba(0, 255, 65, 0.02); border: 2px solid var(--sentinel);
+        }
+        canvas { width: 100%; height: 100%; cursor: crosshair; image-rendering: pixelated; }
+
         #console {
-            width: 100%; max-width: 380px; height: 120px;
+            width: 100%; max-width: 600px; height: 100px;
             background: #000; border: 1px dashed var(--sentinel);
             font-size: 0.7rem; padding: 8px; overflow-y: auto;
             margin-bottom: 10px; box-sizing: border-box;
         }
-        .controls { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 380px; }
+        .controls { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 600px; }
         .row-group { display: flex; gap: 8px; width: 100%; }
         .btn {
             flex: 1; background: var(--glass); border: 1px solid var(--sentinel);
@@ -62,18 +49,22 @@
 <body>
 
     <div id="header">
-        <strong>PROJECT NP | ADELIC ORACLE v8.6.4</strong>
-        <div class="stats">STATIC ANCHOR MAPPING | HASH: 0x517cc1...</div>
+        <strong>PROJECT NP | ADELIC ORACLE v8.6.5</strong>
+        <div class="stats" id="dim-stats">MODE: z=3 (N=9) | ANCHOR LOCKED</div>
     </div>
 
     <div id="console">
-        [SYSTEM] STANDBY. Design your canvas and hit Execute...<br>
+        [SYSTEM] STANDBY. Adjust 'z' for N=9 (z=3) or N=81 (z=9)...<br>
     </div>
 
-    <div class="grid" id="lattice"></div>
+    <div id="lattice-container">
+        <canvas id="manifoldCanvas"></canvas>
+    </div>
 
     <div class="controls">
         <div class="row-group">
+            <span style="font-size: 0.7rem;">z: </span>
+            <input type="number" id="z-val" value="3" min="2" max="9" style="flex: 0.5;">
             <input type="text" id="anchor-input" placeholder="Static Anchor (Auto if Blank)">
             <button class="btn" onclick="executeInference()">Execute</button>
         </div>
@@ -83,39 +74,38 @@
     </div>
 
     <script>
-        const lattice = document.getElementById('lattice');
+        const canvas = document.getElementById('manifoldCanvas');
+        const ctx = canvas.getContext('2d');
         const consoleLog = document.getElementById('console');
         const anchorField = document.getElementById('anchor-input');
-        const cells = [];
-        const N = 9;
+        const zInput = document.getElementById('z-val');
         
-        let board = new Uint16Array(81);
-        let fixed = new Uint16Array(81);
-        let phase = new Uint16Array(81);
-        let rowM = new Array(N).fill(0n);
-        let colM = new Array(N).fill(0n);
-        let blkM = new Array(N).fill(0n);
-        let shadowR = new Array(81);
-        let shadowC = new Array(81);
-        let shadowB = new Array(81);
-        
+        let z, N, totalCells;
+        let board, fixed, phase;
+        let rowM, colM, blkM;
+        let shadowR, shadowC, shadowB;
         let isRunning = false;
 
-        // Initialize Canvas
-        for (let i = 0; i < 81; i++) {
-            const cell = document.createElement('div');
-            cell.className = 'cell';
-            cell.contentEditable = "true";
-            cell.oninput = (e) => {
-                if (!/[1-9]/.test(e.data)) { 
-                    e.target.innerText = ""; cell.classList.remove('fixed'); fixed[i] = 0;
-                } else { 
-                    e.target.innerText = e.data[0]; cell.classList.add('fixed'); fixed[i] = parseInt(e.data[0]);
-                }
-                board.fill(0); phase.fill(0);
-            };
-            lattice.appendChild(cell);
-            cells.push(cell);
+        function initLattice() {
+            z = parseInt(zInput.value);
+            N = z * z;
+            totalCells = N * N;
+            
+            board = new Uint16Array(totalCells);
+            fixed = new Uint16Array(totalCells);
+            phase = new Uint16Array(totalCells);
+            
+            // Mask arrays use BigInt to handle N=81 (81 bits needed)
+            rowM = new Array(N).fill(0n);
+            colM = new Array(N).fill(0n);
+            blkM = new Array(N).fill(0n);
+            
+            shadowR = new Array(totalCells);
+            shadowC = new Array(totalCells);
+            shadowB = new Array(totalCells);
+
+            document.getElementById('dim-stats').innerText = `MODE: z=${z} (N=${N}) | ANCHOR LOCKED`;
+            render();
         }
 
         function updateLog(msg) {
@@ -123,121 +113,165 @@
         }
 
         function calculateStaticAnchor() {
-            let hash = 9n * 0x9E3779B1n;
+            let hash = BigInt(N) * 0x9E3779B1n;
             let count = 0;
-            for (let i = 0; i < 81; i++) {
+            for (let i = 0; i < totalCells; i++) {
                 if (fixed[i] !== 0) {
                     count++;
                     let cellData = (BigInt(i + 1) * 0x517cc1b727220a95n) ^ BigInt(fixed[i]);
                     hash = (hash << 5n) ^ cellData;
                 }
             }
-            // The "1006 Miracle" baseline for empty canvas
-            if (count === 0) hash = 1006n * 9n * 0x9E3779B1n;
-            if ((hash & 1n) === 0n) hash |= (1n << 63n); // Inject MSB entropy
+            if (count === 0) hash = 1006n * BigInt(N) * 0x9E3779B1n;
+            if ((hash & 1n) === 0n) hash |= (1n << 63n); 
             return hash;
         }
 
         async function executeInference() {
             if (isRunning) return;
             
-            // ANCHOR LOCKING PROTOCOL
             let anchorVal;
             const userInput = anchorField.value.trim();
             if (userInput === "") {
                 anchorVal = calculateStaticAnchor();
                 anchorField.value = anchorVal.toString();
-                updateLog(`Auto-Derived Anchor: 0x${anchorVal.toString(16)}`);
+                updateLog(`Auto Anchor Derived: 0x${anchorVal.toString(16)}`);
             } else {
                 anchorVal = BigInt(userInput);
-                updateLog(`User Static Anchor: 0x${anchorVal.toString(16)}`);
+                updateLog(`User Static Anchor Locked: 0x${anchorVal.toString(16)}`);
             }
 
-            // Ensure the parity logic is applied even to manual inputs
             if ((anchorVal & 1n) === 0n) anchorVal |= (1n << 63n);
 
             isRunning = true;
             rowM.fill(0n); colM.fill(0n); blkM.fill(0n);
             board.fill(0); phase.fill(0);
 
-            // Initial Board Grounding
-            for (let i = 0; i < 81; i++) {
+            // Ground fixed hints
+            for (let i = 0; i < totalCells; i++) {
                 if (fixed[i] !== 0) {
                     board[i] = fixed[i];
-                    let r = Math.floor(i / 9), c = i % 9, b = Math.floor(r / 3) * 3 + Math.floor(c / 3);
-                    rowM[r] |= (1n << BigInt(fixed[i]));
-                    colM[c] |= (1n << BigInt(fixed[i]));
-                    blkM[b] |= (1n << BigInt(fixed[i]));
+                    let r = Math.floor(i / N), c = i % N, b = Math.floor(r / z) * z + Math.floor(c / z);
+                    let bit = 1n << BigInt(fixed[i]);
+                    rowM[r] |= bit; colM[c] |= bit; blkM[b] |= bit;
                 }
             }
 
             let d = 0;
             let frictionCount = 0;
 
-            // MAPPING LOOP
+            // v8.6 RESTORED ENGINE
             while (isRunning && d >= 0) {
-                if (d === 81) break;
+                if (d === totalCells) break;
 
-                // Max friction limit for a static anchor
-                if (frictionCount > 50000) {
-                    updateLog("CRITICAL FRICTION. Anchor mapping failed to ground.");
-                    isRunning = false;
-                    return;
+                // Absolute friction limit for static anchor
+                if (frictionCount > 1000000) {
+                    updateLog("FRICTION LIMIT REACHED. Anchor failed to map solution.");
+                    isRunning = false; return;
                 }
 
                 if (fixed[d] !== 0) { d++; continue; }
 
-                let r = Math.floor(d / 9), c = d % 9, b = Math.floor(r / 3) * 3 + Math.floor(c / 3);
+                let r = Math.floor(d / N), c = d % N, b = Math.floor(r / z) * z + Math.floor(c / z);
                 let mask = rowM[r] | colM[c] | blkM[b];
+                
                 let opts = [];
-                for (let i = 1; i <= 9; i++) if (!(mask & (1n << BigInt(i)))) opts.push(i);
+                for (let i = 1; i <= N; i++) if (!(mask & (1n << BigInt(i)))) opts.push(i);
 
                 if (opts.length === 0) {
-                    board[d] = 0; cells[d].innerText = ""; cells[d].classList.remove('inferred');
-                    d--;
-                    if (d < 0) {
-                        updateLog("VOID PARADOX. This Anchor is incompatible with design.");
-                        isRunning = false; return;
-                    }
+                    board[d] = 0;
+                    d--; 
+                    if (d < 0) { updateLog("VOID PARADOX: Anchor incompatible with Manifold."); isRunning = false; return; }
+                    
+                    // RECIRCULATE PHASE (The v8.6 Dance)
                     rowM = [...shadowR[d]]; colM = [...shadowC[d]]; blkM = [...shadowB[d]];
-                    phase[d]++; frictionCount++;
+                    phase[d]++;
+                    frictionCount++;
                     continue;
                 }
 
+                // Preserve local topology before trying a phase
                 shadowR[d] = [...rowM]; shadowC[d] = [...colM]; shadowB[d] = [...blkM];
 
-                // THE STATIC HASH (Does not change during loop)
+                // v8.6 HASH MULTIPLIER
                 let seed = Number(((anchorVal ^ BigInt(d)) * 0x517cc1b727220a95n) % 0xFFFFFFFn);
                 let val = opts[(Math.abs(seed) + phase[d]) % opts.length];
 
                 board[d] = val;
-                cells[d].innerText = val;
-                cells[d].classList.add('inferred');
-                
-                let bit = (1n << BigInt(val));
+                let bit = 1n << BigInt(val);
                 rowM[r] |= bit; colM[c] |= bit; blkM[b] |= bit;
+                
                 d++;
                 
-                // Visualization throttle
-                if (d % 9 === 0) await new Promise(res => setTimeout(res, 0));
+                // Real-time visualization for the N=81 Manifold
+                if (d % (N * 2) === 0) { render(); await new Promise(res => setTimeout(res, 0)); }
             }
 
-            if (d === 81) {
-                updateLog("SINGULARITY ATTAINED. Mapping successful.");
+            if (d === totalCells) {
+                updateLog("SINGULARITY ATTAINED. Manifold Grounded.");
+                render();
                 isRunning = false;
             }
         }
 
+        function render() {
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            const s = canvas.width / N;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            for (let i = 0; i < totalCells; i++) {
+                let x = (i % N) * s, y = Math.floor(i / N) * s;
+                
+                // Draw Grid
+                ctx.strokeStyle = "rgba(0, 255, 65, 0.05)";
+                ctx.strokeRect(x, y, s, s);
+
+                // Block Borders
+                if ((i % N) % z === 0) {
+                    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + s);
+                    ctx.strokeStyle = "rgba(0, 255, 65, 0.3)"; ctx.stroke();
+                }
+                if (Math.floor(i / N) % z === 0) {
+                    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + s, y);
+                    ctx.strokeStyle = "rgba(0, 255, 65, 0.3)"; ctx.stroke();
+                }
+
+                let val = board[i];
+                if (val) {
+                    ctx.fillStyle = fixed[i] ? "var(--gold)" : "var(--sentinel)";
+                    ctx.font = `${s * 0.6}px monospace`;
+                    ctx.textAlign = "center";
+                    ctx.fillText(val, x + s/2, y + s * 0.75);
+                }
+            }
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (isRunning) return;
+            const rect = canvas.getBoundingClientRect();
+            const s = canvas.width / N;
+            const idx = Math.floor((e.clientY - rect.top) / s) * N + Math.floor((e.clientX - rect.left) / s);
+            let v = prompt(`Fix Bit at ${idx} (1-${N}, 0 to clear):`, fixed[idx] || "");
+            if (v !== null) {
+                let p = parseInt(v);
+                fixed[idx] = (isNaN(p) || p < 1 || p > N) ? 0 : p;
+                board[idx] = fixed[idx];
+                render();
+            }
+        });
+
         function purgeManifold() {
             isRunning = false;
-            cells.forEach((c, i) => {
-                c.innerText = "";
-                c.classList.remove('fixed', 'inferred');
-                fixed[i] = 0;
-            });
-            board.fill(0);
+            board.fill(0); fixed.fill(0); phase.fill(0);
+            rowM.fill(0n); colM.fill(0n); blkM.fill(0n);
             updateLog("Manifold Purged.");
+            render();
         }
+
+        window.onresize = render;
+        zInput.onchange = initLattice;
+        initLattice();
     </script>
 </body>
 </html>
