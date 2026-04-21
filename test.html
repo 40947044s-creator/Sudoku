@@ -2,277 +2,138 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Project NP | Adelic Oracle v8.6.5</title>
+    <title>Project NP | Adelic Oracle v8.6.6</title>
     <style>
-        :root {
-            --sentinel: #00ff41; --bedrock: #050505; --glass: rgba(0, 255, 65, 0.1);
-            --friction: #ff3333; --gold: #d4af37;
-        }
-        body {
-            background: var(--bedrock); color: var(--sentinel);
-            font-family: 'Courier New', monospace; margin: 0;
-            display: flex; flex-direction: column; align-items: center;
-            height: 100vh; padding: 10px; box-sizing: border-box; overflow: hidden;
-        }
-        #header { text-align: center; width: 100%; border-bottom: 1px solid var(--sentinel); padding-bottom: 5px; }
-        .stats { font-size: 0.65rem; color: #888; margin-top: 2px; }
-        
-        /* Scalable Manifold Lattice */
-        #lattice-container {
-            width: 100%; max-width: 600px; aspect-ratio: 1/1;
-            margin: 10px 0; overflow: hidden; position: relative;
-            background: rgba(0, 255, 65, 0.02); border: 2px solid var(--sentinel);
-        }
-        canvas { width: 100%; height: 100%; cursor: crosshair; image-rendering: pixelated; }
-
-        #console {
-            width: 100%; max-width: 600px; height: 100px;
-            background: #000; border: 1px dashed var(--sentinel);
-            font-size: 0.7rem; padding: 8px; overflow-y: auto;
-            margin-bottom: 10px; box-sizing: border-box;
-        }
-        .controls { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 600px; }
-        .row-group { display: flex; gap: 8px; width: 100%; }
-        .btn {
-            flex: 1; background: var(--glass); border: 1px solid var(--sentinel);
-            color: var(--sentinel); padding: 12px; cursor: pointer;
-            font-family: inherit; font-size: 0.75rem; text-transform: uppercase; font-weight: bold;
-        }
-        .btn:hover { background: var(--sentinel); color: #000; }
-        input { 
-            background: #000; border: 1px solid #444; color: var(--gold); 
-            text-align: center; font-family: inherit; font-size: 0.85rem; padding: 8px; flex: 2;
-        }
+        :root { --sentinel: #00ff41; --bedrock: #050505; --gold: #d4af37; --friction: #ff3333; }
+        body { background: var(--bedrock); color: var(--sentinel); font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 10px; overflow: hidden; height: 100vh; }
+        #header { text-align: center; border-bottom: 1px solid var(--sentinel); width: 100%; padding-bottom: 5px; }
+        .archive-link { font-size: 0.75rem; color: var(--gold); margin: 5px 0; text-decoration: none; border-bottom: 1px solid var(--gold); }
+        #lattice-container { width: 90vmin; height: 90vmin; background: #000; border: 1px solid var(--sentinel); position: relative; }
+        canvas { width: 100%; height: 100%; image-rendering: pixelated; }
+        .controls { display: flex; gap: 10px; margin: 10px; font-size: 0.8rem; width: 90vmin; }
+        input { background: #000; border: 1px solid #444; color: var(--gold); padding: 5px; flex: 1; text-align: center; }
+        #console { width: 90vmin; height: 80px; background: #000; border: 1px dashed #333; padding: 5px; font-size: 0.65rem; overflow-y: auto; color: #666; }
     </style>
 </head>
 <body>
 
-    <div id="header">
-        <strong>PROJECT NP | ADELIC ORACLE v8.6.5</strong>
-        <div class="stats" id="dim-stats">MODE: z=3 (N=9) | ANCHOR LOCKED</div>
-    </div>
+<div id="header">
+    <strong>PROJECT NP | ADELIC ORACLE v8.6.6</strong>
+    <div style="font-size: 0.6rem;">Optimized for N=81 | Static Anchor Mapping</div>
+    <a href="https://40947044s-creator.github.io/Sudoku/archive/v86" class="archive-link" target="_blank">v8.6 Research Core (N=NP Link)</a>
+</div>
 
-    <div id="console">
-        [SYSTEM] STANDBY. Adjust 'z' for N=9 (z=3) or N=81 (z=9)...<br>
-    </div>
+<div id="lattice-container">
+    <canvas id="mCanvas"></canvas>
+</div>
 
-    <div id="lattice-container">
-        <canvas id="manifoldCanvas"></canvas>
-    </div>
+<div id="console">> [SYSTEM] Standby. Select z (3 for N=9, 9 for N=81).</div>
 
-    <div class="controls">
-        <div class="row-group">
-            <span style="font-size: 0.7rem;">z: </span>
-            <input type="number" id="z-val" value="3" min="2" max="9" style="flex: 0.5;">
-            <input type="text" id="anchor-input" placeholder="Static Anchor (Auto if Blank)">
-            <button class="btn" onclick="executeInference()">Execute</button>
-        </div>
-        <div class="row-group">
-            <button class="btn" onclick="purgeManifold()" style="color:var(--friction); border-color:var(--friction);">Purge Trace</button>
-        </div>
-    </div>
+<div class="controls">
+    z:<input type="number" id="zVal" value="3" style="max-width: 40px;">
+    Anchor:<input type="text" id="aIn" placeholder="Static Key">
+    <button onclick="executeInference()">Execute</button>
+    <button onclick="purge()" style="color:var(--friction)">Purge</button>
+</div>
 
-    <script>
-        const canvas = document.getElementById('manifoldCanvas');
-        const ctx = canvas.getContext('2d');
-        const consoleLog = document.getElementById('console');
-        const anchorField = document.getElementById('anchor-input');
-        const zInput = document.getElementById('z-val');
+<script>
+    const canvas = document.getElementById('mCanvas');
+    const ctx = canvas.getContext('2d');
+    const log = document.getElementById('console');
+    let z, N, total, board, fixed, phase, rowM, colM, blkM, shadowR, shadowC, shadowB, isRunning = false;
+
+    function init() {
+        z = parseInt(document.getElementById('zVal').value);
+        N = z * z; total = N * N;
+        board = new Uint16Array(total); fixed = new Uint16Array(total); phase = new Uint16Array(total);
+        rowM = new BigUint64Array(N); colM = new BigUint64Array(N); blkM = new BigUint64Array(N);
+        // Using Typed Arrays for memory efficiency at N=81
+        shadowR = new BigUint64Array(total * N); 
+        shadowC = new BigUint64Array(total * N);
+        shadowB = new BigUint64Array(total * N);
+        render();
+    }
+
+    function updateLog(m) { log.innerHTML = `> ${m}<br>` + log.innerHTML; }
+
+    function render() {
+        canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
+        const s = canvas.width / N;
+        ctx.clearRect(0,0,canvas.width, canvas.height);
+        for(let i=0; i<total; i++) {
+            let x = (i%N)*s, y = Math.floor(i/N)*s;
+            ctx.strokeStyle = "#111"; ctx.strokeRect(x,y,s,s);
+            if(board[i]) {
+                ctx.fillStyle = fixed[i] ? "var(--gold)" : "var(--sentinel)";
+                ctx.font = `${s*0.6}px monospace`; ctx.textAlign="center";
+                ctx.fillText(board[i], x+s/2, y+s*0.75);
+            }
+        }
+    }
+
+    async function executeInference() {
+        if(isRunning) return;
+        let anchor = document.getElementById('aIn').value;
+        let aVal = anchor ? BigInt(anchor) : (BigInt(N) * 0x9E3779B1n) | (1n << 63n);
+        document.getElementById('aIn').value = aVal.toString();
         
-        let z, N, totalCells;
-        let board, fixed, phase;
-        let rowM, colM, blkM;
-        let shadowR, shadowC, shadowB;
-        let isRunning = false;
-
-        function initLattice() {
-            z = parseInt(zInput.value);
-            N = z * z;
-            totalCells = N * N;
-            
-            board = new Uint16Array(totalCells);
-            fixed = new Uint16Array(totalCells);
-            phase = new Uint16Array(totalCells);
-            
-            // Mask arrays use BigInt to handle N=81 (81 bits needed)
-            rowM = new Array(N).fill(0n);
-            colM = new Array(N).fill(0n);
-            blkM = new Array(N).fill(0n);
-            
-            shadowR = new Array(totalCells);
-            shadowC = new Array(totalCells);
-            shadowB = new Array(totalCells);
-
-            document.getElementById('dim-stats').innerText = `MODE: z=${z} (N=${N}) | ANCHOR LOCKED`;
-            render();
+        isRunning = true; d = 0; friction = 0;
+        rowM.fill(0n); colM.fill(0n); blkM.fill(0n);
+        for(let i=0; i<total; i++) {
+            if(fixed[i]) {
+                let r=Math.floor(i/N), c=i%N, b=Math.floor(r/z)*z+Math.floor(c/z);
+                let bit = 1n << BigInt(fixed[i]);
+                rowM[r]|=bit; colM[c]|=bit; blkM[b]|=bit; board[i]=fixed[i];
+            }
         }
 
-        function updateLog(msg) {
-            consoleLog.innerHTML = `> [${new Date().toLocaleTimeString()}] ${msg}<br>` + consoleLog.innerHTML;
-        }
+        while(isRunning && d < total) {
+            if(d < 0) { updateLog("VOID: Anchor Mismatch."); isRunning=false; return; }
+            if(fixed[d]) { d++; continue; }
 
-        function calculateStaticAnchor() {
-            let hash = BigInt(N) * 0x9E3779B1n;
-            let count = 0;
-            for (let i = 0; i < totalCells; i++) {
-                if (fixed[i] !== 0) {
-                    count++;
-                    let cellData = (BigInt(i + 1) * 0x517cc1b727220a95n) ^ BigInt(fixed[i]);
-                    hash = (hash << 5n) ^ cellData;
-                }
-            }
-            if (count === 0) hash = 1006n * BigInt(N) * 0x9E3779B1n;
-            if ((hash & 1n) === 0n) hash |= (1n << 63n); 
-            return hash;
-        }
+            let r=Math.floor(d/N), c=d%N, b=Math.floor(r/z)*z+Math.floor(c/z);
+            let mask = rowM[r] | colM[c] | blkM[b];
+            let opts = [];
+            for(let i=1; i<=N; i++) if(!(mask & (1n << BigInt(i)))) opts.push(i);
 
-        async function executeInference() {
-            if (isRunning) return;
-            
-            let anchorVal;
-            const userInput = anchorField.value.trim();
-            if (userInput === "") {
-                anchorVal = calculateStaticAnchor();
-                anchorField.value = anchorVal.toString();
-                updateLog(`Auto Anchor Derived: 0x${anchorVal.toString(16)}`);
-            } else {
-                anchorVal = BigInt(userInput);
-                updateLog(`User Static Anchor Locked: 0x${anchorVal.toString(16)}`);
-            }
-
-            if ((anchorVal & 1n) === 0n) anchorVal |= (1n << 63n);
-
-            isRunning = true;
-            rowM.fill(0n); colM.fill(0n); blkM.fill(0n);
-            board.fill(0); phase.fill(0);
-
-            // Ground fixed hints
-            for (let i = 0; i < totalCells; i++) {
-                if (fixed[i] !== 0) {
-                    board[i] = fixed[i];
-                    let r = Math.floor(i / N), c = i % N, b = Math.floor(r / z) * z + Math.floor(c / z);
-                    let bit = 1n << BigInt(fixed[i]);
-                    rowM[r] |= bit; colM[c] |= bit; blkM[b] |= bit;
-                }
-            }
-
-            let d = 0;
-            let frictionCount = 0;
-
-            // v8.6 RESTORED ENGINE
-            while (isRunning && d >= 0) {
-                if (d === totalCells) break;
-
-                // Absolute friction limit for static anchor
-                if (frictionCount > 1000000) {
-                    updateLog("FRICTION LIMIT REACHED. Anchor failed to map solution.");
-                    isRunning = false; return;
-                }
-
-                if (fixed[d] !== 0) { d++; continue; }
-
-                let r = Math.floor(d / N), c = d % N, b = Math.floor(r / z) * z + Math.floor(c / z);
-                let mask = rowM[r] | colM[c] | blkM[b];
-                
-                let opts = [];
-                for (let i = 1; i <= N; i++) if (!(mask & (1n << BigInt(i)))) opts.push(i);
-
-                if (opts.length === 0) {
-                    board[d] = 0;
-                    d--; 
-                    if (d < 0) { updateLog("VOID PARADOX: Anchor incompatible with Manifold."); isRunning = false; return; }
-                    
-                    // RECIRCULATE PHASE (The v8.6 Dance)
-                    rowM = [...shadowR[d]]; colM = [...shadowC[d]]; blkM = [...shadowB[d]];
+            if(opts.length === 0) {
+                board[d]=0; d--; 
+                if(d >= 0) {
+                    for(let i=0; i<N; i++) {
+                        rowM[i] = shadowR[d*N+i]; colM[i] = shadowC[d*N+i]; blkM[i] = shadowB[d*N+i];
+                    }
                     phase[d]++;
-                    frictionCount++;
-                    continue;
                 }
-
-                // Preserve local topology before trying a phase
-                shadowR[d] = [...rowM]; shadowC[d] = [...colM]; shadowB[d] = [...blkM];
-
-                // v8.6 HASH MULTIPLIER
-                let seed = Number(((anchorVal ^ BigInt(d)) * 0x517cc1b727220a95n) % 0xFFFFFFFn);
-                let val = opts[(Math.abs(seed) + phase[d]) % opts.length];
-
-                board[d] = val;
-                let bit = 1n << BigInt(val);
-                rowM[r] |= bit; colM[c] |= bit; blkM[b] |= bit;
-                
-                d++;
-                
-                // Real-time visualization for the N=81 Manifold
-                if (d % (N * 2) === 0) { render(); await new Promise(res => setTimeout(res, 0)); }
+                continue;
             }
 
-            if (d === totalCells) {
-                updateLog("SINGULARITY ATTAINED. Manifold Grounded.");
-                render();
-                isRunning = false;
+            // Save state in optimized flat buffers
+            for(let i=0; i<N; i++) {
+                shadowR[d*N+i] = rowM[i]; shadowC[d*N+i] = colM[i]; shadowB[d*N+i] = blkM[i];
             }
+
+            let seed = Number(((aVal ^ BigInt(d)) * 0x517cc1b727220a95n) % 0xFFFFFFFn);
+            let val = opts[(Math.abs(seed) + phase[d]) % opts.length];
+            board[d] = val;
+            let bit = 1n << BigInt(val);
+            rowM[r]|=bit; colM[c]|=bit; blkM[b]|=bit;
+            d++;
+            if(d % (N*2) === 0) { render(); await new Promise(r=>setTimeout(r,0)); }
         }
+        updateLog("SINGULARITY ATTAINED."); render(); isRunning = false;
+    }
 
-        function render() {
-            canvas.width = canvas.offsetWidth;
-            canvas.height = canvas.offsetHeight;
-            const s = canvas.width / N;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+    canvas.addEventListener('mousedown', (e) => {
+        const rect = canvas.getBoundingClientRect(); const s = canvas.width / N;
+        const i = Math.floor((e.clientY - rect.top)/s)*N + Math.floor((e.clientX - rect.left)/s);
+        let v = prompt(`N=${N} | Cell ${i}:`, fixed[i]||"");
+        fixed[i] = parseInt(v)||0; board[i]=fixed[i]; render();
+    });
 
-            for (let i = 0; i < totalCells; i++) {
-                let x = (i % N) * s, y = Math.floor(i / N) * s;
-                
-                // Draw Grid
-                ctx.strokeStyle = "rgba(0, 255, 65, 0.05)";
-                ctx.strokeRect(x, y, s, s);
-
-                // Block Borders
-                if ((i % N) % z === 0) {
-                    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + s);
-                    ctx.strokeStyle = "rgba(0, 255, 65, 0.3)"; ctx.stroke();
-                }
-                if (Math.floor(i / N) % z === 0) {
-                    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + s, y);
-                    ctx.strokeStyle = "rgba(0, 255, 65, 0.3)"; ctx.stroke();
-                }
-
-                let val = board[i];
-                if (val) {
-                    ctx.fillStyle = fixed[i] ? "var(--gold)" : "var(--sentinel)";
-                    ctx.font = `${s * 0.6}px monospace`;
-                    ctx.textAlign = "center";
-                    ctx.fillText(val, x + s/2, y + s * 0.75);
-                }
-            }
-        }
-
-        canvas.addEventListener('mousedown', (e) => {
-            if (isRunning) return;
-            const rect = canvas.getBoundingClientRect();
-            const s = canvas.width / N;
-            const idx = Math.floor((e.clientY - rect.top) / s) * N + Math.floor((e.clientX - rect.left) / s);
-            let v = prompt(`Fix Bit at ${idx} (1-${N}, 0 to clear):`, fixed[idx] || "");
-            if (v !== null) {
-                let p = parseInt(v);
-                fixed[idx] = (isNaN(p) || p < 1 || p > N) ? 0 : p;
-                board[idx] = fixed[idx];
-                render();
-            }
-        });
-
-        function purgeManifold() {
-            isRunning = false;
-            board.fill(0); fixed.fill(0); phase.fill(0);
-            rowM.fill(0n); colM.fill(0n); blkM.fill(0n);
-            updateLog("Manifold Purged.");
-            render();
-        }
-
-        window.onresize = render;
-        zInput.onchange = initLattice;
-        initLattice();
-    </script>
+    function purge() { board.fill(0); fixed.fill(0); phase.fill(0); render(); updateLog("Purged."); }
+    document.getElementById('zVal').onchange = init;
+    init();
+</script>
 </body>
 </html>
 
