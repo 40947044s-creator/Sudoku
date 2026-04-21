@@ -2,58 +2,57 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Project NP | Adelic Oracle v8.6.16</title>
+    <title>Project NP | Adelic Oracle v8.6.18</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --sentinel: #00ff41; --bedrock: #050505; --gold: #d4af37; --accent: #00d4ff; --friction: #ff3333; }
+        :root { --sentinel: #00ff41; --bedrock: #050505; --gold: #d4af37; --accent: #00d4ff; --friction: #ff3333; --export: #ff00ff; }
         body { background: var(--bedrock); color: var(--sentinel); font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 10px; overflow: hidden; height: 100vh; }
-        #header { text-align: center; border-bottom: 2px solid var(--sentinel); width: 100%; padding-bottom: 5px; }
+        #header { text-align: center; border-bottom: 1px solid var(--sentinel); width: 100%; padding-bottom: 5px; }
         .index-bar { width: 90%; max-width: 600px; background: #111; border: 1px solid #333; margin: 10px 0; padding: 10px; border-left: 5px solid var(--gold); }
         .index-label { font-size: 0.6rem; color: #888; text-transform: uppercase; }
         .index-value { font-size: 0.85rem; color: var(--gold); word-break: break-all; font-weight: bold;}
-        
-        #lattice-container { width: 75vmin; height: 75vmin; background: #000; border: 1px solid var(--accent); position: relative; }
+        #lattice-container { width: 70vmin; height: 70vmin; background: #000; border: 1px solid var(--accent); position: relative; }
         canvas { width: 100%; height: 100%; image-rendering: pixelated; }
-        
         .controls { display: flex; flex-direction: column; gap: 8px; margin: 10px; width: 90%; max-width: 600px;}
         .row-group { display: flex; gap: 8px; }
         #console { width: 90%; max-width: 600px; height: 60px; background: #000; border: 1px dashed #333; padding: 8px; font-size: 0.65rem; color: #666; overflow-y: auto; }
         input { background: #000; border: 1px solid #444; color: var(--accent); padding: 5px; text-align: center; font-family: inherit; }
-        .btn { flex: 1; background: rgba(0, 255, 65, 0.05); border: 1px solid var(--sentinel); color: var(--sentinel); padding: 8px; cursor: pointer; font-family: inherit; font-weight: bold; text-transform: uppercase; font-size: 0.7rem;}
+        .btn { flex: 1; background: rgba(0, 255, 65, 0.05); border: 1px solid var(--sentinel); color: var(--sentinel); padding: 8px; cursor: pointer; font-size: 0.65rem; font-family: inherit; font-weight: bold; text-transform: uppercase; }
+        .btn:hover { background: var(--sentinel); color: #000; }
+        .btn-copy { border-color: var(--gold); color: var(--gold); }
     </style>
 </head>
 <body>
 
 <div id="header">
-    <strong>PROJECT NP: ADELIC ORACLE v8.6.16</strong>
-    <div style="font-size: 0.6rem; color: #888;">[FRICTION HEATMAP | RESISTANCE MAPPING]</div>
+    <strong>PROJECT NP: ADELIC ORACLE v8.6.18</strong>
+    <div style="font-size: 0.6rem; color: #888;">[ANCHOR CAPTURE | REVERSE MAPPING PROTOCOL]</div>
 </div>
 
 <div class="index-bar">
-    <div class="index-label">Static Anchor (Adelic Address)</div>
+    <div class="index-label">Active Adelic Anchor (DNA)</div>
     <div class="index-value" id="index-val">#00000000000000000000</div>
-    <div style="font-size: 0.6rem; color: var(--friction); margin-top: 4px;">Total Friction ($\sum P$): <span id="fric-val">0</span></div>
 </div>
 
 <div class="controls">
     <div class="row-group">
-        z:<input type="number" id="z-val" value="3" min="2" max="9" style="width: 35px;" onchange="initSystem()">
-        <input type="text" id="path-id" placeholder="Enter Anchor Key" style="flex: 1;">
-        <button class="btn" onclick="startInference()">Execute Map</button>
+        z:<input type="number" id="z-val" value="3" min="2" max="9" style="width: 30px;" onchange="initSystem()">
+        <input type="text" id="path-id" placeholder="64-bit Anchor" style="flex: 1;">
+        <button class="btn btn-copy" onclick="copyAnchor()">Copy DNA</button>
     </div>
     <div class="row-group">
-        <button class="btn" onclick="downloadTXT()" style="border-color: #ff00ff; color: #ff00ff;">TXT</button>
-        <button class="btn" onclick="downloadPDF()" style="border-color: #ff00ff; color: #ff00ff;">PDF</button>
+        <button class="btn" onclick="startInference()">Execute Trace</button>
+        <button class="btn" onclick="downloadTXT()" style="border-color:var(--export); color:var(--export);">TXT</button>
         <button class="btn" onclick="resetSystem()" style="color:var(--friction); border-color:var(--friction);">Purge</button>
     </div>
 </div>
 
 <div id="lattice-container"><canvas id="mainCanvas"></canvas></div>
-<div class="console" id="log">> [SENTINEL] Ready. Watch for red cells (High Friction areas).</div>
+<div class="console" id="log">> [SENTINEL] System ready. Ground your Design to begin.</div>
 
 <script>
 let z, N, totalBits, isRunning = false;
-let board, fixed, phase, d = 0, aVal = 0n, totalFriction = 0;
+let board, fixed, phase, d = 0, aVal = 0n;
 let rowM, colM, blkM, shadowR, shadowC, shadowB;
 
 const canvas = document.getElementById('mainCanvas');
@@ -63,6 +62,14 @@ function log(msg) {
     const l = document.getElementById('log');
     l.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}<br>` + l.innerHTML;
     l.scrollTop = 0;
+}
+
+function copyAnchor() {
+    const anchorInput = document.getElementById('path-id');
+    if (!anchorInput.value) { log("ERROR: No Anchor to copy."); return; }
+    navigator.clipboard.writeText(anchorInput.value).then(() => {
+        log("<b>DNA CAPTURED.</b> Anchor copied to clipboard.");
+    });
 }
 
 function initSystem() {
@@ -80,11 +87,14 @@ function initSystem() {
 async function startInference() {
     if (isRunning) return;
     let raw = document.getElementById('path-id').value.trim();
-    aVal = raw ? BigInt(raw) : (1006n * BigInt(N) * 0x9E3779B1n) | (1n << 63n);
+    // Use the 1006 baseline if empty
+    aVal = raw ? BigInt(raw) : (1006n * BigInt(N) * 0x9E3779B1n);
+    if ((aVal & 1n) === 0n) aVal |= (1n << 63n); 
+    
     document.getElementById('path-id').value = aVal.toString();
     document.getElementById('index-val').innerText = `#${aVal.toString()}`;
 
-    isRunning = true; d = 0; totalFriction = 0;
+    isRunning = true; d = 0;
     rowM.fill(0n); colM.fill(0n); blkM.fill(0n);
     
     for(let i=0; i<totalBits; i++) if(fixed[i]) {
@@ -93,7 +103,7 @@ async function startInference() {
         rowM[r]|=bit; colM[c]|=bit; blkM[b]|=bit; board[i]=fixed[i];
     }
     
-    log("<b>MAPPING INITIATED.</b> Analyzing Manifold Resistance...");
+    log("<b>MAPPING INITIATED.</b> Unfolding bitstream...");
     requestAnimationFrame(inferenceStep);
 }
 
@@ -102,7 +112,7 @@ function inferenceStep() {
     let batch = (N > 9) ? 400 : 100;
     for (let i = 0; i < batch; i++) {
         if (d >= totalBits) { finalize(); return; }
-        if (d < 0) { log("VOID PARADOX."); isRunning = false; return; }
+        if (d < 0) { log("VOID PARADOX: Anchor failed."); isRunning = false; return; }
         if (fixed[d]) { d++; continue; }
 
         let r = Math.floor(d / N), c = d % N, b = Math.floor(r / z) * z + Math.floor(c / z);
@@ -114,13 +124,14 @@ function inferenceStep() {
             board[d] = 0; d--;
             if (d >= 0) {
                 rowM = [...shadowR[d]]; colM = [...shadowC[d]]; blkM = [...shadowB[d]];
-                phase[d]++; totalFriction++;
+                phase[d]++;
             }
             continue;
         }
 
         shadowR[d] = [...rowM]; shadowC[d] = [...colM]; shadowB[d] = [...blkM];
 
+        // The v8.6 Multiplier constant
         let seed = Number(((aVal ^ BigInt(d)) * 0x517cc1b727220a95n) % 0xFFFFFFFn);
         let val = opts[(Math.abs(seed) + phase[d]) % opts.length];
         
@@ -129,21 +140,15 @@ function inferenceStep() {
         rowM[r] |= bit; colM[c] |= bit; blkM[b] |= bit;
         d++;
     }
-    document.getElementById('fric-val').innerText = totalFriction;
     render();
     if (isRunning) requestAnimationFrame(inferenceStep);
 }
 
 function render() {
+    canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
     const s = canvas.width / N; ctx.clearRect(0, 0, canvas.width, canvas.height);
     for (let i = 0; i < totalBits; i++) {
         let x = (i % N) * s, y = Math.floor(i / N) * s;
-        // FRICTION HEATMAP: Cells turn red as phase shifts increase
-        if (phase[i] > 0) {
-            let intensity = Math.min(0.5, phase[i] / 20);
-            ctx.fillStyle = `rgba(255, 51, 51, ${intensity})`;
-            ctx.fillRect(x, y, s, s);
-        }
         ctx.strokeStyle = "rgba(0, 212, 255, 0.05)"; ctx.strokeRect(x, y, s, s);
         if (board[i]) {
             ctx.fillStyle = fixed[i] ? "var(--gold)" : "var(--sentinel)";
@@ -154,34 +159,27 @@ function render() {
 }
 
 function downloadTXT() {
-    let content = `PROJECT NP | ANCHOR: ${aVal}\nFRICTION: ${totalFriction}\n\n`;
+    let content = `PROJECT NP | v8.6.18 | ANCHOR: ${aVal}\n\n`;
     for (let r = 0; r < N; r++) {
         let line = "";
         for (let c = 0; c < N; c++) line += (board[r * N + c] || ".").toString().padStart(3, " ");
         content += line + "\n";
     }
     const b = new Blob([content], { type: "text/plain" });
-    const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = `solution_${aVal}.txt`; a.click();
+    const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = `adelic_dna_${aVal}.txt`; a.click();
 }
 
-function downloadPDF() {
-    const { jsPDF } = window.jspdf; const doc = new jsPDF();
-    doc.setFont("courier", "bold"); doc.text(`ADELIC MAP | ANCHOR: ${aVal}`, 20, 20);
-    let s = 160 / N; for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) doc.text((board[r * N + c] || ".").toString(), 20 + c * s, 40 + r * s);
-    doc.save(`map_${aVal}.pdf`);
-}
-
-function finalize() { isRunning = false; render(); log(`<b>SINGULARITY ATTAINED.</b> Friction: ${totalFriction}`); }
+function finalize() { isRunning = false; render(); log("<b>SINGULARITY ATTAINED.</b> Manifold grounded."); }
 function resetSystem() { initSystem(); log("Purged."); }
 
 canvas.addEventListener('mousedown', (e) => {
+    if (isRunning) return;
     const rect = canvas.getBoundingClientRect(); const s = canvas.width / N;
     const idx = Math.floor((e.clientY - rect.top) / s) * N + Math.floor((e.clientX - rect.left) / s);
     let v = prompt(`Fix Bit at ${idx}:`, fixed[idx] || ""); 
     if (v !== null) { fixed[idx] = Math.min(N, Math.max(0, parseInt(v) || 0)); board[idx] = fixed[idx]; render(); }
 });
 
-canvas.width = canvas.height = 600;
 initSystem();
 </script>
 </body>
