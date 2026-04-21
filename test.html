@@ -2,58 +2,67 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Project NP | Adelic Oracle v8.6.18</title>
+    <title>Project NP | Adelic Oracle v8.6.19</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root { --sentinel: #00ff41; --bedrock: #050505; --gold: #d4af37; --accent: #00d4ff; --friction: #ff3333; --export: #ff00ff; }
         body { background: var(--bedrock); color: var(--sentinel); font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 10px; overflow: hidden; height: 100vh; }
         #header { text-align: center; border-bottom: 1px solid var(--sentinel); width: 100%; padding-bottom: 5px; }
-        .index-bar { width: 90%; max-width: 600px; background: #111; border: 1px solid #333; margin: 10px 0; padding: 10px; border-left: 5px solid var(--gold); }
+        .index-bar { width: 90%; max-width: 600px; background: #111; border: 1px solid #333; margin: 10px 0; padding: 10px; border-left: 5px solid var(--gold); position: relative; }
         .index-label { font-size: 0.6rem; color: #888; text-transform: uppercase; }
-        .index-value { font-size: 0.85rem; color: var(--gold); word-break: break-all; font-weight: bold;}
-        #lattice-container { width: 70vmin; height: 70vmin; background: #000; border: 1px solid var(--accent); position: relative; }
+        .index-value { font-size: 0.8rem; color: var(--gold); word-break: break-all; font-weight: bold; padding-right: 40px;}
+        
+        #lattice-container { width: 70vmin; height: 70vmin; background: #000; border: 1px solid var(--accent); position: relative; box-shadow: 0 0 30px rgba(0, 212, 255, 0.1); }
         canvas { width: 100%; height: 100%; image-rendering: pixelated; }
+        
         .controls { display: flex; flex-direction: column; gap: 8px; margin: 10px; width: 90%; max-width: 600px;}
-        .row-group { display: flex; gap: 8px; }
+        .row-group { display: flex; gap: 8px; width: 100%; }
+        
         #console { width: 90%; max-width: 600px; height: 60px; background: #000; border: 1px dashed #333; padding: 8px; font-size: 0.65rem; color: #666; overflow-y: auto; }
-        input { background: #000; border: 1px solid #444; color: var(--accent); padding: 5px; text-align: center; font-family: inherit; }
-        .btn { flex: 1; background: rgba(0, 255, 65, 0.05); border: 1px solid var(--sentinel); color: var(--sentinel); padding: 8px; cursor: pointer; font-size: 0.65rem; font-family: inherit; font-weight: bold; text-transform: uppercase; }
+        
+        input { background: #000; border: 1px solid #444; color: var(--accent); padding: 5px; text-align: center; font-family: inherit; font-size: 0.7rem; }
+        .btn { flex: 1; background: rgba(0, 255, 65, 0.05); border: 1px solid var(--sentinel); color: var(--sentinel); padding: 8px; cursor: pointer; font-size: 0.65rem; font-family: inherit; font-weight: bold; text-transform: uppercase; transition: all 0.2s; }
         .btn:hover { background: var(--sentinel); color: #000; }
         .btn-copy { border-color: var(--gold); color: var(--gold); }
+        .btn-extract { border-color: var(--export); color: var(--export); }
+        
+        .copy-hint { position: absolute; right: 10px; top: 10px; font-size: 0.5rem; color: var(--gold); border: 1px solid var(--gold); padding: 2px 4px; cursor: pointer; }
     </style>
 </head>
 <body>
 
 <div id="header">
-    <strong>PROJECT NP: ADELIC ORACLE v8.6.18</strong>
-    <div style="font-size: 0.6rem; color: #888;">[ANCHOR CAPTURE | REVERSE MAPPING PROTOCOL]</div>
+    <strong>PROJECT NP: ADELIC ORACLE v8.6.19</strong>
+    <div style="font-size: 0.6rem; color: #888;">[REVERSE MAPPING | DNA DECONVOLUTION]</div>
 </div>
 
 <div class="index-bar">
-    <div class="index-label">Active Adelic Anchor (DNA)</div>
+    <div class="index-label">Active Adelic DNA (Anchor)</div>
     <div class="index-value" id="index-val">#00000000000000000000</div>
+    <div class="copy-hint" onclick="copyAnchor()">COPY</div>
 </div>
 
 <div class="controls">
     <div class="row-group">
         z:<input type="number" id="z-val" value="3" min="2" max="9" style="width: 30px;" onchange="initSystem()">
-        <input type="text" id="path-id" placeholder="64-bit Anchor" style="flex: 1;">
-        <button class="btn btn-copy" onclick="copyAnchor()">Copy DNA</button>
+        <input type="text" id="path-id" placeholder="DNA Key" style="flex: 1;">
+        <button class="btn btn-extract" onclick="extractDNA()">Extract DNA</button>
     </div>
     <div class="row-group">
-        <button class="btn" onclick="startInference()">Execute Trace</button>
-        <button class="btn" onclick="downloadTXT()" style="border-color:var(--export); color:var(--export);">TXT</button>
+        <button class="btn" onclick="startInference()">Solve Manifold</button>
+        <button class="btn" onclick="downloadTXT()" style="border-color:var(--export); color:var(--export);">Export TXT</button>
         <button class="btn" onclick="resetSystem()" style="color:var(--friction); border-color:var(--friction);">Purge</button>
     </div>
 </div>
 
 <div id="lattice-container"><canvas id="mainCanvas"></canvas></div>
-<div class="console" id="log">> [SENTINEL] System ready. Ground your Design to begin.</div>
+<div class="console" id="log">> [SENTINEL] System ready. Grounding theory v8.6...</div>
 
 <script>
 let z, N, totalBits, isRunning = false;
 let board, fixed, phase, d = 0, aVal = 0n;
 let rowM, colM, blkM, shadowR, shadowC, shadowB;
+const MULTIPLIER = 0x517cc1b727220a95n;
 
 const canvas = document.getElementById('mainCanvas');
 const ctx = canvas.getContext('2d');
@@ -64,11 +73,31 @@ function log(msg) {
     l.scrollTop = 0;
 }
 
+// THE REVERSE MAPPING: Extracting the 64-bit Anchor from the physical grid
+function extractDNA() {
+    let entropy = 0n;
+    let validCount = 0;
+    for(let i=0; i<totalBits; i++) {
+        if(board[i] > 0) {
+            // Synthesis: XOR-Shift digits into a composite bitstream
+            entropy = (entropy << 5n) ^ (BigInt(board[i]) * BigInt(i + 1) * MULTIPLIER);
+            validCount++;
+        }
+    }
+    if(validCount < N) { log("ERROR: Manifold density too low for extraction."); return; }
+    
+    // Finalize the 64-bit Adelic Address
+    let finalAnchor = (entropy & 0x7FFFFFFFFFFFFFFFn) | (1n << 63n); // Enforce MSB
+    document.getElementById('path-id').value = finalAnchor.toString();
+    document.getElementById('index-val').innerText = `#${finalAnchor.toString()}`;
+    log("<b>DNA EXTRACTED.</b> Solution deconvolved to 64-bit Anchor.");
+}
+
 function copyAnchor() {
-    const anchorInput = document.getElementById('path-id');
-    if (!anchorInput.value) { log("ERROR: No Anchor to copy."); return; }
-    navigator.clipboard.writeText(anchorInput.value).then(() => {
-        log("<b>DNA CAPTURED.</b> Anchor copied to clipboard.");
+    const anchor = document.getElementById('path-id').value;
+    if (!anchor) return;
+    navigator.clipboard.writeText(anchor).then(() => {
+        log("DNA Key copied to clipboard.");
     });
 }
 
@@ -87,9 +116,8 @@ function initSystem() {
 async function startInference() {
     if (isRunning) return;
     let raw = document.getElementById('path-id').value.trim();
-    // Use the 1006 baseline if empty
-    aVal = raw ? BigInt(raw) : (1006n * BigInt(N) * 0x9E3779B1n);
-    if ((aVal & 1n) === 0n) aVal |= (1n << 63n); 
+    // Default to the 1006 baseline if no anchor is provided
+    aVal = raw ? BigInt(raw) : (1006n * BigInt(N) * 0x9E3779B1n) | (1n << 63n);
     
     document.getElementById('path-id').value = aVal.toString();
     document.getElementById('index-val').innerText = `#${aVal.toString()}`;
@@ -103,16 +131,16 @@ async function startInference() {
         rowM[r]|=bit; colM[c]|=bit; blkM[b]|=bit; board[i]=fixed[i];
     }
     
-    log("<b>MAPPING INITIATED.</b> Unfolding bitstream...");
+    log("<b>EXECUTING MANIFOLD MAPPING...</b>");
     requestAnimationFrame(inferenceStep);
 }
 
 function inferenceStep() {
     if (!isRunning) return;
-    let batch = (N > 9) ? 400 : 100;
+    let batch = (N > 9) ? 450 : 100;
     for (let i = 0; i < batch; i++) {
         if (d >= totalBits) { finalize(); return; }
-        if (d < 0) { log("VOID PARADOX: Anchor failed."); isRunning = false; return; }
+        if (d < 0) { log("VOID PARADOX: Anchor failed to resonance."); isRunning = false; return; }
         if (fixed[d]) { d++; continue; }
 
         let r = Math.floor(d / N), c = d % N, b = Math.floor(r / z) * z + Math.floor(c / z);
@@ -131,8 +159,7 @@ function inferenceStep() {
 
         shadowR[d] = [...rowM]; shadowC[d] = [...colM]; shadowB[d] = [...blkM];
 
-        // The v8.6 Multiplier constant
-        let seed = Number(((aVal ^ BigInt(d)) * 0x517cc1b727220a95n) % 0xFFFFFFFn);
+        let seed = Number(((aVal ^ BigInt(d)) * MULTIPLIER) % 0xFFFFFFFn);
         let val = opts[(Math.abs(seed) + phase[d]) % opts.length];
         
         board[d] = val;
@@ -159,24 +186,24 @@ function render() {
 }
 
 function downloadTXT() {
-    let content = `PROJECT NP | v8.6.18 | ANCHOR: ${aVal}\n\n`;
+    let content = `PROJECT NP | v8.6.19 | ANCHOR: ${aVal}\n\n`;
     for (let r = 0; r < N; r++) {
         let line = "";
         for (let c = 0; c < N; c++) line += (board[r * N + c] || ".").toString().padStart(3, " ");
         content += line + "\n";
     }
     const b = new Blob([content], { type: "text/plain" });
-    const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = `adelic_dna_${aVal}.txt`; a.click();
+    const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = `solution_dna_${aVal}.txt`; a.click();
 }
 
-function finalize() { isRunning = false; render(); log("<b>SINGULARITY ATTAINED.</b> Manifold grounded."); }
+function finalize() { isRunning = false; render(); log("<b>SINGULARITY ATTAINED.</b> Solution stable."); }
 function resetSystem() { initSystem(); log("Purged."); }
 
 canvas.addEventListener('mousedown', (e) => {
     if (isRunning) return;
     const rect = canvas.getBoundingClientRect(); const s = canvas.width / N;
     const idx = Math.floor((e.clientY - rect.top) / s) * N + Math.floor((e.clientX - rect.left) / s);
-    let v = prompt(`Fix Bit at ${idx}:`, fixed[idx] || ""); 
+    let v = prompt(`Fix Digit at ${idx}:`, fixed[idx] || ""); 
     if (v !== null) { fixed[idx] = Math.min(N, Math.max(0, parseInt(v) || 0)); board[idx] = fixed[idx]; render(); }
 });
 
