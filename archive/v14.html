@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Project NP | Adelic Oracle v13.0</title>
+    <title>Project NP | Adelic Oracle v14.0</title>
     <style>
         :root { 
             --sentinel: #00ff41; --bedrock: #050505; --accent: #00d4ff; 
@@ -15,7 +15,7 @@
         }
         .header { width: 100%; text-align: center; border-bottom: 2px solid var(--sentinel); padding-bottom: 10px; }
         
-        .layout { display: grid; grid-template-columns: 350px 1fr; gap: 20px; width: 100%; max-width: 950px; margin-top: 15px; }
+        .layout { display: grid; grid-template-columns: 320px 1fr; gap: 20px; width: 100%; max-width: 950px; margin-top: 15px; }
         
         .sidebar { display: flex; flex-direction: column; gap: 15px; }
         .card { background: var(--panel); border: 1px solid #333; padding: 15px; border-left: 4px solid var(--accent); }
@@ -28,68 +28,59 @@
         .btn:hover { background: var(--sentinel); color: #000; }
         .btn-gold { border-color: var(--gold); color: var(--gold); }
         .btn-gold:hover { background: var(--gold); color: #000; }
-        .btn-purge { border-color: var(--friction); color: var(--friction); }
-        .btn-purge:hover { background: var(--friction); color: #fff; }
-
+        
         canvas { border: 1px solid var(--accent); background: #000; box-shadow: 0 0 40px rgba(0, 212, 255, 0.1); cursor: crosshair; }
         
-        /* The Ledger */
-        .ledger-container { height: 220px; overflow-y: auto; background: #000; border: 1px dashed #444; padding: 5px; display: flex; flex-direction: column; gap: 5px; }
-        .ledger-item { background: #1a1a1a; border: 1px solid #333; padding: 8px; font-size: 0.65rem; color: #ccc; }
-        .ledger-hash { color: var(--friction); font-size: 0.6rem; margin-bottom: 4px; }
-        .ledger-mapping { color: var(--accent); font-weight: bold; margin-bottom: 6px; }
-        .snap-btn { background: #222; border: 1px solid var(--gold); color: var(--gold); cursor: pointer; padding: 4px 8px; width: 100%; font-size: 0.6rem; text-transform: uppercase; }
-        .snap-btn:hover { background: var(--gold); color: #000; }
-
+        /* Scrolling List for Anchors */
+        .list-container { height: 180px; overflow-y: auto; background: #000; border: 1px dashed #444; padding: 5px; }
+        .anchor-item { font-size: 0.7rem; color: var(--accent); padding: 8px; cursor: pointer; border-bottom: 1px solid #222; display: flex; flex-direction: column; }
+        .anchor-item:hover { background: #222; color: var(--sentinel); border-left: 2px solid var(--sentinel); }
+        
         .console { width: 100%; height: 80px; background: #000; border: 1px dashed #333; margin-top: 15px; padding: 10px; font-size: 0.7rem; color: #666; overflow-y: auto; box-sizing: border-box; }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <strong>PROJECT NP: ADELIC NAVIGATOR v13.0</strong>
-    <div style="font-size: 0.7rem; color: #888; margin-top: 5px;">[ANCHOR-TO-INDEX GEOMETRIC MAPPING]</div>
+    <strong>PROJECT NP: ADELIC NAVIGATOR v14.0</strong>
+    <div style="font-size: 0.7rem; color: #888; margin-top: 5px;">[VISUAL PLOTTING] // [ANCHOR SCANNER & INDEX LEDGER]</div>
 </div>
 
 <div class="layout">
     <div class="sidebar">
         <div class="card card-gold">
-            <span class="label">Manifold State</span>
+            <span class="label">Manifold Configuration</span>
             <div style="display: flex; gap: 10px;">
                 <div style="flex:1;">
-                    <span class="label" style="font-size:0.55rem;">Scale (Z)</span>
+                    <span class="label" style="font-size:0.55rem;">Z-Scale</span>
                     <input type="number" id="z-val" value="3" min="2" max="5" onchange="initSystem()">
                 </div>
                 <div style="flex:2;">
                     <span class="label" style="font-size:0.55rem;">Geometry Hash</span>
-                    <input type="text" id="prob-hash" readonly value="VACUUM" style="color:var(--friction);">
+                    <input type="text" id="prob-hash" readonly value="VACUUM" style="color:var(--gold);">
                 </div>
             </div>
-            <button class="btn btn-purge" onclick="resetSystem()">Purge Grid</button>
+            <button class="btn" style="border-color: #555; color: #888;" onclick="resetSystem()">Purge Digits</button>
         </div>
 
         <div class="card">
-            <span class="label">Kinetic Anchor</span>
-            <input type="text" id="target-anchor" value="1006" placeholder="Enter Anchor (e.g. 1006)">
-            <button class="btn btn-gold" onclick="mapAnchorToIndex()">Map Anchor To Index</button>
-        </div>
-
-        <div class="card" style="padding: 10px;">
-            <span class="label">Mapping Ledger</span>
-            <div class="ledger-container" id="ledger-list">
-                <div style="color:#555; font-size:0.65rem; padding:5px; text-align:center;">Ledger empty.<br>Map an Anchor to begin.</div>
+            <span class="label">1. Search Active Geometries</span>
+            <button class="btn btn-gold" onclick="scanAnchors()">Scan For Anchors</button>
+            <span class="label" style="margin-top:10px;">2. Discovered Anchors (Click to Plot)</span>
+            <div class="list-container" id="anchor-list">
+                <div style="color:#555; font-size:0.65rem; padding:5px; text-align:center;">Grid idle.<br>Scan to find valid mapping anchors.</div>
             </div>
         </div>
     </div>
 
     <div class="viewport">
         <canvas id="mainCanvas"></canvas>
-        <div class="console" id="log">> [SENTINEL] Draw clues. Map Anchor. Observe Index Shift.</div>
+        <div class="console" id="log">> [SENTINEL] Draw your starting digits, then scan.</div>
     </div>
 </div>
 
 <script>
-let z, N, totalBits, isCalculating = false;
+let z, N, totalBits, isActive = false;
 let board, fixed, phase;
 let rowM, colM, blkM, shadowR, shadowC, shadowB;
 
@@ -110,58 +101,50 @@ function calculateHash() {
 }
 
 function initSystem() {
-    isCalculating = false;
+    isActive = false;
     z = parseInt(document.getElementById('z-val').value);
     N = z * z; totalBits = N * N;
     board = new Uint16Array(totalBits); fixed = new Uint16Array(totalBits); phase = new Uint16Array(totalBits);
     rowM = new Array(N).fill(0n); colM = new Array(N).fill(0n); blkM = new Array(N).fill(0n);
     shadowR = new Array(totalBits); shadowC = new Array(totalBits); shadowB = new Array(totalBits);
     canvas.width = canvas.height = 450;
-    document.getElementById('ledger-list').innerHTML = '';
+    document.getElementById('anchor-list').innerHTML = '';
     calculateHash();
     render();
 }
 
-// Phase 1: Maps the Input Anchor to the Resolved Index for the CURRENT Graph
-async function mapAnchorToIndex() {
-    if (isCalculating) return;
-    isCalculating = true;
-    
-    let baseAnchor = BigInt(document.getElementById('target-anchor').value || "1006");
-    let currentHash = calculateHash();
-    
-    log(`Mapping Anchor [${baseAnchor}] through Geometry Hash [${currentHash}]...`);
-    
+// 1. SCAN MANIFOLD: Fast, invisible search to populate the Anchor List
+async function scanAnchors() {
+    if (isActive) return;
+    isActive = true;
+    document.getElementById('anchor-list').innerHTML = '';
+    log("Scanning geometry for compatible Anchors...");
+
+    let anchorBase = BigInt(Date.now() % 1000000); // Random starting frequency
     let d = 0, scanStep = 0n, friction = 0;
-    let activeID = (baseAnchor ^ (1n << 63n)); 
+    let solutionsFound = 0;
     
     rowM.fill(0n); colM.fill(0n); blkM.fill(0n); board.fill(0); phase.fill(0);
 
-    const t0 = performance.now();
-
-    while (isCalculating && d >= 0) {
+    while (isActive && d >= 0 && solutionsFound < 10) {
         if (d === totalBits) { 
-            const t1 = performance.now();
-            addLedgerEntry(baseAnchor, activeID, currentHash, (t1-t0));
-            isCalculating = false;
-            // Clear the board for visual clarity - forcing the user to use "SNAP" to see it
-            board.fill(0); 
-            render(false);
-            break; 
+            let foundIndex = (anchorBase ^ (1n << 63n)) + scanStep;
+            addAnchorToList(anchorBase, foundIndex);
+            solutionsFound++;
+            d--; // Force backtrack to find the next one
+            rowM = [...shadowR[d]]; colM = [...shadowC[d]]; blkM = [...shadowB[d]]; phase[d]++;
+            continue; 
         }
 
         if (friction > N * 20) {
             scanStep++; d = 0; friction = 0;
-            activeID = (baseAnchor ^ (1n << 63n)) + scanStep;
-            rowM.fill(0n); colM.fill(0n); blkM.fill(0n);
-            // Yield occasionally to prevent UI freeze on very hard graphs
-            if(scanStep % 500n === 0n) await new Promise(r => setTimeout(r, 0));
+            rowM.fill(0n); colM.fill(0n); blkM.fill(0n); board.fill(0); phase.fill(0);
+            if(scanStep % 200n === 0n) await new Promise(r => setTimeout(r, 0)); // Keep UI responsive
             continue;
         }
 
         let r = Math.floor(d / N), c = d % N, b = Math.floor(r / z) * z + Math.floor(c / z);
         let mask = rowM[r] | colM[c] | blkM[b];
-        
         let opts = [];
         for (let i = 1; i <= N; i++) if (!(mask & (1n << BigInt(i)))) opts.push(i);
 
@@ -173,7 +156,7 @@ async function mapAnchorToIndex() {
         }
 
         shadowR[d] = [...rowM]; shadowC[d] = [...colM]; shadowB[d] = [...blkM];
-        
+        let activeID = (anchorBase ^ (1n << 63n)) + scanStep;
         let seed = Number(((activeID ^ BigInt(d)) * 0x517cc1b727220a95n) % BigInt(opts.length));
         let val = (fixed[d] !== 0) ? fixed[d] : opts[(Math.abs(seed) + phase[d]) % opts.length];
         
@@ -182,38 +165,30 @@ async function mapAnchorToIndex() {
         rowM[r] |= bit; colM[c] |= bit; blkM[b] |= bit;
         d++;
     }
+    isActive = false;
+    log(`Scan complete. Displaying discovered trajectories.`);
+    board.fill(0); render(false); // Reset board for user to click an anchor
 }
 
-function addLedgerEntry(anchor, index, hash, time) {
-    const list = document.getElementById('ledger-list');
-    if (list.innerText.includes("empty")) list.innerHTML = ''; // clear placeholder
-
+function addAnchorToList(anchor, index) {
+    const list = document.getElementById('anchor-list');
     const item = document.createElement('div');
-    item.className = 'ledger-item';
-    
-    item.innerHTML = `
-        <div class="ledger-hash">GRAPH HASH: ${hash}</div>
-        <div class="ledger-mapping">
-            A: ${anchor.toString()}<br>
-            <span style="color:#fff;">↓ maps to ↓</span><br>
-            I: #${index.toString()}
-        </div>
-        <div style="font-size:0.5rem; color:#666; margin-bottom:5px;">Time: ${time.toFixed(1)}ms</div>
-        <button class="snap-btn" onclick="manifestFromIndex(${index}n)">Manifest (O(1) Snap)</button>
-    `;
-    list.prepend(item); // Add to top
-    log(`Successfully mapped Anchor to Index #${index}.`);
+    item.className = 'anchor-item';
+    item.innerHTML = `<span style="color:#888;">Anchor: ${anchor}</span><span style="color:var(--sentinel); font-weight:bold;">Index: #${index}</span>`;
+    item.onclick = () => visualPlotting(index);
+    list.appendChild(item);
 }
 
-// Phase 2: O(1) Snap Manifestation from the resolved Index
-function manifestFromIndex(targetIndex) {
-    if (isCalculating) return;
+// 2. VISUAL PLOTTING: Uses the Index to draw the solution on the canvas in real-time
+async function visualPlotting(targetIndex) {
+    if (isActive) return;
+    isActive = true;
     let d = 0;
     rowM.fill(0n); colM.fill(0n); blkM.fill(0n); board.fill(0); phase.fill(0);
+    
+    log(`Plotting Manifold from Index: #${targetIndex}...`);
 
-    const t0 = performance.now();
-
-    while (d >= 0 && d < totalBits) {
+    while (isActive && d >= 0 && d < totalBits) {
         let r = Math.floor(d / N), c = d % N, b = Math.floor(r / z) * z + Math.floor(c / z);
         let mask = rowM[r] | colM[c] | blkM[b];
         let opts = [];
@@ -232,11 +207,17 @@ function manifestFromIndex(targetIndex) {
         let bit = 1n << BigInt(val);
         rowM[r] |= bit; colM[c] |= bit; blkM[b] |= bit;
         d++;
+        
+        // THE VISUAL YIELD: Renders the digits to the canvas dynamically
+        if (d % 3 === 0) { 
+            render(false); 
+            await new Promise(r => setTimeout(r, 0)); // Creates the "plotting" effect
+        }
     }
-
-    const t1 = performance.now();
+    
+    isActive = false;
     render(true);
-    log(`[${(t1-t0).toFixed(2)}ms] Graph instantly snapped from Index #${targetIndex}.`);
+    log(`<b>SINGULARITY GROUNDED</b> at Index #${targetIndex}`);
 }
 
 function render(final = false) {
@@ -251,24 +232,27 @@ function render(final = false) {
 
         let val = fixed[i] || board[i];
         if (val) {
-            ctx.fillStyle = fixed[i] ? "var(--gold)" : (final ? "var(--sentinel)" : "transparent");
+            ctx.fillStyle = fixed[i] ? "var(--gold)" : (final ? "var(--sentinel)" : "white");
             ctx.font = `bold ${s * 0.5}px monospace`; ctx.textAlign = "center";
             ctx.fillText(val, x + s/2, y + s * 0.7);
         }
     }
 }
 
-function resetSystem() { initSystem(); log("Grid and Memory Purged."); }
+function resetSystem() { initSystem(); log("Digits purged. Grid reset to Vacuum."); }
 
+// User Input for Starting Grid (The Clues)
 canvas.addEventListener('mousedown', (e) => {
+    if(isActive) return;
     const rect = canvas.getBoundingClientRect();
     const s = canvas.width / N;
     const idx = Math.floor((e.clientY - rect.top) / s) * N + Math.floor((e.clientX - rect.left) / s);
-    let v = prompt(`Fix Digit at Node ${idx}:`); 
+    let v = prompt(`Fix User Digit at Node ${idx}:`); 
     if (v !== null) { 
         let num = parseInt(v);
         fixed[idx] = (isNaN(num) || num < 0 || num > N) ? 0 : num; 
-        board.fill(0); // clear previous inference visually
+        board.fill(0); // Clear previous visual plot
+        document.getElementById('anchor-list').innerHTML = '<div style="color:#888; font-size:0.65rem; padding:5px; text-align:center;">Graph altered.<br>Re-scan required.</div>';
         calculateHash();
         render(); 
     }
