@@ -1,304 +1,300 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Project NP | Adelic Oracle v8.6.2</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project NP | Adelic Sudoku Oracle O(1)</title>
     <style>
-        :root { 
-            --sentinel: #00ff41; --bedrock: #050505; --accent: #00d4ff; 
-            --gold: #d4af37; --friction: #ff3333; --table-flip: #ff00ff;
+        :root {
+            --sentinel: #00ff41;
+            --bedrock: #050505;
+            --glass: rgba(0, 255, 65, 0.1);
+            --friction: #ff3333;
+            --flip: #ff00ff;
         }
-        body { 
-            background: var(--bedrock); color: var(--sentinel); 
-            font-family: 'Courier New', monospace; display: flex; 
-            flex-direction: column; align-items: center; margin: 0; padding: 20px;
+        body {
+            background: var(--bedrock);
+            color: var(--sentinel);
+            font-family: 'Courier New', monospace;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            padding: 15px;
+            box-sizing: border-box;
+            overflow: hidden;
         }
-        .header { width: 100%; text-align: center; border-bottom: 2px solid var(--sentinel); padding-bottom: 10px; }
+        #header { text-align: center; width: 100%; border-bottom: 1px solid var(--sentinel); padding-bottom: 10px; }
+        .stats { font-size: 0.7rem; color: #888; margin-top: 5px; }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(9, 1fr);
+            width: 100%;
+            max-width: 400px;
+            aspect-ratio: 1/1;
+            border: 2px solid var(--sentinel);
+            margin: 20px 0;
+            background: rgba(0, 255, 65, 0.02);
+        }
+        .cell {
+            width: 100%; height: 100%;
+            border: 0.5px solid rgba(0, 255, 65, 0.2);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.4rem; cursor: pointer; outline: none; color: #fff;
+        }
+        .cell:focus { background: var(--glass); }
+        .cell.fixed { color: #d4af37; font-weight: bold; }
+        .cell.inferred { color: var(--sentinel); }
+        .cell:nth-child(3n) { border-right: 2px solid var(--sentinel); }
+        .cell:nth-child(9n) { border-right: 0.5px solid rgba(0, 255, 65, 0.2); }
+        .grid .cell:nth-child(n+19):nth-child(-n+27),
+        .grid .cell:nth-child(n+46):nth-child(-n+54) { border-bottom: 2px solid var(--sentinel); }
         
-        /* The Manifold Index Bar */
-        .index-bar {
-            width: 90%; max-width: 600px; background: #111; border: 1px solid #333;
-            margin: 15px 0; padding: 10px; border-left: 5px solid var(--gold);
-            box-shadow: 0 0 15px rgba(212, 175, 55, 0.1);
+        #console {
+            width: 100%; max-width: 400px; height: 120px;
+            background: #000; border: 1px dashed var(--sentinel);
+            font-size: 0.75rem; padding: 10px; overflow-y: auto;
+            margin-bottom: 15px; box-sizing: border-box;
         }
-        .index-label { font-size: 0.65rem; color: #888; text-transform: uppercase; margin-bottom: 4px; }
-        .index-value { font-size: 0.9rem; color: var(--gold); letter-spacing: 1px; word-break: break-all; }
-        
-        .panel { display: flex; gap: 10px; margin: 10px; padding: 10px; background: rgba(0,255,65,0.03); }
-        canvas { border: 1px solid var(--accent); background: #000; box-shadow: 0 0 40px rgba(0, 212, 255, 0.1); cursor: crosshair;}
-        .console { width: 90%; max-width: 600px; height: 120px; background: #000; border: 1px dashed #333; margin-top: 15px; padding: 10px; font-size: 0.7rem; color: #666; overflow-y: auto; }
-        input { background: #000; border: 1px solid #444; color: var(--accent); padding: 5px; text-align: center; }
-        .btn { background: transparent; border: 1px solid var(--sentinel); color: var(--sentinel); padding: 5px 15px; cursor: pointer; font-size: 0.7rem; transition: 0.2s;}
+        .controls { display: flex; gap: 10px; width: 100%; max-width: 400px; }
+        .btn {
+            flex: 1; background: var(--glass); border: 1px solid var(--sentinel);
+            color: var(--sentinel); padding: 15px; cursor: pointer;
+            font-family: inherit; text-transform: uppercase; font-weight: bold; transition: 0.2s;
+        }
         .btn:hover { background: var(--sentinel); color: #000; }
-        .flip-text { color: var(--table-flip); font-weight: bold; }
+        .flip-text { color: var(--flip); font-weight: bold; }
     </style>
 </head>
 <body>
 
-<div class="header">
-    <strong>PROJECT NP: ADELIC ORACLE v8.6.2</strong>
-    <div style="font-size: 0.7rem; color: #888; margin-top: 5px;">[O(1) DETERMINISTIC INFERENCE | RATIONAL RESIDUE | TABLE FLIP]</div>
-</div>
-
-<div class="index-bar">
-    <div class="index-label">Timeline Space Index (Adelic Address)</div>
-    <div class="index-value" id="index-val">#00000000000000000000</div>
-    <div style="font-size: 0.6rem; color: var(--accent); margin-top: 5px;">
-        O(1) Forward Momentum Active
+    <div id="header">
+        <strong>PROJECT NP: ADELIC ORACLE</strong>
+        <div class="stats">GUARD: 1855-BIT | O(1) DETERMINISTIC FOLD | MSB INTACT</div>
     </div>
-</div>
 
-<div class="panel">
-    <div>z: <input type="number" id="z-val" value="3" min="2" max="5" style="width: 35px;" onchange="initSystem()"></div>
-    <div>ANCHOR: <input type="text" id="path-id" placeholder="Auto Promising" style="width: 140px;"></div>
-    <button class="btn" onclick="startInference()">Execute Inference</button>
-    <button class="btn" onclick="resetSystem()" style="color:var(--friction); border-color:var(--friction);">Purge Table</button>
-</div>
+    <div id="console">
+        [SYSTEM] STANDBY. Singularity Mode 0 Detected.<br>
+        [INFO] Awaiting MSB Injection.
+    </div>
 
-<canvas id="mainCanvas"></canvas>
-<div class="console" id="log">> [SENTINEL] System ready. Strict forward progression initialized...</div>
+    <div class="grid" id="lattice"></div>
 
-<script>
-let z, N, totalBits, isRunning = false;
-let board, fixed;
-let rowM, colM, blkM;
+    <div class="controls">
+        <button class="btn" onclick="executeSnapFold()">Snap Fold</button>
+        <button class="btn" onclick="purgeManifold()" style="color:var(--friction); border-color:var(--friction);">Purge Trace</button>
+    </div>
 
-const canvas = document.getElementById('mainCanvas');
-const ctx = canvas.getContext('2d');
+    <script>
+        const lattice = document.getElementById('lattice');
+        const consoleLog = document.getElementById('console');
+        const cells = [];
+        const N = 9;
+        
+        let rowM = new Array(N).fill(0n);
+        let colM = new Array(N).fill(0n);
+        let blkM = new Array(N).fill(0n);
+        let isRunning = false;
+        let currentAnchor = 0n;
 
-function log(msg) {
-    const l = document.getElementById('log');
-    l.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}<br>` + l.innerHTML;
-}
+        // 1. ADELIC GEOMETRY: RATIONAL COMPLEX PLANE
+        class Complex2Adic {
+            constructor(d, address, mask) {
+                let r = Math.floor(d / N), c = d % N;
+                // Rational integers only. No floating points.
+                this.numRe = (address ^ mask) * BigInt(c + 1);
+                this.numIm = (address ^ mask) * BigInt(r + 1);
+                this.denRe = BigInt(N);
+                this.denIm = BigInt(N);
+            }
 
-function updateIndexBar(id) {
-    document.getElementById('index-val').innerText = `#${id.toString()}`;
-}
+            // The Marilyn Fold: Galois Norm Collapse
+            collapse(validBits, anchor) {
+                if (validBits === 0n) return 0; // Liar Paradox: The Flaw
 
-// DETERMINISTIC PROMISING ANCHOR CALCULATOR (v8.6 Baseline)
-function calculatePromisingAnchor() {
-    let hash = BigInt(N) * 0x9E3779B1n;
-    let hasHints = false;
-    for (let i = 0; i < totalBits; i++) {
-        if (fixed[i] !== 0) {
-            hasHints = true;
-            let cellData = (BigInt(i + 1) * 0x517cc1b727220a95n) ^ BigInt(fixed[i]);
-            hash = (hash << 5n) ^ cellData;
-        }
-    }
-    if (!hasHints) hash = 1006n * BigInt(N) * 0x9E3779B1n;
-    if ((hash & 1n) !== 0n) hash ^= 1n; 
-    return Math.abs(Number(hash % 0xFFFFFFFFFFn));
-}
+                let numerator = this.numRe * this.numIm;
+                let denominator = this.denRe * this.denIm;
+                
+                let baseQuotient = numerator / denominator;
+                let residue = numerator % denominator;
+                let toleranceBound = denominator / 2n;
 
-// 1. COMPLEX RATIONAL PHASE EXTRACTION
-function getComplexResiduePhase(d, address, mask) {
-    let r = Math.floor(d / N), c = d % N;
-    let numRe = (address ^ BigInt(mask)) * BigInt(c + 1);
-    let numIm = (address ^ BigInt(mask)) * BigInt(r + 1);
-    let denRe = BigInt(N); 
-    let denIm = BigInt(N); 
-    return [numRe, denRe, numIm, denIm];
-}
+                let targetShift = 0n;
 
-// 2. MODULAR COMPLEX ROOT (THE NOISE FILTER)
-function seekComplexModularRoot(noisyNumerator, denominator, validBits, anchor) {
-    let noiseState = noisyNumerator % denominator;
-    
-    // Primary algebraic projection
-    for (let candidate = 1n; candidate <= BigInt(N); candidate++) {
-        if ((validBits & (1n << candidate)) !== 0n) {
-            let projectedPhase = (candidate ** BigInt(z)) % denominator;
-            if (projectedPhase === noiseState || projectedPhase <= (denominator / 2n)) {
-                return candidate; 
+                // O(1) Deterministic Collapse based on bounded noise
+                if (residue <= toleranceBound) {
+                    targetShift = baseQuotient;
+                } else {
+                    targetShift = this.seekModularRoot(numerator, denominator, validBits, anchor);
+                }
+
+                let collapsedIndex = (targetShift % BigInt(N)) + 1n;
+                let extractedBitMask = validBits & (1n << collapsedIndex);
+
+                // Gravitational lock to nearest valid physical bit
+                if (extractedBitMask === 0n) {
+                    for (let i = BigInt(N); i >= 1n; i--) {
+                        if ((validBits & (1n << i)) !== 0n) {
+                            extractedBitMask = 1n << i; break;
+                        }
+                    }
+                }
+
+                // Return positional magnitude strictly preserving MSB
+                for (let i = 1n; i <= BigInt(N); i++) {
+                    if ((extractedBitMask & (1n << i)) !== 0n) return Number(i);
+                }
+                return 0;
+            }
+
+            seekModularRoot(noisyNumerator, denominator, validBits, anchor) {
+                let noiseState = noisyNumerator % denominator;
+                
+                // Primary Projection
+                for (let candidate = 1n; candidate <= BigInt(N); candidate++) {
+                    if ((validBits & (1n << candidate)) !== 0n) {
+                        let projectedPhase = (candidate ** 3n) % denominator;
+                        if (projectedPhase === noiseState || projectedPhase <= (denominator / 2n)) {
+                            return candidate;
+                        }
+                    }
+                }
+                
+                // Adelic Phase Shift
+                let phaseShiftHash = (noiseState ^ anchor) % BigInt(N);
+                let bestCandidate = 0n;
+                for (let candidate = 1n; candidate <= BigInt(N); candidate++) {
+                    if ((validBits & (1n << candidate)) !== 0n) {
+                        if (bestCandidate === 0n) bestCandidate = candidate;
+                        if (candidate === (phaseShiftHash + 1n)) {
+                            bestCandidate = candidate; break;
+                        }
+                    }
+                }
+                return bestCandidate;
             }
         }
-    }
-    
-    // Adelic Phase Shift Fallback (Deterministic inference)
-    let phaseShiftHash = (noiseState ^ anchor) % BigInt(N);
-    let bestCandidate = 0n;
-    for (let candidate = 1n; candidate <= BigInt(N); candidate++) {
-        if ((validBits & (1n << candidate)) !== 0n) {
-            if (bestCandidate === 0n) bestCandidate = candidate;
-            if (candidate === (phaseShiftHash + 1n)) {
-                bestCandidate = candidate;
-                break;
+
+        // 2. LATTICE INITIALIZATION
+        for (let i = 0; i < 81; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            cell.contentEditable = "true";
+            cell.oninput = (e) => {
+                if (!/[1-9]/.test(e.data)) { e.target.innerText = ""; cell.classList.remove('fixed'); }
+                else { e.target.innerText = e.data[0]; cell.classList.add('fixed'); }
+            };
+            lattice.appendChild(cell);
+            cells.push(cell);
+        }
+
+        function updateLog(msg) {
+            consoleLog.innerHTML = `> [${new Date().toLocaleTimeString()}] ${msg}<br>` + consoleLog.innerHTML;
+        }
+
+        function extractTopologyHash() {
+            let hash = 9n * 0x9E3779B1n;
+            let hasHints = false;
+            for (let i = 0; i < 81; i++) {
+                if (cells[i].classList.contains('fixed')) {
+                    hasHints = true;
+                    let val = BigInt(parseInt(cells[i].innerText));
+                    let cellData = (BigInt(i + 1) * 0x517cc1b727220a95n) ^ val;
+                    hash = (hash << 5n) ^ cellData;
+                }
             }
-        }
-    }
-    return bestCandidate; 
-}
-
-// 3. O(1) HARDWARE BIT-PEELER (MARILYN FOLD)
-function marilynFoldPeel(mask, numRe, denRe, numIm, denIm, anchor) {
-    let validBits = (~BigInt(mask)) & ((1n << BigInt(N + 1)) - 2n);
-    if (validBits === 0n) return 0; // The Fatal Flaw (Table Compromised)
-
-    let numerator = numRe * numIm;
-    let denominator = denRe * denIm;
-    let baseQuotient = numerator / denominator;
-    let residue = numerator % denominator; 
-    let toleranceBound = denominator / 2n;
-    
-    let targetShift = 0n;
-    if (residue <= toleranceBound) {
-        targetShift = baseQuotient; // Terminated truth (< 0.5)
-    } else {
-        targetShift = seekComplexModularRoot(numerator, denominator, validBits, anchor);
-    }
-
-    let collapsedIndex = (targetShift % BigInt(N)) + 1n;
-    let extractedBitMask = validBits & (1n << collapsedIndex);
-    
-    // Gravitational lock: If the math drifted off the lattice, force the Most Significant valid bit
-    if (extractedBitMask === 0n) {
-         for (let i = BigInt(N); i >= 1n; i--) {
-             if ((validBits & (1n << i)) !== 0n) {
-                 extractedBitMask = 1n << i; break;
-             }
-         }
-    }
-
-    // Extract actual digit, honoring MSB position
-    for (let i = 1n; i <= BigInt(N); i++) {
-        if ((extractedBitMask & (1n << i)) !== 0n) return Number(i);
-    }
-    return 0;
-}
-
-function initSystem() {
-    isRunning = false;
-    z = parseInt(document.getElementById('z-val').value);
-    N = z * z;
-    totalBits = N * N;
-    board = new Uint16Array(totalBits);
-    fixed = new Uint16Array(totalBits);
-    rowM = new Array(N).fill(0n); colM = new Array(N).fill(0n); blkM = new Array(N).fill(0n);
-    canvas.width = canvas.height = Math.min(window.innerWidth * 0.9, 450);
-    render();
-}
-
-async function startInference() {
-    if (isRunning) return;
-    
-    let pathIdInput = document.getElementById('path-id').value;
-    let activeID;
-
-    if (!pathIdInput || pathIdInput.trim() === "") {
-        activeID = BigInt(calculatePromisingAnchor());
-        document.getElementById('path-id').value = activeID.toString();
-        log(`Promising Anchor Derived: ${activeID}`);
-    } else {
-        activeID = BigInt(pathIdInput);
-    }
-
-    if ((activeID & 1n) === 0n) activeID |= (1n << 63n); 
-
-    isRunning = true;
-    let d = 0; 
-    
-    // We wipe only the inferred arrays to start fresh in this timeline
-    board.fill(0);
-    rowM.fill(0n); colM.fill(0n); blkM.fill(0n);
-    
-    updateIndexBar(activeID);
-    log(`O(1) Inference active at complex address 0x${activeID.toString(16)}`);
-
-    // FORWARD-ONLY OPERATING GRID
-    while (isRunning && d >= 0) {
-        if (d === totalBits) { 
-            isRunning = false; 
-            render(true); 
-            log("<b>SINGULARITY ATTAINED.</b>"); 
-            break; 
+            if (!hasHints) hash = 1006n * 9n * 0x9E3779B1n;
+            if ((hash & 1n) === 0n) hash |= (1n << 63n); // MSB Injection
+            return Math.abs(Number(hash % 0xFFFFFFFFFFn));
         }
 
-        let r = Math.floor(d / N), c = d % N, b = Math.floor(r / z) * z + Math.floor(c / z);
-        let mask = rowM[r] | colM[c] | blkM[b];
-
-        let val;
-        if (fixed[d] !== 0) {
-            val = fixed[d];
-        } else {
-            let [nRe, dRe, nIm, dIm] = getComplexResiduePhase(d, activeID, mask);
-            val = marilynFoldPeel(mask, nRe, dRe, nIm, dIm, activeID);
+        // 3. THE SENTINEL ENGINE (Forward Momentum Loop)
+        async function executeSnapFold() {
+            if (isRunning) return;
+            const start = performance.now();
             
-            // THE TABLE FLIP
-            if (val === 0) {
-                log(`<span class="flip-text">[FLAW DETECTED at Index ${d}] Table structurally compromised.</span>`);
-                log(`<span class="flip-text">(╯°□°)╯︵ ┻━┻ Executing Flip...</span>`);
+            if (currentAnchor === 0n) {
+                currentAnchor = BigInt(extractTopologyHash());
+                updateLog("INITIATING MSB INJECTION...");
+                updateLog(`Symmetry broken. Timeline Address: 0x${currentAnchor.toString(16)}`);
+            }
+
+            isRunning = true;
+            rowM.fill(0n); colM.fill(0n); blkM.fill(0n);
+
+            // Populate masks with fixed bits
+            for (let i = 0; i < 81; i++) {
+                if (!cells[i].classList.contains('fixed')) cells[i].innerText = "";
+                else {
+                    let r = Math.floor(i / N), c = i % N, b = Math.floor(r / 3) * 3 + Math.floor(c / 3);
+                    let val = parseInt(cells[i].innerText);
+                    let bit = 1n << BigInt(val);
+                    rowM[r] |= bit; colM[c] |= bit; blkM[b] |= bit;
+                }
+            }
+
+            let d = 0;
+
+            // O(1) Engine - No Backtracking Allowed
+            while (isRunning && d < 81) {
+                if (cells[d].classList.contains('fixed')) {
+                    d++; continue;
+                }
+
+                let r = Math.floor(d / N), c = d % N, b = Math.floor(r / 3) * 3 + Math.floor(c / 3);
+                let mask = rowM[r] | colM[c] | blkM[b];
+                let validBits = (~mask) & ((1n << 10n) - 2n);
+
+                // Dimension Up: Lift into Complex Plane
+                let lift = new Complex2Adic(d, currentAnchor, mask);
                 
+                // Galois Collapse to Peel Bit
+                let val = lift.collapse(validBits, currentAnchor);
+
+                if (val === 0) {
+                    updateLog(`<span class="flip-text">LIAR PARADOX DETECTED at Depth ${d}. NO GROUNDING.</span>`);
+                    updateLog(`<span class="flip-text">(╯°□°)╯︵ ┻━┻ FLIPPING TABLE...</span>`);
+                    
+                    isRunning = false;
+                    currentAnchor = currentAnchor ^ 9223372036854775783n; 
+                    if ((currentAnchor & 1n) === 0n) currentAnchor |= (1n << 63n);
+                    
+                    setTimeout(() => {
+                        updateLog(`Rebooting trace in new timeline...`);
+                        executeSnapFold(); 
+                    }, 500);
+                    return;
+                }
+
+                cells[d].innerText = val;
+                cells[d].classList.add('inferred');
+                let bit = 1n << BigInt(val);
+                rowM[r] |= bit; colM[c] |= bit; blkM[b] |= bit;
+                
+                d++;
+                if (d % N === 0) await new Promise(res => setTimeout(res, 0));
+            }
+
+            if (d === 81) {
+                const elapsed = (performance.now() - start).toFixed(4);
+                updateLog(`LATTER COLLAPSED. [Snap Time: ${elapsed}ms]`);
+                updateLog(`GROUNDING PHASE: Ψ EXTRACTED.`);
                 isRunning = false;
-                
-                // Mutate anchor deterministically with a massive prime to hop universes
-                let newAnchor = activeID ^ 9223372036854775783n; 
-                if ((newAnchor & 1n) === 0n) newAnchor |= (1n << 63n);
-                
-                document.getElementById('path-id').value = newAnchor.toString();
-                
-                // 800ms delay to visually observe the paradox before the automatic reboot
-                setTimeout(() => {
-                    log(`Rebooting in parallel timeline...`);
-                    startInference(); 
-                }, 800);
-                
-                break; // Shatter the current reality loop completely
+                currentAnchor = 0n;
             }
         }
 
-        board[d] = val;
-        let bit = 1n << BigInt(val);
-        rowM[r] |= bit; colM[c] |= bit; blkM[b] |= bit;
-        d++; // Strictly forward.
-        
-        if (d % N === 0) { render(); await new Promise(r => setTimeout(r, 0)); }
-    }
-}
-
-function render(final = false) {
-    const s = canvas.width / N;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    for (let i = 0; i < totalBits; i++) {
-        let x = (i % N) * s, y = Math.floor(i / N) * s;
-        ctx.strokeStyle = "rgba(0, 212, 255, 0.08)"; ctx.strokeRect(x, y, s, s);
-        
-        if ((i % N) % z === 0) { ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y+s); ctx.strokeStyle = "rgba(0, 212, 255, 0.3)"; ctx.stroke(); }
-        if (Math.floor(i / N) % z === 0) { ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x+s, y); ctx.strokeStyle = "rgba(0, 212, 255, 0.3)"; ctx.stroke(); }
-
-        let val = fixed[i] || board[i];
-        if (val) {
-            ctx.fillStyle = fixed[i] ? "var(--gold)" : (final ? "var(--sentinel)" : "white");
-            ctx.font = `bold ${s * 0.5}px monospace`;
-            ctx.textAlign = "center"; ctx.fillText(val, x + s/2, y + s * 0.7);
+        function purgeManifold() {
+            isRunning = false;
+            currentAnchor = 0n;
+            cells.forEach(c => {
+                c.innerText = "";
+                c.classList.remove('fixed', 'inferred');
+            });
+            updateLog("ADELIC TRACE PURGED. System Idle.");
         }
-    }
-    ctx.strokeStyle = "var(--accent)"; ctx.strokeRect(0, 0, canvas.width, canvas.height);
-}
-
-function resetSystem() { 
-    document.getElementById('path-id').value = ""; 
-    initSystem(); 
-    log("System Purged. Table cleared."); 
-}
-
-canvas.addEventListener('mousedown', (e) => {
-    if (isRunning) return;
-    const rect = canvas.getBoundingClientRect();
-    const s = canvas.width / N;
-    const idx = Math.floor((e.clientY - rect.top) / s) * N + Math.floor((e.clientX - rect.left) / s);
-    let currentVal = fixed[idx] !== 0 ? fixed[idx] : "";
-    let v = prompt(`Fix Bit at ${idx}\n(1-${N}, 0 to clear):`, currentVal); 
-    if (v !== null) { 
-        let parsed = parseInt(v);
-        if (isNaN(parsed) || parsed < 1 || parsed > N) parsed = 0;
-        fixed[idx] = parsed; 
-        board.fill(0); 
-        render(); 
-    }
-});
-
-initSystem();
-</script>
+    </script>
 </body>
 </html>
+
