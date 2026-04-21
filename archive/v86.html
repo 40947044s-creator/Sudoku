@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>Project NP | Adelic Oracle v8.6</title>
+    <style>
+        :root { 
+            --sentinel: #00ff41; --bedrock: #050505; --accent: #00d4ff; 
+            --gold: #d4af37; --friction: #ff3333;
+        }
+        body { 
+            background: var(--bedrock); color: var(--sentinel); 
+            font-family: 'Courier New', monospace; display: flex; 
+            flex-direction: column; align-items: center; margin: 0; padding: 20px;
+        }
+        .header { width: 100%; text-align: center; border-bottom: 2px solid var(--sentinel); padding-bottom: 10px; }
+        
+        /* The Manifold Index Bar */
+        .index-bar {
+            width: 90%; max-width: 600px; background: #111; border: 1px solid #333;
+            margin: 15px 0; padding: 10px; border-left: 5px solid var(--gold);
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.1);
+        }
+        .index-label { font-size: 0.65rem; color: #888; text-transform: uppercase; margin-bottom: 4px; }
+        .index-value { font-size: 0.9rem; color: var(--gold); letter-spacing: 1px; word-break: break-all; }
+        
+        .panel { display: flex; gap: 10px; margin: 10px; padding: 10px; background: rgba(0,255,65,0.03); }
+        canvas { border: 1px solid var(--accent); background: #000; box-shadow: 0 0 40px rgba(0, 212, 255, 0.1); }
+        .console { width: 90%; max-width: 600px; height: 100px; background: #000; border: 1px dashed #333; margin-top: 15px; padding: 10px; font-size: 0.7rem; color: #666; overflow-y: auto; }
+        input { background: #000; border: 1px solid #444; color: var(--accent); padding: 5px; text-align: center; }
+        .btn { background: transparent; border: 1px solid var(--sentinel); color: var(--sentinel); padding: 5px 15px; cursor: pointer; font-size: 0.7rem; }
+        .btn:hover { background: var(--sentinel); color: #000; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <strong>PROJECT NP: ADELIC ORACLE v8.6</strong>
+    <div style="font-size: 0.7rem; color: #888; margin-top: 5px;">[P=NP PHYSICAL ISOMORPHISM]</div>
+</div>
+
+<div class="index-bar">
+    <div class="index-label">Unique Space Index (Adelic Address)</div>
+    <div class="index-value" id="index-val">#00000000000000000000</div>
+    <div style="font-size: 0.6rem; color: var(--accent); margin-top: 5px;">
+        Relative Manifold Depth: <span id="perc-val">0.0000%</span>
+    </div>
+</div>
+
+<div class="panel">
+    <div>z: <input type="number" id="z-val" value="3" min="2" max="5" style="width: 35px;" onchange="initSystem()"></div>
+    <div>ANCHOR: <input type="text" id="path-id" value="40947044" style="width: 140px;"></div>
+    <button class="btn" onclick="startInference()">Execute Inference</button>
+    <button class="btn" onclick="resetSystem()" style="color:var(--friction); border-color:var(--friction);">Purge</button>
+</div>
+
+<canvas id="mainCanvas"></canvas>
+<div class="console" id="log">> [SENTINEL] System ready. Ground your Anchor to begin...</div>
+
+<script>
+let z, N, totalBits, isRunning = false;
+let board, fixed, phase;
+let rowM, colM, blkM, shadowR, shadowC, shadowB;
+const ADELIC_MAX = 6670903752021072936960n;
+
+const canvas = document.getElementById('mainCanvas');
+const ctx = canvas.getContext('2d');
+
+function log(msg) {
+    const l = document.getElementById('log');
+    l.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}<br>` + l.innerHTML;
+}
+
+function updateIndexBar(id) {
+    document.getElementById('index-val').innerText = `#${id.toString()}`;
+    let perc = (Number(id % 1000000n) / 10000).toFixed(4);
+    document.getElementById('perc-val').innerText = `${perc}%`;
+}
+
+function initSystem() {
+    isRunning = false;
+    z = parseInt(document.getElementById('z-val').value);
+    N = z * z;
+    totalBits = N * N;
+    board = new Uint16Array(totalBits);
+    fixed = new Uint16Array(totalBits);
+    phase = new Uint16Array(totalBits);
+    rowM = new Array(N).fill(0n); colM = new Array(N).fill(0n); blkM = new Array(N).fill(0n);
+    shadowR = new Array(totalBits); shadowC = new Array(totalBits); shadowB = new Array(totalBits);
+    canvas.width = canvas.height = Math.min(window.innerWidth * 0.9, 450);
+    render();
+}
+
+async function startInference() {
+    if (isRunning) return;
+    isRunning = true;
+    let anchor = BigInt(document.getElementById('path-id').value);
+    
+    // LAW: Enforce Odd Parity to break Singularity Mode 0
+    if ((anchor & 1n) === 0n) anchor |= (1n << 63n); 
+    
+    let d = 0, scanStep = 0n, friction = 0;
+    let activeID = anchor; 
+
+    updateIndexBar(activeID);
+    log(`Inference active at address 0x${activeID.toString(16)}`);
+
+    while (isRunning && d >= 0) {
+        if (d === totalBits) { finalize(); break; }
+
+        // Linear Ripple Scan for Unique Mapping
+        if (friction > N * 15) {
+            scanStep++;
+            d = Math.max(0, d - N); 
+            activeID = anchor + scanStep; 
+            friction = 0;
+            updateIndexBar(activeID);
+            continue;
+        }
+
+        let r = Math.floor(d / N), c = d % N, b = Math.floor(r / z) * z + Math.floor(c / z);
+        let mask = rowM[r] | colM[c] | blkM[b];
+        
+        let opts = [];
+        for (let i = 1; i <= N; i++) if (!(mask & (1n << BigInt(i)))) opts.push(i);
+
+        if (opts.length === 0) {
+            board[d] = 0; d--;
+            if (d < 0) { log("PARADOX: Address leads to Void."); isRunning = false; break; }
+            rowM = [...shadowR[d]]; colM = [...shadowC[d]]; blkM = [...shadowB[d]];
+            phase[d]++; friction++; continue;
+        }
+
+        shadowR[d] = [...rowM]; shadowC[d] = [...colM]; shadowB[d] = [...blkM];
+
+        let val;
+        if (fixed[d] !== 0) {
+            val = opts.includes(fixed[d]) ? fixed[d] : 0;
+            if (val === 0) { d--; friction += 20; continue; }
+        } else if (opts.length === 1) {
+            val = opts[0]; // Truth-Lock Singularity
+        } else {
+            let seed = Number(((activeID ^ BigInt(d)) * 0x517cc1b727220a95n) % 0xFFFFFFFn);
+            val = opts[(Math.abs(seed) + phase[d]) % opts.length];
+        }
+
+        board[d] = val;
+        let bit = 1n << BigInt(val);
+        rowM[r] |= bit; colM[c] |= bit; blkM[b] |= bit;
+        d++;
+        if (d % N === 0) { render(); await new Promise(r => setTimeout(r, 0)); }
+    }
+}
+
+function render(final = false) {
+    const s = canvas.width / N;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (let i = 0; i < totalBits; i++) {
+        let x = (i % N) * s, y = Math.floor(i / N) * s;
+        ctx.strokeStyle = "rgba(0, 212, 255, 0.08)"; ctx.strokeRect(x, y, s, s);
+        let val = fixed[i] || board[i];
+        if (val) {
+            ctx.fillStyle = fixed[i] ? "var(--gold)" : (final ? "var(--sentinel)" : "white");
+            ctx.font = `bold ${s * 0.5}px monospace`;
+            ctx.textAlign = "center"; ctx.fillText(val, x + s/2, y + s * 0.7);
+        }
+    }
+}
+
+function finalize() { isRunning = false; render(true); log("<b>SINGULARITY ATTAINED.</b>"); }
+function resetSystem() { initSystem(); log("System Purged."); }
+
+canvas.addEventListener('mousedown', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const s = canvas.width / N;
+    const idx = Math.floor((e.clientY - rect.top) / s) * N + Math.floor((e.clientX - rect.left) / s);
+    let v = prompt(`Fix Bit at ${idx}:`); 
+    if (v !== null) { fixed[idx] = Math.min(N, Math.max(0, parseInt(v) || 0)); render(); }
+});
+
+initSystem();
+</script>
+</body>
+</html>

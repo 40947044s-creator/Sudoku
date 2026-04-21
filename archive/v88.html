@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>Project NP | Adelic Oracle v8.8</title>
+    <style>
+        :root { 
+            --sentinel: #00ff41; --bedrock: #050505; --accent: #00d4ff; 
+            --gold: #d4af37; --friction: #ff3333;
+        }
+        body { 
+            background: var(--bedrock); color: var(--sentinel); 
+            font-family: 'Courier New', monospace; display: flex; 
+            flex-direction: column; align-items: center; margin: 0; padding: 20px;
+        }
+        .header { width: 100%; text-align: center; border-bottom: 2px solid var(--sentinel); padding-bottom: 10px; }
+        .lookup-zone {
+            width: 90%; max-width: 650px; background: #111; border: 1px solid #333;
+            margin: 15px 0; padding: 15px; border-top: 3px solid var(--gold);
+        }
+        .index-input { 
+            background: #000; border: 1px solid var(--gold); color: var(--gold); 
+            padding: 10px; font-size: 1rem; width: 100%; box-sizing: border-box; outline: none;
+        }
+        canvas { border: 1px solid var(--accent); background: #000; box-shadow: 0 0 40px rgba(0, 212, 255, 0.1); }
+        .console { width: 90%; max-width: 650px; height: 100px; background: #000; border: 1px dashed #444; margin-top: 15px; padding: 10px; font-size: 0.7rem; color: #666; overflow-y: auto; }
+        .btn { background: transparent; border: 1px solid var(--sentinel); color: var(--sentinel); padding: 8px 15px; cursor: pointer; text-transform: uppercase; }
+        .btn:hover { background: var(--sentinel); color: #000; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <strong>PROJECT NP: ADELIC ORACLE v8.8</strong>
+    <div style="font-size: 0.7rem; color: #888; margin-top: 5px;">[DPI DETERMINISTIC GROUNDING] | [DELAYED INFRA-VALIDATION]</div>
+</div>
+
+<div class="lookup-zone">
+    <div style="font-size: 0.7rem; color: var(--gold); margin-bottom: 5px;">MANIFOLD COORDINATE (ANCHOR)</div>
+    <input type="text" id="target-index" class="index-input" value="40947044">
+    <div style="display: flex; justify-content: space-between; margin-top: 8px;">
+        <button class="btn" onclick="startInference()">Start Inference</button>
+        <button class="btn" onclick="resetSystem()" style="color:var(--friction); border-color:var(--friction);">Purge</button>
+    </div>
+</div>
+
+<canvas id="mainCanvas"></canvas>
+<div class="console" id="log">> [SENTINEL] DPI Mode: Ground-at-End. Waiting for pulse...</div>
+
+<script>
+let z, N, totalBits, isRunning = false;
+let board, fixed, rowM, colM, blkM;
+const ADELIC_MAX = 6670903752021072936960n;
+
+const canvas = document.getElementById('mainCanvas');
+const ctx = canvas.getContext('2d');
+
+function log(msg) {
+    const l = document.getElementById('log');
+    l.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}<br>` + l.innerHTML;
+}
+
+function initSystem() {
+    isRunning = false;
+    z = 3; N = 9; totalBits = 81;
+    board = new Uint16Array(totalBits);
+    fixed = new Uint16Array(totalBits);
+    rowM = new Array(N).fill(0n); colM = new Array(N).fill(0n); blkM = new Array(N).fill(0n);
+    canvas.width = canvas.height = 450;
+    render();
+}
+
+async function startInference() {
+    if (isRunning) return;
+    isRunning = true;
+    
+    let anchor = BigInt(document.getElementById('target-index').value);
+    if ((anchor & 1n) === 0n) anchor |= (1n << 63n); // MSB Injection
+    
+    let d = 0, scanStep = 0n;
+    let activeID = anchor;
+
+    log(`Inference Ripple: 0x${activeID.toString(16)}`);
+
+    while (isRunning) {
+        // 1. INFERENCE PHASE: Fast-Ripple without per-digit grounding check
+        for (d = 0; d < totalBits; d++) {
+            if (fixed[d] !== 0) {
+                board[d] = fixed[d];
+            } else {
+                let seed = Number(((activeID ^ BigInt(d)) * 0x517cc1b727220a95n) % 0xFFFFFFFn);
+                board[d] = (Math.abs(seed) % N) + 1;
+            }
+        }
+
+        // 2. GROUND TEST: Test Trinity Laws only at end of manifold
+        if (validateGround()) {
+            finalize(activeID);
+            break;
+        } else {
+            // 3. DPI (Deep Phase Inversion): Determine new ground if test fails
+            scanStep++;
+            activeID = anchor + scanStep;
+            if (scanStep % 1000n === 0n) {
+                document.getElementById('target-index').value = activeID.toString();
+                render();
+                await new Promise(r => setTimeout(r, 0));
+            }
+        }
+    }
+}
+
+function validateGround() {
+    rowM.fill(0n); colM.fill(0n); blkM.fill(0n);
+    for (let d = 0; d < totalBits; d++) {
+        let r = Math.floor(d / N), c = d % N, b = Math.floor(r / z) * z + Math.floor(c / z);
+        let bit = 1n << BigInt(board[d]);
+        if ((rowM[r] & bit) || (colM[c] & bit) || (blkM[b] & bit)) return false;
+        rowM[r] |= bit; colM[c] |= bit; blkM[b] |= bit;
+    }
+    return true;
+}
+
+function render(final = false) {
+    const s = canvas.width / N;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (let i = 0; i < totalBits; i++) {
+        let x = (i % N) * s, y = Math.floor(i / N) * s;
+        ctx.strokeStyle = "rgba(0, 255, 65, 0.08)"; ctx.strokeRect(x, y, s, s);
+        if (board[i]) {
+            ctx.fillStyle = fixed[i] ? "var(--gold)" : (final ? "var(--sentinel)" : "#555");
+            ctx.font = `bold ${s * 0.5}px monospace`;
+            ctx.textAlign = "center"; ctx.fillText(board[i], x + s/2, y + s * 0.7);
+        }
+    }
+}
+
+function finalize(id) { 
+    isRunning = false; render(true); 
+    log(`<b>SINGULARITY GROUNDED.</b> Final Index: ${id}`); 
+}
+function resetSystem() { initSystem(); log("Purged."); }
+
+canvas.addEventListener('mousedown', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const s = canvas.width / N;
+    const idx = Math.floor((e.clientY - rect.top) / s) * N + Math.floor((e.clientX - rect.left) / s);
+    let v = prompt(`Fix Node ${idx}:`); 
+    if (v) { fixed[idx] = parseInt(v); render(); }
+});
+
+initSystem();
+</script>
+</body>
+</html>
