@@ -1,163 +1,251 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Project NP | Adelic Oracle v8.6.10</title>
+    <title>Project NP | Adelic Oracle v8.6.11</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --sentinel: #00ff41; --bedrock: #050505; --gold: #d4af37; --friction: #ff3333; --export: #00d4ff; }
-        body { background: var(--bedrock); color: var(--sentinel); font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 10px; overflow: hidden; height: 100vh; }
-        #header { text-align: center; border-bottom: 1px solid var(--sentinel); width: 100%; padding-bottom: 5px; }
-        .archive-link { font-size: 0.7rem; color: var(--gold); text-decoration: none; border-bottom: 1px solid var(--gold); }
-        #lattice-container { width: 80vmin; height: 80vmin; background: #000; border: 1px solid var(--sentinel); position: relative; }
-        canvas { width: 100%; height: 100%; image-rendering: pixelated; }
-        .controls { display: flex; flex-direction: column; gap: 5px; margin: 10px; width: 80vmin; }
-        .row-group { display: flex; gap: 5px; width: 100%; }
-        input { background: #000; border: 1px solid #444; color: var(--gold); padding: 6px; flex: 1; text-align: center; font-family: inherit; font-size: 0.8rem; }
-        #console { width: 80vmin; height: 60px; background: #000; border: 1px dashed #333; padding: 5px; font-size: 0.6rem; overflow-y: auto; color: #666; }
-        .btn { flex: 1; background: rgba(0, 255, 65, 0.1); border: 1px solid var(--sentinel); color: var(--sentinel); padding: 8px; cursor: pointer; font-family: inherit; font-weight: bold; font-size: 0.7rem; }
+        :root { 
+            --sentinel: #00ff41; --bedrock: #050505; --accent: #00d4ff; 
+            --gold: #d4af37; --friction: #ff3333; --export: #ff00ff;
+        }
+        body { 
+            background: var(--bedrock); color: var(--sentinel); 
+            font-family: 'Courier New', monospace; display: flex; 
+            flex-direction: column; align-items: center; margin: 0; padding: 20px;
+        }
+        .header { width: 100%; text-align: center; border-bottom: 2px solid var(--sentinel); padding-bottom: 10px; }
+        
+        .index-bar {
+            width: 90%; max-width: 600px; background: #111; border: 1px solid #333;
+            margin: 15px 0; padding: 10px; border-left: 5px solid var(--gold);
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.1);
+        }
+        .index-label { font-size: 0.65rem; color: #888; text-transform: uppercase; margin-bottom: 4px; }
+        .index-value { font-size: 0.9rem; color: var(--gold); letter-spacing: 1px; word-break: break-all; }
+        
+        .panel { display: flex; flex-direction: column; gap: 10px; margin: 10px; padding: 15px; background: rgba(0,255,65,0.03); border: 1px solid #222; width: 90%; max-width: 600px;}
+        .row-group { display: flex; gap: 10px; align-items: center; justify-content: center; width: 100%; }
+        
+        canvas { border: 1px solid var(--accent); background: #000; box-shadow: 0 0 40px rgba(0, 212, 255, 0.1); cursor: crosshair; }
+        .console { width: 90%; max-width: 600px; height: 100px; background: #000; border: 1px dashed #333; margin-top: 15px; padding: 10px; font-size: 0.7rem; color: #666; overflow-y: auto; }
+        
+        input { background: #000; border: 1px solid #444; color: var(--accent); padding: 5px; text-align: center; font-family: inherit; }
+        .btn { background: transparent; border: 1px solid var(--sentinel); color: var(--sentinel); padding: 8px 15px; cursor: pointer; font-size: 0.7rem; font-family: inherit; font-weight: bold; text-transform: uppercase; }
         .btn:hover { background: var(--sentinel); color: #000; }
-        .btn-stop { color: var(--friction); border-color: var(--friction); }
+        .btn-export { border-color: var(--export); color: var(--export); }
+        .btn-export:hover { background: var(--export); color: #000; }
+        .btn-suggest { border-color: var(--gold); color: var(--gold); }
+        .btn-suggest:hover { background: var(--gold); color: #000; }
     </style>
 </head>
 <body>
 
-<div id="header">
-    <strong>PROJECT NP | ADELIC ORACLE v8.6.10</strong>
-    <div style="font-size: 0.55rem; margin-bottom: 2px;">ASYNCHRONOUS MANIFOLD MAPPING | N=NP</div>
-    <a href="https://40947044s-creator.github.io/Sudoku/archive/v86" class="archive-link" target="_blank">v8.6 Research Core</a>
+<div class="header">
+    <strong>PROJECT NP: ADELIC ORACLE v8.6.11</strong>
+    <div style="font-size: 0.7rem; color: #888; margin-top: 5px;">[STATIC MAPPING | EXPORT | RECOMMENDATION]</div>
 </div>
 
-<div id="lattice-container"><canvas id="mCanvas"></canvas></div>
-
-<div id="console">> [SYSTEM] Awaiting Design. Async Throttle Active.</div>
-
-<div class="controls">
-    <div class="row-group">
-        z:<input type="number" id="zVal" value="3" style="max-width: 35px;">
-        Anchor:<input type="text" id="aIn" placeholder="Static Anchor">
-        <button class="btn" onclick="executeInference()">Execute</button>
-        <button class="btn btn-stop" onclick="stopInference()">Stop</button>
-    </div>
-    <div class="row-group">
-        <button class="btn" onclick="exportTXT()" style="color:var(--export); border-color:var(--export)">TXT</button>
-        <button class="btn" onclick="exportPDF()" style="color:var(--export); border-color:var(--export)">PDF</button>
-        <button class="btn" onclick="purge()">Purge</button>
+<div class="index-bar">
+    <div class="index-label">Adelic Anchor (Resonance Key)</div>
+    <div class="index-value" id="index-val">#00000000000000000000</div>
+    <div style="font-size: 0.6rem; color: var(--accent); margin-top: 5px;">
+        Mapping Progress: <span id="perc-val">0.0000%</span>
     </div>
 </div>
+
+<div class="panel">
+    <div class="row-group">
+        <div>z: <input type="number" id="z-val" value="3" min="2" max="5" style="width: 35px;" onchange="initSystem()"></div>
+        <input type="text" id="path-id" placeholder="Input Anchor" style="flex: 1;">
+        <button class="btn btn-suggest" onclick="recommendAnchor()">Suggest Anchor</button>
+    </div>
+    <div class="row-group">
+        <button class="btn" onclick="startInference()">Execute Inference</button>
+        <button class="btn btn-export" onclick="downloadTXT()">Download TXT</button>
+        <button class="btn btn-export" onclick="downloadPDF()">Download PDF</button>
+        <button class="btn" onclick="resetSystem()" style="color:var(--friction); border-color:var(--friction);">Purge</button>
+    </div>
+</div>
+
+<canvas id="mainCanvas"></canvas>
+<div class="console" id="log">> [SENTINEL] System ready. Ground your Anchor to begin...</div>
 
 <script>
-    const canvas = document.getElementById('mCanvas'); const ctx = canvas.getContext('2d'); const log = document.getElementById('console');
-    let z, N, total, board, fixed, phase, rowM, colM, blkM, shadowR, shadowC, shadowB, isRunning = false;
-    let d = 0, aVal = 0n;
+let z, N, totalBits, isRunning = false;
+let board, fixed, phase;
+let rowM, colM, blkM, shadowR, shadowC, shadowB;
 
-    function init() {
-        z = parseInt(document.getElementById('zVal').value); N = z * z; total = N * N;
-        board = new Uint16Array(total); fixed = new Uint16Array(total); phase = new Uint16Array(total);
-        rowM = new BigUint64Array(N); colM = new BigUint64Array(N); blkM = new BigUint64Array(N);
-        shadowR = new BigUint64Array(total * N); shadowC = new BigUint64Array(total * N); shadowB = new BigUint64Array(total * N);
-        render();
-    }
+const canvas = document.getElementById('mainCanvas');
+const ctx = canvas.getContext('2d');
 
-    function updateLog(m) { log.innerHTML = `> ${m}<br>` + log.innerHTML; log.scrollTop = 0; }
+function log(msg) {
+    const l = document.getElementById('log');
+    l.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}<br>` + l.innerHTML;
+    l.scrollTop = 0;
+}
 
-    async function executeInference() {
-        if(isRunning) return;
-        const input = document.getElementById('aIn').value;
-        aVal = input ? BigInt(input) : (BigInt(N) * 0x9E3779B1n) | (1n << 63n);
-        document.getElementById('aIn').value = aVal.toString();
+function updateIndexBar(id) {
+    document.getElementById('index-val').innerText = `#${id.toString()}`;
+    let perc = (Number(id % 1000000n) / 10000).toFixed(4);
+    document.getElementById('perc-val').innerText = `${perc}%`;
+}
+
+function recommendAnchor() {
+    // Injecting the Singularity Anchor for N=9 (z=3)
+    const singularityAnchor = "9223396070116155902";
+    document.getElementById('path-id').value = singularityAnchor;
+    log("<b>RECOMMENDATION:</b> Singularity Anchor (1006 Baseline) injected.");
+}
+
+function initSystem() {
+    isRunning = false;
+    z = parseInt(document.getElementById('z-val').value);
+    N = z * z;
+    totalBits = N * N;
+    board = new Uint16Array(totalBits);
+    fixed = new Uint16Array(totalBits);
+    phase = new Uint16Array(totalBits);
+    rowM = new Array(N).fill(0n); colM = new Array(N).fill(0n); blkM = new Array(N).fill(0n);
+    shadowR = new Array(totalBits); shadowC = new Array(totalBits); shadowB = new Array(totalBits);
+    canvas.width = canvas.height = Math.min(window.innerWidth * 0.9, 450);
+    render();
+}
+
+async function startInference() {
+    if (isRunning) return;
+    
+    let rawAnchor = document.getElementById('path-id').value.trim();
+    if (!rawAnchor) { log("ERROR: No Anchor provided."); return; }
+    
+    let anchor = BigInt(rawAnchor);
+    // LAW: Enforce Odd Parity to break Singularity Mode 0
+    if ((anchor & 1n) === 0n) anchor |= (1n << 63n); 
+    
+    isRunning = true;
+    let d = 0, scanStep = 0n, friction = 0;
+    let activeID = anchor; 
+
+    updateIndexBar(activeID);
+    log(`Inference active at address 0x${activeID.toString(16)}`);
+
+    while (isRunning && d >= 0) {
+        if (d === totalBits) { finalize(); break; }
+
+        if (friction > N * 15) {
+            scanStep++;
+            d = Math.max(0, d - N); 
+            activeID = anchor + scanStep; 
+            friction = 0;
+            updateIndexBar(activeID);
+            continue;
+        }
+
+        let r = Math.floor(d / N), c = d % N, b = Math.floor(r / z) * z + Math.floor(c / z);
+        let mask = rowM[r] | colM[c] | blkM[b];
         
-        isRunning = true; d = 0; rowM.fill(0n); colM.fill(0n); blkM.fill(0n);
-        for(let i=0; i<total; i++) if(fixed[i]) { let r=Math.floor(i/N), c=i%N, b=Math.floor(r/z)*z+Math.floor(c/z); let bit=1n<<BigInt(fixed[i]); rowM[r]|=bit; colM[c]|=bit; blkM[b]|=bit; board[i]=fixed[i]; }
+        let opts = [];
+        for (let i = 1; i <= N; i++) if (!(mask & (1n << BigInt(i)))) opts.push(i);
+
+        if (opts.length === 0) {
+            board[d] = 0; d--;
+            if (d < 0) { log("PARADOX: Address leads to Void."); isRunning = false; break; }
+            rowM = [...shadowR[d]]; colM = [...shadowC[d]]; blkM = [...shadowB[d]];
+            phase[d]++; friction++; continue;
+        }
+
+        shadowR[d] = [...rowM]; shadowC[d] = [...colM]; shadowB[d] = [...blkM];
+
+        let val;
+        if (fixed[d] !== 0) {
+            val = opts.includes(fixed[d]) ? fixed[d] : 0;
+            if (val === 0) { d--; friction += 20; continue; }
+        } else if (opts.length === 1) {
+            val = opts[0];
+        } else {
+            let seed = Number(((activeID ^ BigInt(d)) * 0x517cc1b727220a95n) % 0xFFFFFFFn);
+            val = opts[(Math.abs(seed) + phase[d]) % opts.length];
+        }
+
+        board[d] = val;
+        let bit = 1n << BigInt(val);
+        rowM[r] |= bit; colM[c] |= bit; blkM[b] |= bit;
+        d++;
+        if (d % N === 0) { render(); await new Promise(r => setTimeout(r, 0)); }
+    }
+}
+
+function render(final = false) {
+    const s = canvas.width / N;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (let i = 0; i < totalBits; i++) {
+        let x = (i % N) * s, y = Math.floor(i / N) * s;
+        ctx.strokeStyle = "rgba(0, 212, 255, 0.08)"; ctx.strokeRect(x, y, s, s);
         
-        updateLog("Executing Static Mapping...");
-        requestAnimationFrame(inferenceStep); // Start the async cycle
-    }
+        // Block Boundaries
+        if ((i % N) % z === 0) { ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x, y+s); ctx.strokeStyle = "rgba(0,212,255,0.3)"; ctx.stroke(); }
+        if (Math.floor(i / N) % z === 0) { ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+s, y); ctx.strokeStyle = "rgba(0,212,255,0.3)"; ctx.stroke(); }
 
-    function inferenceStep() {
-        if(!isRunning) return;
-
-        let batchSize = 100; // Process 100 cells per animation frame
-        for(let i=0; i < batchSize; i++) {
-            if(d >= total) { isRunning = false; updateLog("SINGULARITY ATTAINED."); render(); return; }
-            if(d < 0) { isRunning = false; updateLog("VOID PARADOX: Anchor Failure."); return; }
-
-            if(fixed[d]) { d++; continue; }
-
-            let r=Math.floor(d/N), c=d%N, b=Math.floor(r/z)*z+Math.floor(c/z);
-            let mask = rowM[r] | colM[c] | blkM[b];
-            let opts = [];
-            for(let j=1; j<=N; j++) if(!(mask & (1n << BigInt(j)))) opts.push(j);
-
-            if(opts.length === 0) {
-                board[d]=0; d--; 
-                if(d >= 0) {
-                    for(let j=0; j<N; j++) { rowM[j]=shadowR[d*N+j]; colM[j]=shadowC[d*N+j]; blkM[j]=shadowB[d*N+j]; }
-                    phase[d]++;
-                }
-                continue;
-            }
-
-            for(let j=0; j<N; j++) { shadowR[d*N+j]=rowM[j]; shadowC[d*N+j]=colM[j]; shadowB[d*N+j]=blkM[j]; }
-
-            let seed = Number(((aVal ^ BigInt(d)) * 0x517cc1b727220a95n) % 0xFFFFFFFn);
-            let val = opts[(Math.abs(seed) + phase[d]) % opts.length];
-            board[d] = val; 
-            let bit = 1n << BigInt(val); rowM[r]|=bit; colM[c]|=bit; blkM[b]|=bit;
-            d++;
-        }
-
-        render();
-        if(isRunning) requestAnimationFrame(inferenceStep);
-    }
-
-    function render() {
-        canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
-        const s = canvas.width / N; ctx.clearRect(0,0,canvas.width, canvas.height);
-        for(let i=0; i<total; i++) {
-            let x = (i%N)*s, y = Math.floor(i/N)*s;
-            ctx.strokeStyle = "rgba(0,255,65,0.05)"; ctx.strokeRect(x,y,s,s);
-            if(board[i]) {
-                ctx.fillStyle = fixed[i] ? "var(--gold)" : "var(--sentinel)";
-                ctx.font = `${s*0.6}px monospace`; ctx.textAlign="center";
-                ctx.fillText(board[i], x+s/2, y+s*0.75);
-            }
+        let val = fixed[i] || board[i];
+        if (val) {
+            ctx.fillStyle = fixed[i] ? "var(--gold)" : (final ? "var(--sentinel)" : "white");
+            ctx.font = `bold ${s * 0.5}px monospace`;
+            ctx.textAlign = "center"; ctx.fillText(val, x + s/2, y + s * 0.72);
         }
     }
+}
 
-    function stopInference() { isRunning = false; updateLog("Trace Aborted."); }
-
-    function exportTXT() {
-        let content = `ADELIC ORACLE v8.6.10\nANCHOR: ${aVal}\n\n`;
-        const pad = N.toString().length + 1;
-        for(let r=0; r<N; r++) {
-            let line = "";
-            for(let c=0; c<N; c++) line += (board[r*N+c]||".").toString().padStart(pad, " ");
-            content += line + "\n";
+// EXPORT PROTOCOLS
+function downloadTXT() {
+    let content = `PROJECT NP | ADELIC SOLUTION\nANCHOR: ${document.getElementById('path-id').value}\n\n`;
+    const pad = N.toString().length + 1;
+    for (let r = 0; r < N; r++) {
+        let line = "";
+        for (let c = 0; c < N; c++) {
+            line += (board[r * N + c] || ".").toString().padStart(pad, " ");
         }
-        const b = new Blob([content], {type: "text/plain"});
-        const a = document.createElement("a"); a.href=URL.createObjectURL(b); a.download="solution.txt"; a.click();
+        content += line + "\n";
     }
+    const blob = new Blob([content], { type: "text/plain" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `adelic_n${N}.txt`;
+    link.click();
+}
 
-    function exportPDF() {
-        const { jsPDF } = window.jspdf; const doc = new jsPDF();
-        doc.setFont("courier","bold"); doc.text(`ADELIC SOLUTION N=${N}`, 20, 20);
-        doc.setFontSize(8); doc.text(`Anchor: ${aVal}`, 20, 26);
-        let s = 160/N; doc.setFontSize(s > 8 ? 8 : 4);
-        for(let r=0; r<N; r++) for(let c=0; c<N; c++) doc.text((board[r*N+c]||".").toString(), 20+c*s, 40+r*s);
-        doc.save("solution.pdf");
+function downloadPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    doc.setFont("courier", "bold");
+    doc.text(`ADELIC ORACLE SOLUTION (N=${N})`, 20, 20);
+    doc.setFontSize(8);
+    doc.text(`Anchor Key: ${document.getElementById('path-id').value}`, 20, 28);
+    
+    const margin = 20;
+    const step = 160 / N;
+    doc.setFontSize(step > 10 ? 12 : 6);
+    
+    for (let r = 0; r < N; r++) {
+        for (let c = 0; c < N; c++) {
+            let val = board[r * N + c] || ".";
+            doc.text(val.toString(), margin + c * step + (step/2), 40 + r * step + (step/2), { align: "center" });
+        }
     }
+    doc.save(`adelic_n${N}.pdf`);
+}
 
-    canvas.addEventListener('mousedown', (e) => {
-        if(isRunning) return;
-        const rect = canvas.getBoundingClientRect(); const s = canvas.width / N;
-        const i = Math.floor((e.clientY - rect.top)/s)*N + Math.floor((e.clientX - rect.left)/s);
-        let v = prompt(`Cell ${i}:`, fixed[i]||"");
-        fixed[i] = parseInt(v)||0; board[i]=fixed[i]; render();
-    });
+function finalize() { isRunning = false; render(true); log("<b>SINGULARITY ATTAINED.</b>"); }
+function resetSystem() { initSystem(); log("System Purged."); }
 
-    function purge() { isRunning = false; board.fill(0); fixed.fill(0); phase.fill(0); render(); updateLog("Manifold Purged."); }
-    document.getElementById('zVal').onchange = init; init();
+canvas.addEventListener('mousedown', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const s = canvas.width / N;
+    const idx = Math.floor((e.clientY - rect.top) / s) * N + Math.floor((e.clientX - rect.left) / s);
+    let v = prompt(`Fix Bit at ${idx}:`); 
+    if (v !== null) { fixed[idx] = Math.min(N, Math.max(0, parseInt(v) || 0)); render(); }
+});
+
+initSystem();
 </script>
 </body>
 </html>
