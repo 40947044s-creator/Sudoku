@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>Project NP | Universal Oracle v7.0</title>
+    <style>
+        :root { --ntnu-red: #b31b1b; --gold: #d4af37; --bg: #050505; --accent: #00d4ff; --ground: #00ff00; }
+        body { background: var(--bg); color: #fff; font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; margin: 0; }
+        .header { padding: 20px; text-align: center; border-bottom: 2px solid var(--ntnu-red); width: 100%; }
+        .panel { display: flex; gap: 10px; margin: 15px; flex-wrap: wrap; justify-content: center; }
+        canvas { border: 1px solid var(--accent); box-shadow: 0 0 30px rgba(0, 212, 255, 0.1); cursor: crosshair; }
+        .status { color: var(--gold); font-size: 0.8rem; margin: 5px; }
+        .btn { background: #000; border: 1px solid var(--accent); color: var(--accent); padding: 8px 15px; cursor: pointer; transition: 0.2s; }
+        .btn:hover { background: var(--accent); color: #000; }
+        input { background: #000; border: 1px solid #444; color: var(--accent); padding: 5px; text-align: center; }
+        .console { width: 90%; max-width: 650px; height: 100px; background: #000; border: 1px dashed #333; padding: 10px; font-size: 0.7rem; color: #888; overflow-y: auto; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <strong>PROJECT NP: UNIVERSAL ADELIC ORACLE (n=Z)</strong>
+    <div class="status">[DEPTH: <span id="f-val">0</span> / <span id="total-val">0</span>] | [BUF: <span id="buf-val">0</span>]</div>
+</div>
+
+<div class="panel">
+    <div>n (Z): <input type="number" id="n-val" value="3" min="1" max="10" style="width: 45px;" onchange="initUniverse()"></div>
+    <div>ANCHOR: <input type="text" id="path-id" value="40947044" style="width: 150px;"></div>
+    <button class="btn" onclick="startInference()">INFERENCE</button>
+    <button class="btn" onclick="snapFold()">SNAP</button>
+    <button class="btn" onclick="resetAll()" style="color: #ff3333;">PURGE</button>
+</div>
+
+<canvas id="mainCanvas"></canvas>
+<div class="console" id="log">> [SENTINEL] Boundaryless Manifold ready. Input Z to expand.</div>
+
+<script>
+/**
+ * PROJECT NP v7.0 - METHOD n=Z
+ * Core: Triple-Moduli Sieve + Holographic Buffer + Marilyn Fold O(1)
+ */
+let z, N, targetDepth, isRunning = false;
+let manifoldData, fixedCells, phaseShifts;
+let rowMask, colMask, blkMask;
+let buf_manifoldData, buf_phaseShifts, buf_rowMask, buf_colMask, buf_blkMask;
+let bufferedDepth = 0, localEntropy = 0, fullMask = 0n;
+
+const canvas = document.getElementById('mainCanvas');
+const ctx = canvas.getContext('2d');
+
+function log(msg) {
+    const l = document.getElementById('log');
+    l.innerHTML = `> ${msg}<br>` + l.innerHTML;
+}
+
+function initUniverse() {
+    isRunning = false;
+    z = parseInt(document.getElementById('n-val').value);
+    N = z * z;
+    targetDepth = N * N;
+    document.getElementById('total-val').innerText = targetDepth;
+    
+    // 動態分配符合 n=Z 規模的記憶體
+    fixedCells = new Uint16Array(targetDepth);
+    manifoldData = new Uint16Array(targetDepth);
+    phaseShifts = new Uint16Array(targetDepth);
+    
+    buf_manifoldData = new Uint16Array(targetDepth);
+    buf_phaseShifts = new Uint16Array(targetDepth);
+    
+    rowMask = new Array(N).fill(0n); colMask = new Array(N).fill(0n); blkMask = new Array(N).fill(0n);
+    buf_rowMask = new Array(N).fill(0n); buf_colMask = new Array(N).fill(0n); buf_blkMask = new Array(N).fill(0n);
+    
+    // 生成 N 維全量遮罩
+    fullMask = 0n;
+    for (let i = 1; i <= N; i++) fullMask |= (1n << BigInt(i));
+
+    const size = Math.min(window.innerWidth * 0.95, 550);
+    canvas.width = canvas.height = size;
+    render();
+    log(`Universe expanded to Z=${z} (N=${N}, Total Depth=${targetDepth}).`);
+}
+
+canvas.addEventListener('mousedown', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const cellSize = canvas.width / N;
+    const idx = Math.floor((e.clientY - rect.top) / cellSize) * N + Math.floor((e.clientX - rect.left) / cellSize);
+    let val = prompt(`Fix Bit at ${idx} (1-${N}):`);
+    if (val !== null) {
+        fixedCells[idx] = Math.min(N, Math.max(0, parseInt(val)));
+        render();
+    }
+});
+
+async function startInference() {
+    if (isRunning) return;
+    isRunning = true;
+    let originalID = BigInt(document.getElementById('path-id').value);
+    
+    // 拓撲綁定：將輸入轉換為專屬 Anchor
+    let inputEntropy = 0n;
+    for (let i = 0; i < targetDepth; i++) {
+        if (fixedCells[i] !== 0) inputEntropy ^= (BigInt(i + 1) * 0x517cc1b7n) * (BigInt(fixedCells[i]) * 0x9e3779b9n);
+    }
+    let pathID = originalID ^ inputEntropy;
+    
+    let d = 0, jumpCount = 0n;
+    bufferedDepth = 0; localEntropy = 0;
+    
+    rowMask.fill(0n); colMask.fill(0n); blkMask.fill(0n);
+    phaseShifts.fill(0); manifoldData.fill(0);
+
+    log(`Inference started. Method n=Z (${z}x${z} grids).`);
+
+    while (isRunning && d >= 0) {
+        if (d === targetDepth) { finalize(); break; }
+
+        // --- SNAPSHOT (Buffer Trusted Inference) ---
+        if (d > bufferedDepth && d % N === 0 && d > 0) {
+            bufferedDepth = d; localEntropy = 0;
+            buf_manifoldData.set(manifoldData); buf_phaseShifts.set(phaseShifts);
+            for(let i=0; i<N; i++) { buf_rowMask[i]=rowMask[i]; buf_colMask[i]=colMask[i]; buf_blkMask[i]=blkMask[i]; }
+        }
+
+        // --- DPI READBACK (Entropy Threshold) ---
+        if (localEntropy > N * 30) {
+            jumpCount++;
+            d = bufferedDepth;
+            manifoldData.set(buf_manifoldData); phaseShifts.set(buf_phaseShifts);
+            for(let i=0; i<N; i++) { rowMask[i]=buf_rowMask[i]; colMask[i]=buf_colMask[i]; blkMask[i]=buf_blkMask[i]; }
+            pathID = (pathID ^ (jumpCount * 0x517cc1b727220a95n)) + BigInt(bufferedDepth);
+            localEntropy = 0; phaseShifts[d]++;
+            continue;
+        }
+
+        let r = Math.floor(d / N), c = d % N, b = Math.floor(r / z) * z + Math.floor(c / z);
+        let conflictMask = rowMask[r] | colMask[c] | blkMask[b];
+        let freeMask = (~conflictMask) & fullMask;
+
+        let options = [];
+        if (fixedCells[d] !== 0) {
+            if ((freeMask & (1n << BigInt(fixedCells[d]))) !== 0n) options.push(fixedCells[d]);
+        } else {
+            for (let i = 1; i <= N; i++) if ((freeMask & (1n << BigInt(i))) !== 0n) options.push(i);
+        }
+
+        // --- The Closing ---
+        if (phaseShifts[d] >= options.length) {
+            phaseShifts[d] = 0; d--;
+            if (d < 0) break;
+            let pr = Math.floor(d / N), pc = d % N, pb = Math.floor(pr / z) * z + Math.floor(pc / z);
+            let prevBit = 1n << BigInt(manifoldData[d]);
+            rowMask[pr] ^= prevBit; colMask[pc] ^= prevBit; blkMask[pb] ^= prevBit;
+            phaseShifts[d]++; localEntropy++;
+            continue;
+        }
+
+        // --- O(1) Marilyn Fold ---
+        let seed = Number(((pathID ^ BigInt(d)) * 0x9e3779b97f4a7c15n) % 0xFFFFFFFn);
+        let val = options[(Math.abs(seed) + phaseShifts[d]) % options.length];
+
+        manifoldData[d] = val;
+        let bit = 1n << BigInt(val);
+        rowMask[r] |= bit; colMask[c] |= bit; blkMask[b] |= bit;
+        d++;
+
+        // 指數級節能渲染
+        if (jumpCount % 5000n === 0n || d === bufferedDepth) {
+            document.getElementById('f-val').innerText = d;
+            document.getElementById('buf-val').innerText = bufferedDepth;
+            render(); await new Promise(r => setTimeout(r, 0));
+        }
+    }
+}
+
+function render(grounded = false) {
+    const cellSize = canvas.width / N;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    let d = parseInt(document.getElementById('f-val').innerText) || 0;
+    for (let i = 0; i < targetDepth; i++) {
+        let x = (i % N) * cellSize, y = Math.floor(i / N) * cellSize;
+        let val = (i < d || grounded) ? manifoldData[i] : 0;
+        if (fixedCells[i] !== 0) val = fixedCells[i];
+        
+        ctx.strokeStyle = "rgba(0, 212, 255, 0.1)";
+        ctx.strokeRect(x, y, cellSize, cellSize);
+        if (val > 0) {
+            ctx.fillStyle = (fixedCells[i] !== 0) ? "var(--gold)" : (grounded ? "var(--ground)" : "#fff");
+            ctx.font = `bold ${cellSize * 0.4}px monospace`;
+            ctx.textAlign = "center";
+            ctx.fillText(val, x + cellSize/2, y + cellSize * 0.7);
+        }
+    }
+}
+
+function finalize() { isRunning = false; render(true); log("SINGULARITY ATTAINED."); }
+function snapFold() { isRunning = false; render(true); }
+function resetAll() { initUniverse(); log("Purged."); }
+initUniverse();
+</script>
+</body>
+</html>

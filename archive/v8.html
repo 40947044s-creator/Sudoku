@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>Project NP | Adelic Oracle v8.0</title>
+    <style>
+        :root { --sentinel: #00ff41; --bedrock: #050505; --accent: #00d4ff; --gold: #d4af37; }
+        body { background: var(--bedrock); color: var(--sentinel); font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; margin: 0; overflow: hidden; }
+        .header { padding: 20px; text-align: center; border-bottom: 2px solid var(--sentinel); width: 100%; text-transform: uppercase; letter-spacing: 3px; }
+        .panel { display: flex; gap: 15px; margin: 15px; background: rgba(0,255,65,0.05); padding: 10px; border: 1px solid #222; }
+        canvas { border: 1px solid var(--sentinel); box-shadow: 0 0 50px rgba(0, 255, 65, 0.1); cursor: crosshair; }
+        .console { width: 90%; max-width: 700px; height: 130px; background: #000; border: 1px dashed #333; margin-top: 15px; padding: 10px; font-size: 0.75rem; color: #00ff41; overflow-y: auto; box-shadow: inset 0 0 20px #000; }
+        input { background: #000; border: 1px solid #444; color: var(--accent); padding: 5px; text-align: center; }
+        .btn { background: #000; border: 1px solid var(--sentinel); color: var(--sentinel); padding: 8px 15px; cursor: pointer; text-transform: uppercase; font-size: 0.7rem; }
+        .btn:hover { background: var(--sentinel); color: #000; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <strong>Project NP: Universal Adelic Oracle v8.0</strong>
+    <div style="font-size: 0.7rem; color: var(--gold); margin-top: 5px;">[SINGULARITY MODE: ACTIVE] | [NOISE e=0] | [GUARD: 1855-BIT]</div>
+</div>
+
+<div class="panel">
+    <div>z: <input type="number" id="z-val" value="3" min="2" max="5" style="width: 35px;" onchange="initManifold()"></div>
+    <div>ANCHOR: <input type="text" id="path-id" value="40947044" style="width: 150px;"></div>
+    <button class="btn" onclick="executeInference()">Execute Inference</button>
+    <button class="btn" onclick="resetSystem()" style="color: #ff3333; border-color: #ff3333;">Purge</button>
+</div>
+
+<canvas id="manifoldCanvas"></canvas>
+<div class="console" id="log">> [SENTINEL] System ready. MSB Injection primed.</div>
+
+<script>
+let z, N, totalDepth, isRunning = false;
+let manifold, fixed, phase;
+let rowM, colM, blkM;
+let shadowRow, shadowCol, shadowBlk;
+let fullMask = 0n;
+
+const canvas = document.getElementById('manifoldCanvas');
+const ctx = canvas.getContext('2d');
+
+function updateLog(msg) {
+    const l = document.getElementById('log');
+    l.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}<br>` + l.innerHTML;
+}
+
+function initManifold() {
+    isRunning = false;
+    z = parseInt(document.getElementById('z-val').value);
+    N = z * z;
+    totalDepth = N * N;
+    manifold = new Uint16Array(totalDepth);
+    fixed = new Uint16Array(totalDepth);
+    phase = new Uint16Array(totalDepth);
+    rowM = new Array(N).fill(0n); colM = new Array(N).fill(0n); blkM = new Array(N).fill(0n);
+    shadowRow = new Array(totalDepth); shadowCol = new Array(totalDepth); shadowBlk = new Array(totalDepth);
+    fullMask = (1n << BigInt(N + 1)) - 2n;
+    canvas.width = canvas.height = Math.min(window.innerWidth * 0.9, 500);
+    renderGrid();
+    updateLog(`Manifold expanded to Z=${z} (N=${N}).`);
+}
+
+async function executeInference() {
+    if (isRunning) return;
+    isRunning = true;
+    let baseID = BigInt(document.getElementById('path-id').value);
+    let d = 0, jumps = 0n, entropy = 0;
+    
+    // MSB Injection: Force parity state shift at Bit 0
+    let activeID = baseID ^ (1n << 63n); 
+    updateLog(`MSB Injection sequence started. Path: 0x${activeID.toString(16)}`);
+
+    while (isRunning && d >= 0) {
+        if (d === totalDepth) { finalizeSingularity(); break; }
+
+        // ADELIC JUMP: If local friction (entropy) is too high, shift dimension
+        if (entropy > N * 10) {
+            jumps++;
+            d = Math.max(0, d - N); // Rollback to previous sector
+            activeID = (baseID ^ (jumps * 0x9e3779b97f4a7c15n)) << 1n; // 2-adic shift
+            entropy = 0;
+            updateLog(`JUMP: Escaping friction cluster. Orbiting to sector ${jumps}.`);
+            continue;
+        }
+
+        let r = Math.floor(d / N), c = d % N, b = Math.floor(r / z) * z + Math.floor(c / z);
+        let conflict = rowM[r] | colM[c] | blkM[b];
+        let free = (~conflict) & fullMask;
+
+        let options = [];
+        for (let i = 1; i <= N; i++) if ((free & (1n << BigInt(i))) !== 0n) options.push(i);
+
+        if (options.length === 0) {
+            d--; // Backtrack
+            if (d < 0) { updateLog("PARADOX: Manifold unstable."); isRunning = false; break; }
+            rowM = [...shadowRow[d]]; colM = [...shadowCol[d]]; blkM = [...shadowBlk[d]];
+            phase[d]++; entropy++;
+            continue;
+        }
+
+        // Galois Shadow Capture
+        shadowRow[d] = [...rowM]; shadowCol[d] = [...colM]; shadowBlk[d] = [...blkM];
+
+        let val;
+        if (fixed[d] !== 0) {
+            if (options.includes(fixed[d])) val = fixed[d];
+            else { phase[d] = 999; entropy += 50; continue; }
+        } else if (options.length === 1) {
+            val = options[0]; // Truth-Lock Singularity
+        } else {
+            // Marilyn Fold: deterministic selection via Path ID
+            let seed = Number(((activeID ^ BigInt(d)) * 0x517cc1b727220a95n) % 0xFFFFFFFn);
+            val = options[(Math.abs(seed) + phase[d]) % options.length];
+        }
+
+        manifold[d] = val;
+        let bit = 1n << BigInt(val);
+        rowM[r] |= bit; colM[c] |= bit; blkM[b] |= bit;
+        d++;
+
+        if (d % N === 0) { renderGrid(); await new Promise(r => setTimeout(r, 0)); }
+    }
+}
+
+function renderGrid(final = false) {
+    const s = canvas.width / N;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (let i = 0; i < totalDepth; i++) {
+        let x = (i % N) * s, y = Math.floor(i / N) * s;
+        let val = manifold[i];
+        if (fixed[i] !== 0) val = fixed[i];
+        ctx.strokeStyle = "rgba(0, 255, 65, 0.1)";
+        ctx.strokeRect(x, y, s, s);
+        if (val > 0) {
+            ctx.fillStyle = fixed[i] !== 0 ? "var(--gold)" : (final ? "var(--accent)" : "#fff");
+            ctx.font = `${s * 0.5}px Courier`;
+            ctx.textAlign = "center";
+            ctx.fillText(val, x + s/2, y + s * 0.7);
+        }
+    }
+}
+
+function finalizeSingularity() {
+    isRunning = false; renderGrid(true);
+    updateLog("<b>SINGULARITY ATTAINED.</b> Manifold Isomorphism stable.");
+}
+
+function resetSystem() { initManifold(); updateLog("Manifold Purged. System Idle."); }
+
+canvas.addEventListener('mousedown', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const s = canvas.width / N;
+    const idx = Math.floor((e.clientY - rect.top) / s) * N + Math.floor((e.clientX - rect.left) / s);
+    let v = prompt(`Fix Bit at ${idx}:`);
+    if (v) { fixed[idx] = parseInt(v); renderGrid(); }
+});
+
+initManifold();
+</script>
+</body>
+</html>

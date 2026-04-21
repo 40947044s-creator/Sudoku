@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>Project NP | Universal Oracle v7.6</title>
+    <style>
+        :root { 
+            --ntnu-red: #b31b1b; --gold: #d4af37; --bg: #050505; 
+            --accent: #00d4ff; --ground: #39ff14; --void: #1a1a1a;
+        }
+        body { 
+            background: var(--bg); color: #fff; font-family: 'Segoe UI', monospace; 
+            display: flex; flex-direction: column; align-items: center; margin: 0; 
+        }
+        .header { 
+            padding: 25px; text-align: center; border-bottom: 2px solid var(--ntnu-red); 
+            width: 100%; background: linear-gradient(180deg, #111, #050505); letter-spacing: 2px;
+        }
+        .panel { 
+            display: flex; gap: 15px; margin: 20px; padding: 15px;
+            background: var(--void); border: 1px solid #333; border-radius: 8px;
+            justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        canvas { border: 1px solid var(--accent); background: #000; box-shadow: 0 0 40px rgba(0, 212, 255, 0.15); }
+        .status-container { display: flex; gap: 20px; font-size: 0.85rem; text-transform: uppercase; }
+        .status-item { color: var(--gold); }
+        .status-item span { color: var(--accent); font-weight: bold; }
+        .btn { 
+            background: transparent; border: 1px solid var(--accent); color: var(--accent); 
+            padding: 10px 20px; cursor: pointer; transition: 0.3s; font-weight: bold;
+        }
+        .btn:hover { background: var(--accent); color: #000; }
+        .console { 
+            width: 90%; max-width: 650px; height: 120px; background: rgba(0,0,0,0.8); 
+            border: 1px solid #222; margin-top: 20px; padding: 12px; font-size: 0.75rem; 
+            color: #00ff41; overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <strong>PROJECT NP: UNIVERSAL ADELIC ORACLE v7.6</strong>
+    <div class="status-container">
+        <div class="status-item">Depth: <span id="f-val">0</span> / <span id="total-val">0</span></div>
+        <div class="status-item">Buffer: <span id="buf-val">0</span></div>
+        <div class="status-item">Jump: <span id="jump-val">0</span></div>
+    </div>
+</div>
+
+<div class="panel">
+    <div>N-VAL (Z): <input type="number" id="n-val" value="3" min="1" max="10" style="width: 45px;" onchange="initUniverse()"></div>
+    <div>ANCHOR: <input type="text" id="path-id" value="40947044" style="width: 120px;"></div>
+    <button class="btn" onclick="startInference()">Inference</button>
+    <button class="btn btn-purge" onclick="resetAll()" style="border-color:#ff3333; color:#ff3333;">Purge</button>
+</div>
+
+<canvas id="mainCanvas"></canvas>
+<div class="console" id="log">> [SYSTEM] Oracle online. v7.6 Logic Loaded.</div>
+
+<script>
+let z, N, targetDepth, isRunning = false;
+let manifoldData, fixedCells, phaseShifts;
+let rowMask, colMask, blkMask;
+let buf_manifoldData, buf_phaseShifts, buf_rowMask, buf_colMask, buf_blkMask;
+let shadowRowMask, shadowColMask, shadowBlkMask;
+let bufferedDepth = 0, localEntropy = 0, fullMask = 0n;
+
+const canvas = document.getElementById('mainCanvas');
+const ctx = canvas.getContext('2d');
+
+function log(msg) {
+    const l = document.getElementById('log');
+    l.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}<br>` + l.innerHTML;
+}
+
+function getCoordinate(anchor, jump) {
+    let projection = (anchor + BigInt(jump)) % 1000000n;
+    return (Number(projection) / 10000).toFixed(4) + "%";
+}
+
+function initUniverse() {
+    isRunning = false;
+    z = parseInt(document.getElementById('n-val').value);
+    N = z * z;
+    targetDepth = N * N;
+    document.getElementById('total-val').innerText = targetDepth;
+    fixedCells = new Uint16Array(targetDepth);
+    manifoldData = new Uint16Array(targetDepth);
+    phaseShifts = new Uint16Array(targetDepth);
+    buf_manifoldData = new Uint16Array(targetDepth);
+    buf_phaseShifts = new Uint16Array(targetDepth);
+    rowMask = new Array(N).fill(0n); colMask = new Array(N).fill(0n); blkMask = new Array(N).fill(0n);
+    buf_rowMask = new Array(N).fill(0n); buf_colMask = new Array(N).fill(0n); buf_blkMask = new Array(N).fill(0n);
+    shadowRowMask = new Array(targetDepth); shadowColMask = new Array(targetDepth); shadowBlkMask = new Array(targetDepth);
+    fullMask = 0n;
+    for (let i = 1; i <= N; i++) fullMask |= (1n << BigInt(i));
+    canvas.width = canvas.height = Math.min(window.innerWidth * 0.95, 500);
+    render();
+    log(`Universe expanded to Z=${z}. Ready.`);
+}
+
+canvas.addEventListener('mousedown', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const cellSize = canvas.width / N;
+    const idx = Math.floor((e.clientY - rect.top) / cellSize) * N + Math.floor((e.clientX - rect.left) / cellSize);
+    let val = prompt(`Fix node (1-${N}):`);
+    if (val !== null) { fixedCells[idx] = Math.min(N, Math.max(0, parseInt(val) || 0)); render(); }
+});
+
+async function startInference() {
+    if (isRunning) return;
+    isRunning = true;
+    let baseAnchor = BigInt(document.getElementById('path-id').value);
+    let activePathID = baseAnchor;
+    let d = 0, jumpCount = 0n;
+    bufferedDepth = 0; localEntropy = 0;
+    rowMask.fill(0n); colMask.fill(0n); blkMask.fill(0n);
+    phaseShifts.fill(0); manifoldData.fill(0);
+
+    log(`Projecting Anchor: ${baseAnchor}`);
+
+    while (isRunning && d >= 0) {
+        if (d === targetDepth) { finalize(); break; }
+
+        // --- CHECKPOINT ---
+        if (d > bufferedDepth && d % N === 0) {
+            bufferedDepth = d; localEntropy = 0;
+            buf_manifoldData.set(manifoldData); buf_phaseShifts.set(phaseShifts);
+            for(let i=0; i<N; i++) { buf_rowMask[i]=rowMask[i]; buf_colMask[i]=colMask[i]; buf_blkMask[i]=blkMask[i]; }
+        }
+
+        // --- DPI JUMP (Entropy Override) ---
+        if (localEntropy > N * 20) {
+            jumpCount++;
+            document.getElementById('jump-val').innerText = jumpCount;
+            d = bufferedDepth;
+            manifoldData.set(buf_manifoldData); phaseShifts.set(buf_phaseShifts);
+            for(let i=0; i<N; i++) { rowMask[i]=buf_rowMask[i]; colMask[i]=buf_colMask[i]; blkMask[i]=buf_blkMask[i]; }
+            activePathID = baseAnchor ^ (jumpCount * 0x9e3779b97f4a7c15n);
+            localEntropy = 0; phaseShifts[d]++;
+            log(`DPI Orbit: ${getCoordinate(baseAnchor, jumpCount)}`);
+            continue;
+        }
+
+        let r = Math.floor(d / N), c = d % N, b = Math.floor(r / z) * z + Math.floor(c / z);
+        let conflictMask = rowMask[r] | colMask[c] | blkMask[b];
+        let freeMask = (~conflictMask) & fullMask;
+
+        let options = [];
+        for (let i = 1; i <= N; i++) if ((freeMask & (1n << BigInt(i))) !== 0n) options.push(i);
+
+        // --- TRUTH-LOCK & FOLD LOGIC ---
+        if (options.length === 0) {
+            manifoldData[d] = 0; d--;
+            if (d < 0) { log("PARADOX: Space Exhausted."); break; }
+            rowMask = [...shadowRowMask[d]]; colMask = [...shadowColMask[d]]; blkMask = [...shadowBlkMask[d]];
+            phaseShifts[d]++; localEntropy++;
+            continue;
+        }
+
+        shadowRowMask[d] = [...rowMask]; shadowColMask[d] = [...colMask]; shadowBlkMask[d] = [...blkMask];
+
+        let val;
+        if (fixedCells[d] !== 0) {
+            if (options.includes(fixedCells[d])) val = fixedCells[d];
+            else { phaseShifts[d] = 999; localEntropy += 99; continue; } 
+        } else if (options.length === 1) {
+            val = options[0]; // Truth-Lock Singularity
+        } else {
+            let seed = Number(((activePathID ^ BigInt(d)) * 0x517cc1b727220a95n) % 0xFFFFFFFn);
+            val = options[(Math.abs(seed) + phaseShifts[d]) % options.length];
+        }
+
+        manifoldData[d] = val;
+        let bit = 1n << BigInt(val);
+        rowMask[r] |= bit; colMask[c] |= bit; blkMask[b] |= bit;
+        d++;
+
+        if (jumpCount % 20n === 0n || d % N === 0) {
+            document.getElementById('f-val').innerText = d;
+            document.getElementById('buf-val').innerText = bufferedDepth;
+            render(); await new Promise(res => setTimeout(res, 0));
+        }
+    }
+}
+
+function render(grounded = false) {
+    const cellSize = canvas.width / N;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    let d = parseInt(document.getElementById('f-val').innerText) || 0;
+    for (let i = 0; i < targetDepth; i++) {
+        let x = (i % N) * cellSize, y = Math.floor(i / N) * cellSize;
+        let val = (i < d || grounded) ? manifoldData[i] : 0;
+        if (fixedCells[i] !== 0) val = fixedCells[i];
+        ctx.strokeStyle = "rgba(0, 212, 255, 0.1)"; ctx.strokeRect(x, y, cellSize, cellSize);
+        if (val > 0) {
+            ctx.fillStyle = (fixedCells[i] !== 0) ? "var(--gold)" : (grounded ? "var(--ground)" : "#fff");
+            ctx.font = `bold ${cellSize * 0.45}px monospace`; ctx.textAlign = "center";
+            ctx.fillText(val, x + cellSize/2, y + cellSize * 0.68);
+        }
+    }
+}
+function finalize() { isRunning = false; render(true); log("<b>SINGULARITY ATTAINED.</b>"); }
+function resetAll() { initUniverse(); log("Purged."); }
+initUniverse();
+</script>
+</body>
+</html>

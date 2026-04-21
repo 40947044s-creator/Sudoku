@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>Project NP | Adelic Oracle v8.2</title>
+    <style>
+        :root { --sentinel: #00ff41; --bedrock: #050505; --accent: #00d4ff; --gold: #d4af37; }
+        body { background: var(--bedrock); color: var(--sentinel); font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 20px; }
+        .header { text-align: center; border-bottom: 2px solid var(--sentinel); width: 100%; letter-spacing: 2px; padding-bottom: 10px; }
+        .panel { display: flex; gap: 10px; margin: 15px; padding: 10px; border: 1px solid #333; background: #111; }
+        canvas { border: 1px solid var(--sentinel); box-shadow: 0 0 30px var(--glass); }
+        .monitor { width: 100%; max-width: 600px; font-size: 0.75rem; color: var(--gold); margin: 10px 0; border-left: 3px solid var(--accent); padding-left: 10px; }
+        .console { width: 100%; max-width: 750px; height: 120px; background: #000; border: 1px dashed #444; padding: 10px; font-size: 0.7rem; overflow-y: auto; color: var(--sentinel); }
+        .btn { background: #000; border: 1px solid var(--sentinel); color: var(--sentinel); padding: 5px 15px; cursor: pointer; }
+        .btn:hover { background: var(--sentinel); color: #000; }
+        input { background: #000; border: 1px solid #444; color: var(--accent); text-align: center; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <strong>Project NP: Universal Adelic Oracle v8.2</strong>
+    <div style="font-size: 0.6rem; color: #888;">[RIEMANN MANIFOLD NAVIGATION]</div>
+</div>
+
+<div class="panel">
+    <div>Z: <input type="number" id="z-val" value="3" min="2" max="5" style="width: 35px;" onchange="initSystem()"></div>
+    <div>ANCHOR: <input type="text" id="path-id" value="40947044" style="width: 140px;"></div>
+    <button class="btn" onclick="runInference()">Inference</button>
+    <button class="btn" onclick="resetSystem()" style="color:#f33; border-color:#f33;">Purge</button>
+</div>
+
+<div class="monitor" id="monitor">CARDINALITY: 6.67e+21 | ORBIT: #0 [0.0000%]</div>
+<canvas id="mainCanvas"></canvas>
+<div class="console" id="log">> [SENTINEL] Adelic Ripple Counter ready.</div>
+
+<script>
+let z, N, totalBits, isRunning = false;
+let board, fixed, rowM, colM, blkM, shadowR, shadowC, shadowB;
+const Z3_SIZE = 6670903752021072936960n;
+
+const canvas = document.getElementById('mainCanvas');
+const ctx = canvas.getContext('2d');
+
+function log(msg) {
+    const l = document.getElementById('log');
+    l.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}<br>` + l.innerHTML;
+    l.scrollTop = 0;
+}
+
+function initSystem() {
+    isRunning = false;
+    z = parseInt(document.getElementById('z-val').value);
+    N = z * z;
+    totalBits = N * N;
+    board = new Uint16Array(totalBits);
+    fixed = new Uint16Array(totalBits);
+    rowM = new Array(N).fill(0n); colM = new Array(N).fill(0n); blkM = new Array(N).fill(0n);
+    shadowR = new Array(totalBits); shadowC = new Array(totalBits); shadowB = new Array(totalBits);
+    canvas.width = canvas.height = Math.min(window.innerWidth * 0.9, 450);
+    render();
+}
+
+async function runInference() {
+    if (isRunning) return;
+    isRunning = true;
+    let anchor = BigInt(document.getElementById('path-id').value);
+    let d = 0, jumpCount = 0n, entropy = 0;
+    
+    // MSB Injection (The Spark)
+    let activeID = anchor ^ (1n << 63n);
+
+    while (isRunning && d >= 0) {
+        if (d === totalBits) { finalize(); break; }
+
+        if (entropy > N * 12) {
+            jumpCount++;
+            d = Math.max(0, d - N);
+            activeID = (anchor ^ (jumpCount * 0x9e3779b97f4a7c15n));
+            entropy = 0;
+            updateMonitor(activeID);
+            continue;
+        }
+
+        let r = Math.floor(d / N), c = d % N, b = Math.floor(r / z) * z + Math.floor(c / z);
+        let mask = rowM[r] | colM[c] | blkM[b];
+        let opts = [];
+        for (let i = 1; i <= N; i++) if (!(mask & (1n << BigInt(i)))) opts.push(i);
+
+        if (opts.length === 0) {
+            d--;
+            if (d < 0) { log("PARADOX: Input has no Adelic solution."); isRunning = false; break; }
+            rowM = [...shadowR[d]]; colM = [...shadowC[d]]; blkM = [...shadowB[d]];
+            entropy++; continue;
+        }
+
+        shadowR[d] = [...rowM]; shadowC[d] = [...colM]; shadowB[d] = [...blkM];
+
+        let val;
+        if (fixed[d] !== 0) {
+            val = opts.includes(fixed[d]) ? fixed[d] : 0;
+            if (val === 0) { d--; entropy += 10; continue; }
+        } else {
+            let seed = Number(((activeID ^ BigInt(d)) * 0x517cc1b727220a95n) % 0xFFFFFFFn);
+            val = opts[Math.abs(seed) % opts.length];
+        }
+
+        board[d] = val;
+        let bit = 1n << BigInt(val);
+        rowM[r] |= bit; colM[c] |= bit; blkM[b] |= bit;
+        d++;
+        if (d % N === 0) { render(); await new Promise(r => setTimeout(r, 0)); }
+    }
+}
+
+function updateMonitor(id) {
+    let perc = (Number(id % 1000000n) / 10000).toFixed(4);
+    document.getElementById('monitor').innerText = `CARDINALITY: 6.67e+21 | ORBIT: #${id} [${perc}%]`;
+}
+
+function render() {
+    const s = canvas.width / N;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (let i = 0; i < totalBits; i++) {
+        let x = (i % N) * s, y = Math.floor(i / N) * s;
+        ctx.strokeStyle = "#222"; ctx.strokeRect(x, y, s, s);
+        if (board[i] || fixed[i]) {
+            ctx.fillStyle = fixed[i] ? "var(--gold)" : "white";
+            ctx.textAlign = "center"; ctx.fillText(fixed[i] || board[i], x + s/2, y + s * 0.7);
+        }
+    }
+}
+function finalize() { isRunning = false; render(); log("SINGULARITY ATTAINED."); }
+function resetSystem() { initSystem(); log("System Purged."); }
+canvas.addEventListener('mousedown', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const s = canvas.width / N;
+    const idx = Math.floor((e.clientY - rect.top) / s) * N + Math.floor((e.clientX - rect.left) / s);
+    let v = prompt("Value:"); if (v) fixed[idx] = parseInt(v); render();
+});
+initSystem();
+</script>
+</body>
+</html>
