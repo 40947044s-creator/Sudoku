@@ -2,59 +2,60 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Project NP | Adelic Oracle v8.6.22</title>
+    <title>Project NP | Adelic Oracle v8.6.23</title>
     <style>
-        :root { --sentinel: #00ff41; --bedrock: #050505; --gold: #d4af37; --accent: #00d4ff; --friction: #ff3333; --export: #ff00ff; }
-        body { background: var(--bedrock); color: var(--sentinel); font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 10px; overflow: hidden; height: 100vh; }
-        #header { text-align: center; border-bottom: 2px solid var(--sentinel); width: 100%; padding-bottom: 5px; }
-        .index-bar { width: 90%; max-width: 600px; background: #111; border: 1px solid #333; margin: 10px 0; padding: 10px; border-left: 5px solid var(--gold); }
-        .index-label { font-size: 0.6rem; color: #888; text-transform: uppercase; }
-        .index-value { font-size: 0.8rem; color: var(--gold); word-break: break-all; font-weight: bold; }
-        #lattice-container { width: 70vmin; height: 70vmin; background: #000; border: 1px solid var(--accent); position: relative; }
+        :root { --sentinel: #00ff41; --bedrock: #050505; --gold: #d4af37; --accent: #00d4ff; --friction: #ff3333; }
+        body { background: var(--bedrock); color: var(--sentinel); font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; padding: 15px; margin: 0; overflow: hidden; height: 100vh; }
+        #header { text-align: center; border-bottom: 2px solid var(--sentinel); width: 100%; padding-bottom: 10px; }
+        .index-bar { width: 90%; max-width: 600px; background: #111; border: 1px solid #333; margin: 15px 0; padding: 15px; border-left: 5px solid var(--gold); }
+        .index-label { font-size: 0.6rem; color: #888; text-transform: uppercase; margin-bottom: 5px; }
+        .index-value { font-size: 0.9rem; color: var(--gold); word-break: break-all; font-weight: bold; letter-spacing: 1px; }
+        
+        #lattice-container { width: 65vmin; height: 65vmin; background: #000; border: 1px solid var(--accent); position: relative; }
         canvas { width: 100%; height: 100%; image-rendering: pixelated; }
-        .controls { display: flex; flex-direction: column; gap: 8px; margin: 10px; width: 90%; max-width: 600px;}
-        .row-group { display: flex; gap: 8px; width: 100%; }
-        #console { width: 90%; max-width: 600px; height: 60px; background: #000; border: 1px dashed #333; padding: 8px; font-size: 0.65rem; color: #666; overflow-y: auto; }
-        input { background: #000; border: 1px solid #444; color: var(--accent); padding: 5px; text-align: center; font-family: inherit; font-size: 0.7rem; }
-        .btn { flex: 1; background: rgba(0, 255, 65, 0.05); border: 1px solid var(--sentinel); color: var(--sentinel); padding: 8px; cursor: pointer; font-size: 0.65rem; font-family: inherit; font-weight: bold; text-transform: uppercase; text-decoration: none; display: flex; align-items: center; justify-content: center; text-align: center;}
+        
+        .controls { display: flex; flex-direction: column; gap: 10px; margin: 15px; width: 90%; max-width: 600px;}
+        .row-group { display: flex; gap: 10px; }
+        
+        #console { width: 90%; max-width: 600px; height: 80px; background: #000; border: 1px dashed #333; padding: 10px; font-size: 0.7rem; color: #666; overflow-y: auto; }
+        input { background: #000; border: 1px solid #444; color: var(--accent); padding: 8px; text-align: center; font-family: inherit; }
+        .btn { flex: 1; background: rgba(0, 255, 65, 0.05); border: 1px solid var(--sentinel); color: var(--sentinel); padding: 10px; cursor: pointer; font-size: 0.7rem; font-family: inherit; font-weight: bold; text-transform: uppercase; text-decoration: none; display: flex; align-items: center; justify-content: center; }
         .btn:hover { background: var(--sentinel); color: #000; }
-        .btn-tune { border-color: var(--gold); color: var(--gold); }
-        .btn-launch { border-color: var(--export); color: var(--export); animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 0, 255, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(255, 0, 255, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 0, 255, 0); } }
+        .btn-hunt { border-color: var(--gold); color: var(--gold); }
+        .btn-v86 { border-color: #ff00ff; color: #ff00ff; animation: glow 1.5s infinite alternate; }
+        @keyframes glow { from { box-shadow: 0 0 5px rgba(255,0,255,0.2); } to { box-shadow: 0 0 20px rgba(255,0,255,0.6); } }
     </style>
 </head>
 <body>
 
 <div id="header">
-    <strong>PROJECT NP: ADELIC ORACLE v8.6.22</strong>
-    <div style="font-size: 0.6rem; color: #888;">[RESONANCE TUNING | Clue Alignment Index 40]</div>
+    <strong>PROJECT NP: ADELIC ORACLE v8.6.23</strong>
+    <div style="font-size: 0.6rem; color: #888; margin-top: 5px;">[ANCHOR REALIGNMENT ENGINE | Clue Index 40]</div>
 </div>
 
 <div class="index-bar">
-    <div class="index-label">Optimized Adelic Anchor</div>
+    <div class="index-label">Resonant Adelic Anchor (Found DNA)</div>
     <div class="index-value" id="index-val">#00000000000000000000</div>
 </div>
 
 <div class="controls">
     <div class="row-group">
-        z:<input type="number" id="z-val" value="3" min="2" max="9" style="width: 30px;" onchange="initSystem()">
-        <input type="text" id="path-id" placeholder="Current Anchor" style="flex: 1;">
-        <button class="btn btn-tune" onclick="findResonantAnchor()">Tune for Clues</button>
+        z:<input type="number" id="z-val" value="3" min="2" max="9" style="width: 35px;" onchange="initSystem()">
+        <input type="text" id="path-id" placeholder="Base Anchor" style="flex: 1;">
+        <button class="btn btn-hunt" onclick="huntAnchor()">Hunt Anchor</button>
     </div>
     <div class="row-group">
-        <button class="btn" onclick="startInference()">Execute</button>
-        <a id="v86-link" href="https://40947044s-creator.github.io/Sudoku/test" target="_blank" class="btn btn-launch">Launch v8.6 Core</a>
+        <a id="v86-bridge" href="https://40947044s-creator.github.io/Sudoku/test" target="_blank" class="btn btn-v86">Launch v8.6 Core</a>
         <button class="btn" onclick="resetSystem()" style="color:var(--friction); border-color:var(--friction);">Purge</button>
     </div>
 </div>
 
 <div id="lattice-container"><canvas id="mainCanvas"></canvas></div>
-<div id="console">> [SENTINEL] Fix clues (like 9 at 40) then click 'Tune for Clues'.</div>
+<div id="console">> [SENTINEL] Sentinel active. Set clues, then 'Hunt' the Resonant Anchor.</div>
 
 <script>
-let z, N, totalBits, isRunning = false;
-let board, fixed, phase, d = 0, aVal = 0n;
-let rowM, colM, blkM, shadowR, shadowC, shadowB;
+let z, N, totalBits;
+let board, fixed;
 const MULT = 0x517cc1b727220a95n;
 
 const canvas = document.getElementById('mainCanvas');
@@ -65,98 +66,53 @@ function log(msg) {
     l.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}<br>` + l.innerHTML;
 }
 
-// THE "GOOD USE": Searches for an anchor that aligns with fixed clues with 0 friction
-async function findResonantAnchor() {
-    log("<b>TUNING:</b> Searching for Resonance Cluster...");
-    let bestAnchor = BigInt(Date.now()) | (1n << 63n);
+// THE SEARCH: Finds the anchor in N that matches the physical clues (like 9 at 40)
+async function huntAnchor() {
+    log("<b>HUNTING:</b> Scanning Adelic Space for Resonance...");
+    let baseline = document.getElementById('path-id').value;
+    let anchor = baseline ? BigInt(baseline) : 1006n * 0x9E3779B1n;
+    
     let found = false;
-    
-    // Optimization: Mutate from 1006 baseline
-    let seedBase = 1006n * BigInt(N) * 0x9E3779B1n;
-    
-    for (let i = 0; i < 500; i++) {
-        let testAnchor = (seedBase ^ BigInt(i * 0x517cc1b7)) | (1n << 63n);
-        if (quickCheck(testAnchor)) {
-            bestAnchor = testAnchor;
+    // Iterate through mutations to find a bitstream that passes through the "9" at index 40
+    for (let i = 0; i < 10000; i++) {
+        let testAnchor = (anchor + BigInt(i)) | (1n << 63n);
+        if (validateResonance(testAnchor)) {
+            anchor = testAnchor;
             found = true;
             break;
         }
     }
-    
-    aVal = bestAnchor;
-    document.getElementById('index-val').innerText = `#${aVal.toString()}`;
-    document.getElementById('path-id').value = aVal.toString();
-    document.getElementById('v86-link').href = `https://40947044s-creator.github.io/Sudoku/test?anchor=${aVal}`;
-    log(found ? "<b>RESONANCE FOUND.</b> Singularity aligned." : "Heuristic shift applied. Try Execute.");
+
+    if (found) {
+        document.getElementById('index-val').innerText = `#${anchor.toString()}`;
+        document.getElementById('path-id').value = anchor.toString();
+        document.getElementById('v86-bridge').href = `https://40947044s-creator.github.io/Sudoku/test?anchor=${anchor}`;
+        log(`<b>ANCHOR FOUND:</b> DNA aligned with clues.`);
+    } else {
+        log("HUNT FAILED: Clues too dense for current search range.");
+    }
 }
 
-function quickCheck(anchor) {
-    // A resonant anchor should produce the fixed digits (like 9 at 40) at phase 0
+function validateResonance(a) {
+    // Check if the anchor's bitstream produces the fixed digits at phase 0
+    // This is the 'One-to-Many' check. We want the one anchor that hits all clues.
     for (let i = 0; i < totalBits; i++) {
         if (fixed[i]) {
-            let seed = Number(((anchor ^ BigInt(i)) * MULT) % 0xFFFFFFFn);
-            // This is the simplified 2-adic alignment check
-            if (i === 40 && (Math.abs(seed) % N) + 1 !== fixed[i]) return false;
+            // Simplified check: Does the seed's residue match the digit?
+            let seed = Number(((a ^ BigInt(i)) * MULT) % 0xFFFFFFFn);
+            // This logic must match your v8.6 logic exactly
+            if ((Math.abs(seed) % N) + 1 !== fixed[i]) return false;
         }
     }
     return true;
 }
 
 function initSystem() {
-    isRunning = false;
     z = parseInt(document.getElementById('z-val').value);
     N = z * z; totalBits = N * N;
-    board = new Uint16Array(totalBits); fixed = new Uint16Array(totalBits);
-    phase = new Uint16Array(totalBits);
-    rowM = new BigUint64Array(N); colM = new BigUint64Array(N); blkM = new BigUint64Array(N);
-    shadowR = new Array(totalBits); shadowC = new Array(totalBits); shadowB = new Array(totalBits);
+    board = new Uint16Array(totalBits);
+    fixed = new Uint16Array(totalBits);
     render();
-}
-
-async function startInference() {
-    if (isRunning) return;
-    let raw = document.getElementById('path-id').value.trim();
-    aVal = raw ? BigInt(raw) : (1006n * BigInt(N) * 0x9E3779B1n) | (1n << 63n);
-    document.getElementById('v86-link').href = `https://40947044s-creator.github.io/Sudoku/test?anchor=${aVal}`;
-    isRunning = true; d = 0;
-    rowM.fill(0n); colM.fill(0n); blkM.fill(0n);
-    for(let i=0; i<totalBits; i++) if(fixed[i]) {
-        let r=Math.floor(i/N), c=i%N, b=Math.floor(r/z)*z+Math.floor(c/z);
-        let bit = 1n << BigInt(fixed[i]);
-        rowM[r]|=bit; colM[c]|=bit; blkM[b]|=bit; board[i]=fixed[i];
-    }
-    requestAnimationFrame(inferenceStep);
-}
-
-function inferenceStep() {
-    if (!isRunning) return;
-    let batch = (N > 9) ? 450 : 100;
-    for (let i = 0; i < batch; i++) {
-        if (d >= totalBits) { finalize(); return; }
-        if (d < 0) { log("VOID PARADOX."); isRunning = false; return; }
-        if (fixed[d]) { d++; continue; }
-        let r = Math.floor(d / N), c = d % N, b = Math.floor(r / z) * z + Math.floor(c / z);
-        let mask = rowM[r] | colM[c] | blkM[b];
-        let opts = [];
-        for (let j = 1; j <= N; j++) if (!(mask & (1n << BigInt(j)))) opts.push(j);
-        if (opts.length === 0) {
-            board[d] = 0; d--;
-            if (d >= 0) {
-                rowM = [...shadowR[d]]; colM = [...shadowC[d]]; blkM = [...shadowB[d]];
-                phase[d]++;
-            }
-            continue;
-        }
-        shadowR[d] = [...rowM]; shadowC[d] = [...colM]; shadowB[d] = [...blkM];
-        let seed = Number(((aVal ^ BigInt(d)) * MULT) % 0xFFFFFFFn);
-        let val = opts[(Math.abs(seed) + phase[d]) % opts.length];
-        board[d] = val;
-        let bit = 1n << BigInt(val);
-        rowM[r] |= bit; colM[c] |= bit; blkM[b] |= bit;
-        d++;
-    }
-    render();
-    if (isRunning) requestAnimationFrame(inferenceStep);
 }
 
 function render() {
@@ -164,24 +120,22 @@ function render() {
     const s = canvas.width / N; ctx.clearRect(0, 0, canvas.width, canvas.height);
     for (let i = 0; i < totalBits; i++) {
         let x = (i % N) * s, y = Math.floor(i / N) * s;
-        ctx.strokeStyle = "rgba(0, 212, 255, 0.05)"; ctx.strokeRect(x, y, s, s);
-        if (board[i]) {
-            ctx.fillStyle = fixed[i] ? "var(--gold)" : "var(--sentinel)";
-            ctx.font = `${s * 0.6}px monospace`; ctx.textAlign = "center";
-            ctx.fillText(board[i], x + s / 2, y + s * 0.75);
+        ctx.strokeStyle = "rgba(0, 212, 255, 0.1)"; ctx.strokeRect(x, y, s, s);
+        if (fixed[i]) {
+            ctx.fillStyle = "var(--gold)";
+            ctx.font = `bold ${s * 0.6}px monospace`; ctx.textAlign = "center";
+            ctx.fillText(fixed[i], x + s / 2, y + s * 0.75);
         }
     }
 }
 
-function finalize() { isRunning = false; render(); log("<b>SINGULARITY ATTAINED.</b>"); }
-function resetSystem() { initSystem(); log("Purged."); }
+function resetSystem() { initSystem(); log("Manifold Purged."); }
 
 canvas.addEventListener('mousedown', (e) => {
-    if (isRunning) return;
     const rect = canvas.getBoundingClientRect(); const s = canvas.width / N;
     const idx = Math.floor((e.clientY - rect.top) / s) * N + Math.floor((e.clientX - rect.left) / s);
-    let v = prompt(`Fix Bit at ${idx}:`, fixed[idx] || ""); 
-    if (v !== null) { fixed[idx] = Math.min(N, Math.max(0, parseInt(v) || 0)); board[idx] = fixed[idx]; render(); }
+    let v = prompt(`Fix Clue at ${idx}:`, fixed[idx] || ""); 
+    if (v !== null) { fixed[idx] = Math.min(N, Math.max(0, parseInt(v) || 0)); render(); }
 });
 
 initSystem();
