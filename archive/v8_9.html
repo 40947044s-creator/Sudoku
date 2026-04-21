@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>Adelic Oracle v8.9 | High-Performance Manifold</title>
+    <style>
+        :root { --sentinel: #00ff41; --bedrock: #050505; --accent: #00d4ff; --gold: #d4af37; }
+        body { background: var(--bedrock); color: var(--sentinel); font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 20px; }
+        .header { width: 100%; text-align: center; border-bottom: 2px solid var(--sentinel); padding-bottom: 5px; }
+        .index-bar { width: 90%; max-width: 600px; background: #111; border: 1px solid #333; margin: 15px 0; padding: 10px; border-left: 5px solid var(--accent); }
+        .index-value { font-size: 0.9rem; color: var(--accent); letter-spacing: 1px; }
+        canvas { border: 1px solid #222; background: #000; cursor: crosshair; }
+        .controls { margin: 10px; display: flex; gap: 10px; }
+        .btn { background: transparent; border: 1px solid var(--sentinel); color: var(--sentinel); padding: 5px 15px; cursor: pointer; }
+        .btn:hover { background: var(--sentinel); color: #000; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <strong>PROJECT NP: ADELIC ORACLE v8.9</strong>
+    <div style="font-size: 0.6rem; color: #888;">[OPTIMIZED HEURISTIC INFERENCE]</div>
+</div>
+
+<div class="index-bar">
+    <div class="index-label" style="font-size: 0.6rem; color: #666;">DYNAMIC ADELIC ADDRESS</div>
+    <div class="index-value" id="index-val">0x000000000000</div>
+</div>
+
+<div class="controls">
+    <button class="btn" onclick="startSolve()">Execute Inference</button>
+    <button class="btn" onclick="resetSystem()" style="color: #ff3333; border-color: #ff3333;">Purge</button>
+</div>
+
+<canvas id="mainCanvas"></canvas>
+
+<script>
+let z = 3, N = 9, totalBits = 81;
+let board = new Int8Array(totalBits);
+let anchor = 40947044n;
+let isRunning = false;
+
+const canvas = document.getElementById('mainCanvas');
+const ctx = canvas.getContext('2d');
+canvas.width = canvas.height = 400;
+
+function resetSystem() {
+    isRunning = false;
+    board.fill(0);
+    render();
+}
+
+// Bitwise constraint checker
+function getOptions(idx) {
+    let r = Math.floor(idx / N), c = idx % N, b = Math.floor(r / z) * z + Math.floor(c / z);
+    let mask = 0;
+    for (let i = 0; i < N; i++) {
+        if (board[r * N + i]) mask |= (1 << board[r * N + i]);
+        if (board[i * N + c]) mask |= (1 << board[i * N + c]);
+        let br = Math.floor(b / z) * z + Math.floor(i / z);
+        let bc = (b % z) * z + (i % z);
+        if (board[br * N + bc]) mask |= (1 << board[br * N + bc]);
+    }
+    let opts = [];
+    for (let v = 1; v <= N; v++) if (!(mask & (1 << v))) opts.push(v);
+    return opts;
+}
+
+// Find cell with LEAST possibilities (High Performality)
+function findBestCell() {
+    let best = -1, minOpts = 10;
+    for (let i = 0; i < totalBits; i++) {
+        if (board[i] === 0) {
+            let opts = getOptions(i);
+            if (opts.length < minOpts) {
+                minOpts = opts.length;
+                best = i;
+            }
+            if (minOpts === 1) break; 
+        }
+    }
+    return { idx: best, count: minOpts };
+}
+
+async function startSolve() {
+    if (isRunning) return;
+    isRunning = true;
+    if (await solve()) {
+        document.getElementById('index-val').innerText = "SINGULARITY ATTAINED";
+    }
+    isRunning = false;
+}
+
+async function solve() {
+    if (!isRunning) return false;
+    let { idx, count } = findBestCell();
+    if (idx === -1) return true; // Solved
+    if (count === 0) return false; // Dead end
+
+    let opts = getOptions(idx);
+    
+    // Anchor-based shuffling for dynamic pathing
+    let seed = Number(anchor % BigInt(opts.length));
+    opts = [...opts.slice(seed), ...opts.slice(0, seed)];
+
+    for (let val of opts) {
+        board[idx] = val;
+        // Visual throttle
+        if (Math.random() > 0.98) {
+            render();
+            document.getElementById('index-val').innerText = `0x${(anchor ^ BigInt(idx)).toString(16).toUpperCase()}`;
+            await new Promise(r => setTimeout(r, 0));
+        }
+        if (await solve()) return true;
+        board[idx] = 0;
+    }
+    return false;
+}
+
+canvas.addEventListener('mousedown', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const s = canvas.width / N;
+    const x = Math.floor((e.clientX - rect.left) / s);
+    const y = Math.floor((e.clientY - rect.top) / s);
+    anchor += BigInt(x + y * N); // Dynamic Anchor Mutation
+    if (!isRunning) startSolve();
+});
+
+function render() {
+    const s = canvas.width / N;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (let i = 0; i < totalBits; i++) {
+        let x = (i % N) * s, y = Math.floor(i / N) * s;
+        ctx.strokeStyle = "#222"; ctx.strokeRect(x, y, s, s);
+        if (board[i]) {
+            ctx.fillStyle = "white";
+            ctx.font = "20px monospace";
+            ctx.textAlign = "center";
+            ctx.fillText(board[i], x + s/2, y + s * 0.7);
+        }
+    }
+}
+
+render();
+</script>
+</body>
+</html>
