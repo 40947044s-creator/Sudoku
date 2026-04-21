@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Project NP | Adelic Oracle v8.9</title>
+    <title>Project NP | Adelic Oracle v8.6.1</title>
     <style>
         :root { 
             --sentinel: #00ff41; --bedrock: #050505; --accent: #00d4ff; 
@@ -25,18 +25,18 @@
         .index-value { font-size: 0.9rem; color: var(--gold); letter-spacing: 1px; word-break: break-all; }
         
         .panel { display: flex; gap: 10px; margin: 10px; padding: 10px; background: rgba(0,255,65,0.03); }
-        canvas { border: 1px solid var(--accent); background: #000; box-shadow: 0 0 40px rgba(0, 212, 255, 0.1); cursor: crosshair; }
+        canvas { border: 1px solid var(--accent); background: #000; box-shadow: 0 0 40px rgba(0, 212, 255, 0.1); cursor: crosshair;}
         .console { width: 90%; max-width: 600px; height: 100px; background: #000; border: 1px dashed #333; margin-top: 15px; padding: 10px; font-size: 0.7rem; color: #666; overflow-y: auto; }
         input { background: #000; border: 1px solid #444; color: var(--accent); padding: 5px; text-align: center; }
-        .btn { background: transparent; border: 1px solid var(--sentinel); color: var(--sentinel); padding: 5px 15px; cursor: pointer; font-size: 0.7rem; transition: 0.2s; }
+        .btn { background: transparent; border: 1px solid var(--sentinel); color: var(--sentinel); padding: 5px 15px; cursor: pointer; font-size: 0.7rem; }
         .btn:hover { background: var(--sentinel); color: #000; }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <strong>PROJECT NP: ADELIC ORACLE v8.9</strong>
-    <div style="font-size: 0.7rem; color: #888; margin-top: 5px;">[P=NP PHYSICAL ISOMORPHISM - DETERMINISTIC MAPPING]</div>
+    <strong>PROJECT NP: ADELIC ORACLE v8.6.1</strong>
+    <div style="font-size: 0.7rem; color: #888; margin-top: 5px;">[P=NP PHYSICAL ISOMORPHISM - PARITY EXPLOIT]</div>
 </div>
 
 <div class="index-bar">
@@ -49,13 +49,13 @@
 
 <div class="panel">
     <div>z: <input type="number" id="z-val" value="3" min="2" max="5" style="width: 35px;" onchange="initSystem()"></div>
-    <div>ANCHOR: <input type="text" id="path-id" placeholder="Auto or Number" style="width: 140px;"></div>
+    <div>ANCHOR: <input type="text" id="path-id" placeholder="Auto Promising" style="width: 140px;"></div>
     <button class="btn" onclick="startInference()">Execute Inference</button>
     <button class="btn" onclick="resetSystem()" style="color:var(--friction); border-color:var(--friction);">Purge</button>
 </div>
 
 <canvas id="mainCanvas"></canvas>
-<div class="console" id="log">> [SENTINEL] System ready. Click on graph to set hints, then execute...</div>
+<div class="console" id="log">> [SENTINEL] System ready. Ground your Anchor or auto-seek to begin...</div>
 
 <script>
 let z, N, totalBits, isRunning = false;
@@ -77,22 +77,32 @@ function updateIndexBar(id) {
     document.getElementById('perc-val').innerText = `${perc}%`;
 }
 
-// STRICTLY DETERMINISTIC: Maps the board's exact topology to a single unique address
-function generateTopologicalAnchor() {
-    let baseHash = BigInt(N); // Baseline entropy from grid dimension
+// v8.6.1 PROMISING ANCHOR CALCULATOR
+function calculatePromisingAnchor() {
+    let hash = BigInt(N) * 0x9E3779B1n;
+    let hasHints = false;
     
+    // Hash the physical topology of the board
     for (let i = 0; i < totalBits; i++) {
         if (fixed[i] !== 0) {
-            // Uniquely hash the specific value at its specific index
-            let cellHash = (BigInt(i) * 0x9E3779B1n) ^ BigInt(fixed[i]);
-            baseHash = (baseHash << 3n) ^ cellHash; 
+            hasHints = true;
+            let cellData = (BigInt(i + 1) * 0x517cc1b727220a95n) ^ BigInt(fixed[i]);
+            hash = (hash << 5n) ^ cellData;
         }
     }
     
-    // LAW: Enforce Odd Parity to break Mode 0 Singularity
-    if ((baseHash & 1n) === 0n) baseHash |= (1n << 63n);
+    // If the board is completely empty, default to a multiplier of the "1006 Miracle"
+    if (!hasHints) {
+        hash = 1006n * BigInt(N) * 0x9E3779B1n;
+    }
+
+    // CRITICAL v8.6 LOGIC: Force EVEN Parity
+    // This guarantees the original v8.6 logic triggers the (1n << 63n) flip for massive entropy
+    if ((hash & 1n) !== 0n) {
+        hash ^= 1n; 
+    }
     
-    return Math.abs(Number(baseHash % 0xFFFFFFFFFFFFn));
+    return Math.abs(Number(hash % 0xFFFFFFFFFFn));
 }
 
 function initSystem() {
@@ -100,6 +110,135 @@ function initSystem() {
     z = parseInt(document.getElementById('z-val').value);
     N = z * z;
     totalBits = N * N;
+    board = new Uint16Array(totalBits);
+    fixed = new Uint16Array(totalBits);
+    phase = new Uint16Array(totalBits);
+    rowM = new Array(N).fill(0n); colM = new Array(N).fill(0n); blkM = new Array(N).fill(0n);
+    shadowR = new Array(totalBits); shadowC = new Array(totalBits); shadowB = new Array(totalBits);
+    canvas.width = canvas.height = Math.min(window.innerWidth * 0.9, 450);
+    render();
+}
+
+async function startInference() {
+    if (isRunning) return;
+    
+    let pathIdInput = document.getElementById('path-id').value;
+    let anchor;
+
+    // AUTO-SEEK THE MOST PROMISING ANCHOR
+    if (!pathIdInput || pathIdInput.trim() === "") {
+        anchor = BigInt(calculatePromisingAnchor());
+        document.getElementById('path-id').value = anchor.toString();
+        log(`Promising Anchor Derived: ${anchor}`);
+    } else {
+        anchor = BigInt(pathIdInput);
+    }
+
+    isRunning = true;
+    
+    // THE v8.6 LAW: Enforce Odd Parity to break Singularity Mode 0
+    if ((anchor & 1n) === 0n) {
+        anchor |= (1n << 63n); 
+        log("Parity flip activated: 64-bit entropy injected.");
+    }
+    
+    let d = 0, scanStep = 0n, friction = 0;
+    let activeID = anchor; 
+
+    updateIndexBar(activeID);
+    log(`Inference active at address 0x${activeID.toString(16)}`);
+
+    while (isRunning && d >= 0) {
+        if (d === totalBits) { finalize(); break; }
+
+        // Linear Ripple Scan for Unique Mapping
+        if (friction > N * 15) {
+            scanStep++;
+            d = Math.max(0, d - N); 
+            activeID = anchor + scanStep; 
+            friction = 0;
+            updateIndexBar(activeID);
+            continue;
+        }
+
+        let r = Math.floor(d / N), c = d % N, b = Math.floor(r / z) * z + Math.floor(c / z);
+        let mask = rowM[r] | colM[c] | blkM[b];
+        
+        let opts = [];
+        for (let i = 1; i <= N; i++) if (!(mask & (1n << BigInt(i)))) opts.push(i);
+
+        if (opts.length === 0) {
+            board[d] = 0; d--;
+            if (d < 0) { log("PARADOX: Address leads to Void."); isRunning = false; break; }
+            rowM = [...shadowR[d]]; colM = [...shadowC[d]]; blkM = [...shadowB[d]];
+            phase[d]++; friction++; continue;
+        }
+
+        shadowR[d] = [...rowM]; shadowC[d] = [...colM]; shadowB[d] = [...blkM];
+
+        let val;
+        if (fixed[d] !== 0) {
+            val = opts.includes(fixed[d]) ? fixed[d] : 0;
+            if (val === 0) { d--; friction += 20; continue; }
+        } else if (opts.length === 1) {
+            val = opts[0]; // Truth-Lock Singularity
+        } else {
+            let seed = Number(((activeID ^ BigInt(d)) * 0x517cc1b727220a95n) % 0xFFFFFFFn);
+            val = opts[(Math.abs(seed) + phase[d]) % opts.length];
+        }
+
+        board[d] = val;
+        let bit = 1n << BigInt(val);
+        rowM[r] |= bit; colM[c] |= bit; blkM[b] |= bit;
+        d++;
+        if (d % N === 0) { render(); await new Promise(r => setTimeout(r, 0)); }
+    }
+}
+
+function render(final = false) {
+    const s = canvas.width / N;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (let i = 0; i < totalBits; i++) {
+        let x = (i % N) * s, y = Math.floor(i / N) * s;
+        ctx.strokeStyle = "rgba(0, 212, 255, 0.08)"; ctx.strokeRect(x, y, s, s);
+        
+        // Block Outlines for Arbitrary N
+        if ((i % N) % z === 0) { ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y+s); ctx.strokeStyle = "rgba(0, 212, 255, 0.3)"; ctx.stroke(); }
+        if (Math.floor(i / N) % z === 0) { ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x+s, y); ctx.strokeStyle = "rgba(0, 212, 255, 0.3)"; ctx.stroke(); }
+
+        let val = fixed[i] || board[i];
+        if (val) {
+            ctx.fillStyle = fixed[i] ? "var(--gold)" : (final ? "var(--sentinel)" : "white");
+            ctx.font = `bold ${s * 0.5}px monospace`;
+            ctx.textAlign = "center"; ctx.fillText(val, x + s/2, y + s * 0.7);
+        }
+    }
+    ctx.strokeStyle = "var(--accent)"; ctx.strokeRect(0, 0, canvas.width, canvas.height);
+}
+
+function finalize() { isRunning = false; render(true); log("<b>SINGULARITY ATTAINED.</b>"); }
+function resetSystem() { document.getElementById('path-id').value = ""; initSystem(); log("System Purged."); }
+
+canvas.addEventListener('mousedown', (e) => {
+    if (isRunning) return;
+    const rect = canvas.getBoundingClientRect();
+    const s = canvas.width / N;
+    const idx = Math.floor((e.clientY - rect.top) / s) * N + Math.floor((e.clientX - rect.left) / s);
+    let currentVal = fixed[idx] !== 0 ? fixed[idx] : "";
+    let v = prompt(`Fix Bit at ${idx}\n(1-${N}, 0 to clear):`, currentVal); 
+    if (v !== null) { 
+        let parsed = parseInt(v);
+        if (isNaN(parsed) || parsed < 1 || parsed > N) parsed = 0;
+        fixed[idx] = parsed; 
+        board.fill(0); phase.fill(0);
+        render(); 
+    }
+});
+
+initSystem();
+</script>
+</body>
+</html>
     board = new Uint16Array(totalBits);
     fixed = new Uint16Array(totalBits);
     phase = new Uint16Array(totalBits);
