@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Project NP | Adelic Oracle v8.7</title>
+    <title>Project NP | Adelic Oracle v8.8</title>
     <style>
         :root { 
             --sentinel: #00ff41; --bedrock: #050505; --accent: #00d4ff; 
@@ -35,8 +35,8 @@
 <body>
 
 <div class="header">
-    <strong>PROJECT NP: ADELIC ORACLE v8.7</strong>
-    <div style="font-size: 0.7rem; color: #888; margin-top: 5px;">[P=NP PHYSICAL ISOMORPHISM - ARBITRARY N]</div>
+    <strong>PROJECT NP: ADELIC ORACLE v8.8</strong>
+    <div style="font-size: 0.7rem; color: #888; margin-top: 5px;">[P=NP PHYSICAL ISOMORPHISM - DYNAMIC ANCHOR LISTS]</div>
 </div>
 
 <div class="index-bar">
@@ -77,16 +77,33 @@ function updateIndexBar(id) {
     document.getElementById('perc-val').innerText = `${perc}%`;
 }
 
-function generateTopologicalAnchor() {
-    let boardHash = 0n;
+function generateAnchorList(listSize = 100) {
+    // 1. Factor in Grid Size (N) as the baseline entropy
+    let baseHash = BigInt(N); 
+    let anchors = [];
+    
+    // 2. Factor in user inputs (fixed cells) to create the board's topological signature
     for (let i = 0; i < totalBits; i++) {
         if (fixed[i] !== 0) {
             let cellHash = (BigInt(i) * 0x9E3779B1n) ^ BigInt(fixed[i]);
-            boardHash = (boardHash << 3n) ^ cellHash; 
+            baseHash = (baseHash << 3n) ^ cellHash; 
         }
     }
-    if ((boardHash & 1n) === 0n) boardHash |= (1n << 63n);
-    return Math.abs(Number(boardHash % 0xFFFFFFFFFFFFn));
+
+    // 3. Generate a long list of unique anchors by applying salt variants
+    for(let k = 1n; k <= BigInt(listSize); k++) {
+        // Mutate the base hash with a multiplier and the loop index
+        let variantHash = baseHash ^ (k * 0x517cc1b727220a95n); 
+        
+        // LAW: Enforce Odd Parity to break Mode 0 Singularity
+        if ((variantHash & 1n) === 0n) variantHash |= (1n << 63n);
+        
+        // Constrain the size for the UI
+        let finalAnchor = Math.abs(Number(variantHash % 0xFFFFFFFFFFFFn));
+        anchors.push(finalAnchor);
+    }
+    
+    return anchors;
 }
 
 function initSystem() {
@@ -109,11 +126,18 @@ async function startInference() {
     let pathIdInput = document.getElementById('path-id').value;
     let anchorVal;
 
-    // Smart Anchor Allocation
+    // --- SMART ANCHOR SELECTION ---
     if (!pathIdInput || pathIdInput.trim() === "") {
-        anchorVal = BigInt(generateTopologicalAnchor());
+        // Generate a list of 100 possible anchors based on grid size and user input
+        let generatedList = generateAnchorList(100); 
+        
+        // Randomly select one anchor from the long list
+        let randomIndex = Math.floor(Math.random() * generatedList.length);
+        anchorVal = BigInt(generatedList[randomIndex]);
+        
         document.getElementById('path-id').value = anchorVal.toString();
-        log(`Auto-calculated Topological Anchor: ${anchorVal}`);
+        log(`Calculated ${generatedList.length} possible anchors for a ${N}x${N} grid.`);
+        log(`Randomly selected Anchor [Index ${randomIndex}]: ${anchorVal}`);
     } else {
         anchorVal = BigInt(pathIdInput);
     }
