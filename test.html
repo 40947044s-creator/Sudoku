@@ -2,22 +2,20 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Project NP | Adelic Oracle v13.1</title>
+    <title>Project NP | Adelic Oracle v13.2</title>
     <style>
-        :root { --sentinel: #00ff41; --bedrock: #050505; --accent: #00d4ff; --gold: #d4af37; --error: #ff3333; --jolt: #ff00ff; }
+        :root { --sentinel: #00ff41; --bedrock: #050505; --accent: #00d4ff; --gold: #d4af37; --error: #ff3333; }
         body { background: var(--bedrock); color: var(--sentinel); font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
         .header { text-align: center; border-bottom: 2px solid var(--sentinel); width: 100%; max-width: 900px; padding-bottom: 10px; margin-bottom: 25px; }
-        .panel { display: flex; gap: 20px; background: #111; padding: 20px; border: 1px solid #333; border-top: 4px solid var(--gold); width: 100%; max-width: 1200px; box-sizing: border-box; }
+        .panel { display: flex; gap: 20px; background: #111; padding: 20px; border: 1px solid #333; border-top: 4px solid var(--gold); width: 100%; max-width: 1250px; box-sizing: border-box; }
         .grid-container { flex: 1.5; display: flex; flex-direction: column; align-items: center; }
         .grid { display: grid; border: 3px solid var(--sentinel); background: rgba(0, 255, 65, 0.02); }
         .cell { border: 0.5px solid rgba(0, 255, 65, 0.1); display: flex; align-items: center; justify-content: center; color: var(--gold); font-weight: bold; outline: none; cursor: text; overflow: hidden; }
         .cell.calculated { color: #fff; font-weight: normal; background: rgba(0, 212, 255, 0.03); }
-        .cell.stress { background: rgba(255, 0, 255, 0.3); border: 1.5px solid var(--jolt); }
         .controls { flex: 1; display: flex; flex-direction: column; gap: 12px; }
         .io-label { font-size: 0.65rem; color: #888; text-transform: uppercase; margin-bottom: 5px; }
-        textarea { width: 100%; background: #000; color: var(--accent); border: 1px solid #444; padding: 10px; box-sizing: border-box; font-family: inherit; font-size: 0.75rem; word-break: break-all; outline: none; text-align: center; resize: none; }
-        #truth-url-io { min-height: 120px; }
-        #serial-out { min-height: 100px; color: var(--gold); border-color: var(--gold); }
+        textarea { width: 100%; background: #000; color: var(--accent); border: 1px solid #444; padding: 12px; box-sizing: border-box; font-family: inherit; font-size: 0.7rem; word-break: break-all; outline: none; text-align: center; resize: none; }
+        #truth-url-io { min-height: 150px; color: var(--gold); }
         .btn { background: rgba(0, 255, 65, 0.1); border: 1px solid var(--sentinel); color: var(--sentinel); padding: 14px; cursor: pointer; font-weight: bold; text-transform: uppercase; transition: 0.2s; }
         .btn:hover { background: var(--sentinel); color: #000; box-shadow: 0 0 15px var(--sentinel); }
         #status { font-size: 0.75rem; color: #999; margin-top: 10px; border-left: 2px solid var(--gold); padding-left: 10px; min-height: 60px; line-height: 1.4; }
@@ -26,8 +24,8 @@
 <body>
 
 <div class="header">
-    <strong>PROJECT NP: ADELIC ORACLE v13.1</strong>
-    <div style="font-size:0.6rem; color:#888;">[SYMMETRY-LOCKED CORE | SERIAL ID SYNTHESIS | z=5 READY]</div>
+    <strong>PROJECT NP: ADELIC ORACLE v13.2</strong>
+    <div style="font-size:0.6rem; color:#888;">[FINITELY INFINITE | UNBOUNDED TRUTH URL | z=5 READY]</div>
 </div>
 
 <div class="panel">
@@ -40,22 +38,20 @@
     </div>
 
     <div class="controls">
-        <div class="io-label">128-Bit Anchor (Hex)</div>
-        <textarea id="truth-url-io" placeholder="0x517CC1B727220A959E3779B97F4A7C15..."></textarea>
+        <div class="io-label">Unbounded Truth URL (Decimal Serial String)</div>
+        <textarea id="truth-url-io" placeholder="Paste 500+ digit Serial here..."></textarea>
         
-        <div class="io-label">Truth URL / Serial ID (Decimal)</div>
-        <textarea id="serial-out" readonly placeholder="Calculated Serial ID will appear here..."></textarea>
-
-        <button class="btn" onclick="executeSymmetrySnap()">Execute Symmetry Snap</button>
-        <button class="btn" style="border-color:var(--gold); color:var(--gold);" onclick="solidify()">Solidify Waves</button>
+        <button class="btn" onclick="executeAdelicSnap()">Execute Resonant Snap</button>
+        <button class="btn" style="border-color:var(--gold); color:var(--gold);" onclick="exportSerial()">Synthesize Current Serial</button>
         
-        <div id="status">> [SYSTEM] v13.1 Synthesis Ready. 256-bit Phase Simulation active.</div>
+        <div id="status">> [SYSTEM] v13.2 Unbounded Core Online. Anchor Lock: 0x517CC...</div>
     </div>
 </div>
 
 <script>
     let z, n, total, cells = [], adj = [];
     let isRunning = false;
+    const ANCHOR = 0x517CC1B727220A959E3779B97F4A7C15n;
     const ADELIC_CONST = 0x517cc1b727220a95n;
 
     function log(msg) { document.getElementById('status').innerHTML = `> ${msg}`; }
@@ -85,6 +81,7 @@
             }
         }
         root.appendChild(grid);
+        log(`Unbounded Manifold Initialized: n=${n}.`);
     }
 
     function getValidOpts(board, idx) {
@@ -95,81 +92,54 @@
         return opts;
     }
 
-    async function executeSymmetrySnap() {
-        if (isRunning) { isRunning = false; return; }
-        isRunning = true;
-        
-        let iteration = 0;
-        let lastFracture = -1, lockCounter = 0;
-        let urlInput = document.getElementById('truth-url-io').value.trim();
-        let A = urlInput.startsWith('0x') ? BigInt(urlInput) : 0x517CC1B727220A959E3779B97F4A7C15n;
+    // --- SYNTHESIZE CURRENT SERIAL (Export) ---
+    async function exportSerial() {
+        let board = cells.map(c => parseInt(c.innerText) || 0);
+        let serial = 0n;
+        let multiplier = 1n;
+        let tBoard = new Uint16Array(total);
 
-        // BLOCK-PRIMARY ORDER
-        let order = [];
-        for(let b=0; b<n; b++) {
-            for(let i=0; i<total; i++) {
-                let r = Math.floor(i/n), c = i%n;
-                if(Math.floor(r/z)*z + Math.floor(c/z) === b) order.push(i);
-            }
-        }
-
-        while (isRunning && iteration < 500) {
-            iteration++;
-            let board = cells.map(c => parseInt(c.innerText) || 0);
-            let fixedIdx = board.map((v, i) => v !== 0 ? i : -1).filter(i => i !== -1);
-            let fractureIdx = -1;
-            
-            // SERIAL SYNTHESIS ACCUMULATORS
-            let serialId = 0n;
-            let multiplier = 1n;
-
-            for (let i of order) {
-                if (fixedIdx.includes(i)) { continue; }
-                let opts = getValidOpts(board, i).sort((a,b) => a-b);
-                
-                if (opts.length === 0) { fractureIdx = i; break; }
-
-                let rot = BigInt((i * 31) % 128); 
-                let p = (A >> rot) | (A << (128n - rot));
-                let choiceIdx = Number((p ^ ADELIC_CONST) % BigInt(opts.length));
-                
-                board[i] = opts[choiceIdx];
-                
-                // Track Serial Contribution
-                serialId += BigInt(choiceIdx) * multiplier;
-                multiplier *= BigInt(opts.length);
-            }
-
-            board.forEach((v, i) => { if(v && !fixedIdx.includes(i)) cells[i].innerText = v; });
-
-            if (fractureIdx === -1) {
-                document.getElementById('serial-out').value = serialId.toString();
-                log(`RESONANCE ACHIEVED. Serial synthesized.`);
-                isRunning = false;
-            } else {
-                if (fractureIdx === lastFracture) lockCounter++;
-                else { lockCounter = 0; lastFracture = fractureIdx; }
-
-                if (lockCounter > 3) {
-                    A ^= (ADELIC_CONST * 61n);
-                    log(`<span style="color:var(--jolt)">!! PHASE LOCK: JOLT !!</span>`);
-                    lockCounter = 0;
-                } else {
-                    A ^= (BigInt(fractureIdx + 1) * ADELIC_CONST) << BigInt(iteration % 64);
-                    log(`TUNING: Fracture at Node ${fractureIdx}.`);
+        log("Synthesizing Unbounded Serial ID...");
+        for (let i = 0; i < total; i++) {
+            let opts = getValidOpts(tBoard, i).sort((a,b) => a-b);
+            if (board[i] !== 0) {
+                let idx = opts.indexOf(board[i]);
+                if (idx !== -1) {
+                    serial += BigInt(idx) * multiplier;
+                    tBoard[i] = board[i];
                 }
-
-                document.getElementById('truth-url-io').value = "0x" + (A & ((1n << 128n) - 1n)).toString(16).toUpperCase();
-                cells.forEach((c, idx) => { if(!fixedIdx.includes(idx)) c.innerText = ""; });
-                await new Promise(r => setTimeout(r, 0));
             }
+            multiplier *= BigInt(opts.length || 1);
         }
+        document.getElementById('truth-url-io').value = serial.toString();
+        log("Serial Synthesis Complete.");
     }
 
-    function solidify() { cells.forEach(c => c.className = 'cell'); log("Waves Solidified."); }
+    // --- EXECUTE RESONANT SNAP (Import) ---
+    async function executeAdelicSnap() {
+        let input = document.getElementById('truth-url-io').value.replace(/\D/g, '');
+        if (!input) { log("Error: Truth URL String Required."); return; }
+        
+        let serial = BigInt(input);
+        let board = new Uint16Array(total);
+        log("Snap: Collapsing Finitely Infinite Manifold...");
+
+        for (let i = 0; i < total; i++) {
+            let opts = getValidOpts(board, i).sort((a,b) => a-b);
+            if (opts.length === 0) { log("<span style='color:var(--error)'>Fracture: Serial is Irrational.</span>"); return; }
+            
+            let choiceIdx = Number(serial % BigInt(opts.length));
+            serial /= BigInt(opts.length);
+            
+            board[i] = opts[choiceIdx];
+            cells[i].innerText = board[i];
+            cells[i].classList.add('calculated');
+        }
+        log("Resonance Solidified.");
+    }
+
     function purge() { cells.forEach(c => { c.innerText = ""; c.className = 'cell'; }); log("Manifold Purged."); }
     init();
 </script>
 </body>
 </html>
-
