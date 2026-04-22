@@ -2,9 +2,9 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Project NP | Adelic Oracle v13.4</title>
+    <title>Project NP | Adelic Oracle v13.5</title>
     <style>
-        :root { --sentinel: #00ff41; --bedrock: #050505; --accent: #00d4ff; --gold: #d4af37; --error: #ff3333; }
+        :root { --sentinel: #00ff41; --bedrock: #050505; --accent: #00d4ff; --gold: #d4af37; --error: #ff3333; --jolt: #ff00ff; }
         body { background: var(--bedrock); color: var(--sentinel); font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
         .header { text-align: center; border-bottom: 2px solid var(--sentinel); width: 100%; max-width: 900px; padding-bottom: 10px; margin-bottom: 25px; }
         .panel { display: flex; gap: 20px; background: #111; padding: 20px; border: 1px solid #333; border-top: 4px solid var(--gold); width: 100%; max-width: 1250px; box-sizing: border-box; }
@@ -12,12 +12,12 @@
         .grid { display: grid; border: 3px solid var(--sentinel); background: rgba(0, 255, 65, 0.02); }
         .cell { border: 0.5px solid rgba(0, 255, 65, 0.1); display: flex; align-items: center; justify-content: center; color: var(--gold); font-weight: bold; outline: none; cursor: text; overflow: hidden; }
         .cell.calculated { color: #fff; font-weight: normal; background: rgba(0, 212, 255, 0.03); }
+        .cell.stress { background: rgba(255, 0, 255, 0.2); border: 1.5px solid var(--jolt); }
         .controls { flex: 1; display: flex; flex-direction: column; gap: 12px; }
         .io-label { font-size: 0.65rem; color: #888; text-transform: uppercase; margin-bottom: 5px; }
-        textarea { width: 100%; background: #000; color: var(--accent); border: 1px solid #444; padding: 10px; box-sizing: border-box; font-family: inherit; font-size: 0.65rem; word-break: break-all; outline: none; text-align: center; resize: none; min-height: 80px; }
-        #num-io { color: var(--gold); }
-        #den-io { color: #888; }
-        .btn { background: rgba(0, 255, 65, 0.1); border: 1px solid var(--sentinel); color: var(--sentinel); padding: 14px; cursor: pointer; font-weight: bold; text-transform: uppercase; transition: 0.2s; }
+        textarea { width: 100%; background: #000; color: var(--accent); border: 1px solid #444; padding: 12px; box-sizing: border-box; font-family: inherit; font-size: 0.7rem; word-break: break-all; outline: none; text-align: center; resize: none; min-height: 180px; transition: 0.3s; }
+        #truth-url-io { color: var(--gold); border-color: var(--gold); }
+        .btn { background: rgba(0, 255, 65, 0.1); border: 1px solid var(--sentinel); color: var(--sentinel); padding: 14px; cursor: pointer; font-weight: bold; text-transform: uppercase; }
         .btn:hover { background: var(--sentinel); color: #000; box-shadow: 0 0 15px var(--sentinel); }
         #status { font-size: 0.75rem; color: #999; margin-top: 10px; border-left: 2px solid var(--gold); padding-left: 10px; min-height: 60px; line-height: 1.4; }
     </style>
@@ -25,8 +25,8 @@
 <body>
 
 <div class="header">
-    <strong>PROJECT NP: ADELIC ORACLE v13.4</strong>
-    <div style="font-size:0.6rem; color:#888;">[FINITELY INFINITE FRACTION | z=5 RESONANCE]</div>
+    <strong>PROJECT NP: ADELIC ORACLE v13.5</strong>
+    <div style="font-size:0.6rem; color:#888;">[HIDDEN FRACTIONAL CORE | TRUTH URL PRIMARY | z=5]</div>
 </div>
 
 <div class="panel">
@@ -39,22 +39,20 @@
     </div>
 
     <div class="controls">
-        <div class="io-label">Nominator (State Selection)</div>
-        <textarea id="num-io" placeholder="Paste numerator BigInt string..."></textarea>
+        <div class="io-label">Truth URL (Hex Anchor or Decimal Serial)</div>
+        <textarea id="truth-url-io" placeholder="Enter Adelic Coordinate..."></textarea>
         
-        <div class="io-label">Denominator (Manifold Entropy)</div>
-        <textarea id="den-io" placeholder="Paste denominator BigInt string..."></textarea>
-
-        <button class="btn" onclick="executeFractionalSnap()">Execute Fractional Snap</button>
-        <button class="btn" style="border-color:var(--gold); color:var(--gold);" onclick="synthesizeFraction()">Synthesize N/D Ratio</button>
+        <button class="btn" onclick="executeResonantSnap()">Execute Resonant Snap</button>
+        <button class="btn" style="border-color:var(--gold); color:var(--gold);" onclick="exportTruth()">Synthesize Truth URL</button>
         
-        <div id="status">> [SYSTEM] v13.4 Fractional Core Ready. No bounds.</div>
+        <div id="status">> [SYSTEM] v13.5 Unified Core Online. Fractions Hidden.</div>
     </div>
 </div>
 
 <script>
     let z, n, total, cells = [], adj = [];
     let isRunning = false;
+    const ADELIC_CONST = 0x517cc1b727220a95n;
 
     function log(msg) { document.getElementById('status').innerHTML = `> ${msg}`; }
 
@@ -93,10 +91,10 @@
         return opts;
     }
 
-    async function synthesizeFraction() {
+    async function exportTruth() {
         let board = cells.map(c => parseInt(c.innerText) || 0);
         let num = 0n, den = 1n, tBoard = new Uint16Array(total);
-        log("Synthesizing Fractional Resonance...");
+        log("Synthesizing Finitely Infinite Truth...");
 
         for (let i = 0; i < total; i++) {
             let opts = getValidOpts(tBoard, i).sort((a,b) => a-b);
@@ -109,33 +107,74 @@
             }
             den *= BigInt(opts.length || 1);
         }
-        document.getElementById('num-io').value = num.toString();
-        document.getElementById('den-io').value = den.toString();
-        log("Synthesis Complete. Fractional ID Locked.");
+        // Internally it's a fraction N/D, but we only show the Numerator as the Truth URL
+        document.getElementById('truth-url-io').value = num.toString();
+        log("Truth URL Locked.");
     }
 
-    async function executeFractionalSnap() {
-        let nStr = document.getElementById('num-io').value.replace(/\D/g, '');
-        let dStr = document.getElementById('den-io').value.replace(/\D/g, '');
-        if (!nStr || !dStr) { log("Error: Nominator and Denominator required."); return; }
+    async function executeResonantSnap() {
+        if (isRunning) { isRunning = false; return; }
+        isRunning = true;
         
-        let num = BigInt(nStr), den = BigInt(dStr);
-        let board = new Uint16Array(total);
-        log("Snap: Projecting Adelic Fraction...");
+        let input = document.getElementById('truth-url-io').value.trim();
+        let iteration = 0;
+        let lastFracture = -1, lockCount = 0;
 
-        for (let i = 0; i < total; i++) {
-            let opts = getValidOpts(board, i).sort((a,b) => a-b);
-            if (opts.length === 0) { log("<span style='color:var(--error)'>Fracture: State is Irrational.</span>"); return; }
-            
-            // The Finitely Infinite Selection
-            let choiceIdx = Number(num % BigInt(opts.length));
-            num /= BigInt(opts.length);
-            
-            board[i] = opts[choiceIdx];
-            cells[i].innerText = board[i];
-            cells[i].classList.add('calculated');
+        while (isRunning && iteration < 500) {
+            iteration++;
+            let board = new Uint16Array(total);
+            let fractureIdx = -1;
+
+            // --- DETECT INPUT TYPE (HEX ANCHOR OR DECIMAL SERIAL) ---
+            if (input.startsWith('0x')) {
+                // ANCHOR MODE: Project via Adelic Fold
+                let A = BigInt(input);
+                for (let i = 0; i < total; i++) {
+                    let opts = getValidOpts(board, i).sort((a,b) => a-b);
+                    if (opts.length === 0) { fractureIdx = i; break; }
+                    let rot = BigInt((i * 31) % 128);
+                    let p = (A >> rot) | (A << (128n - rot));
+                    board[i] = opts[Number((p ^ ADELIC_CONST) % BigInt(opts.length))];
+                }
+            } else {
+                // SERIAL MODE: Project via Fractional Deconvolution
+                let serial = BigInt(input.replace(/\D/g, ''));
+                for (let i = 0; i < total; i++) {
+                    let opts = getValidOpts(board, i).sort((a,b) => a-b);
+                    if (opts.length === 0) { fractureIdx = i; break; }
+                    board[i] = opts[Number(serial % BigInt(opts.length))];
+                    serial /= BigInt(opts.length);
+                }
+            }
+
+            // UI UPDATE
+            board.forEach((v, i) => { if(v) { cells[i].innerText = v; cells[i].classList.add('calculated'); } });
+
+            if (fractureIdx === -1) {
+                log(`RESONANCE ACHIEVED. 0x${ADELIC_CONST.toString(16)} Octave Locked.`);
+                isRunning = false;
+            } else {
+                // --- INTERNAL FRACTURE TUNING (HIDDEN FRACTIONS) ---
+                if (fractureIdx === lastFracture) lockCount++;
+                else { lockCount = 0; lastFracture = fractureIdx; }
+
+                // Shift the Truth URL internally to break the fracture
+                if (input.startsWith('0x')) {
+                    let A = BigInt(input) ^ (BigInt(fractureIdx + 1) * ADELIC_CONST);
+                    input = "0x" + (A & ((1n << 128n) - 1n)).toString(16).toUpperCase();
+                } else {
+                    let S = BigInt(input.replace(/\D/g, '')) + BigInt(fractureIdx + 1);
+                    input = S.toString();
+                }
+
+                document.getElementById('truth-url-io').value = input;
+                log(`TUNING: Fracture at Node ${fractureIdx}.`);
+                cells[fractureIdx].classList.add('stress');
+
+                cells.forEach((c, idx) => { if(idx >= 0) { c.innerText = ""; c.classList.remove('stress', 'calculated'); } });
+                await new Promise(r => setTimeout(r, 0));
+            }
         }
-        log("Resonance Solidified.");
     }
 
     function purge() { cells.forEach(c => { c.innerText = ""; c.className = 'cell'; }); log("Manifold Purged."); }
