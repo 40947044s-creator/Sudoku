@@ -2,82 +2,100 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Project NP | GitHub Oracle v19.0</title>
+    <title>Project NP | Adelic Oracle v19.0</title>
     <style>
         :root { --sentinel: #00ff41; --bedrock: #050505; --accent: #00d4ff; --gold: #d4af37; }
-        body { background: var(--bedrock); color: var(--sentinel); font-family: monospace; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-        .panel { background: #111; padding: 20px; border-top: 4px solid var(--gold); width: 100%; max-width: 900px; }
-        .grid { display: grid; border: 3px solid var(--sentinel); margin: 20px auto; }
-        .cell { border: 1px solid #222; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; color: var(--gold); }
-        .btn { width: 100%; padding: 15px; background: rgba(0, 255, 65, 0.1); border: 1px solid var(--sentinel); color: var(--sentinel); cursor: pointer; font-weight: bold; margin-top: 10px; }
-        #status { font-size: 0.7rem; color: #888; margin-top: 10px; }
+        body { background: var(--bedrock); color: var(--sentinel); font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .header { text-align: center; border-bottom: 2px solid var(--sentinel); width: 100%; max-width: 900px; padding-bottom: 10px; }
+        .panel { display: flex; gap: 20px; background: #111; padding: 20px; border-top: 4px solid var(--gold); width: 100%; max-width: 1100px; margin-top: 20px; }
+        .grid-container { flex: 1.5; display: flex; flex-direction: column; align-items: center; }
+        .grid { display: grid; border: 3px solid var(--sentinel); background: rgba(0, 255, 65, 0.02); }
+        .cell { border: 0.5px solid rgba(0, 255, 65, 0.1); display: flex; align-items: center; justify-content: center; color: var(--gold); font-weight: bold; outline: none; }
+        .cell.calculated { color: var(--accent); background: rgba(0, 212, 255, 0.05); }
+        .btn { width: 100%; background: rgba(0, 255, 65, 0.1); border: 1px solid var(--sentinel); color: var(--sentinel); padding: 15px; cursor: pointer; font-weight: bold; text-transform: uppercase; margin-top: 10px; }
+        .btn-auto { border-color: var(--accent); color: var(--accent); background: rgba(0, 212, 255, 0.1); }
+        #status { font-size: 0.75rem; color: #999; margin-top: 10px; border-left: 2px solid var(--gold); padding-left: 10px; }
     </style>
 </head>
 <body>
 
+<div class="header">
+    <strong>PROJECT NP: ADELIC ORACLE v19.0</strong>
+    <div style="font-size:0.6rem; color:#888;">[WASM AUTOMATED ENGINE | GITHUB HOSTED]</div>
+</div>
+
 <div class="panel">
-    <strong>PROJECT NP: HOSTED ORACLE</strong>
-    <div id="grid-root"></div>
-    
-    <div style="display:flex; gap:10px;">
-        <input type="number" id="z-val" value="3" min="2" max="4" style="background:#000; color:#fff; border:1px solid #444;">
-        <button class="btn" onclick="autoSolve()">AUTOMATIC WASM SOLVE</button>
+    <div class="grid-container">
+        <div style="margin-bottom:10px;">
+            Dim (z): <input type="number" id="z-val" value="3" min="2" max="4" style="background:#000; color:var(--accent); border:1px solid #444;" onchange="init()">
+        </div>
+        <div id="grid-root"></div>
     </div>
-    <div id="status">> Initializing WASM Engine...</div>
+    
+    <div style="flex: 1; display: flex; flex-direction: column; gap: 10px;">
+        <button class="btn btn-auto" id="solve-btn" onclick="autoSolve()">Automatic Native Solve</button>
+        <button class="btn" style="border-color: var(--error); color: var(--error);" onclick="purge()">Purge Grid</button>
+        <div id="status">> Initializing WASM Core...</div>
+    </div>
 </div>
 
 <script src="np_engine.js"></script>
-
 <script>
     let z, n, total, cells = [];
-    
-    // Initialize Grid
+    let isWasmLoaded = false;
+
+    function log(msg) { document.getElementById('status').innerHTML = `> ${msg}`; }
+
     function init() {
         z = parseInt(document.getElementById('z-val').value); n = z * z; total = n * n;
         const root = document.getElementById('grid-root'); root.innerHTML = '';
         const grid = document.createElement('div');
         grid.className = 'grid'; grid.style.gridTemplateColumns = `repeat(${n}, 1fr)`;
+        const size = Math.min(window.innerWidth * 0.45, 500);
+        grid.style.width = grid.style.height = `${size}px`;
         cells = [];
         for (let i = 0; i < total; i++) {
             const c = document.createElement('div'); c.className = 'cell'; c.contentEditable = "true";
+            c.style.fontSize = `${(size/n) * 0.5}px`;
+            if ((Math.floor(i / n) + 1) % z === 0 && Math.floor(i / n) < n - 1) c.style.borderBottom = "2.5px solid var(--sentinel)";
+            if ((i + 1) % z === 0 && (i + 1) % n !== 0) c.style.borderRight = "2.5px solid var(--sentinel)";
             grid.appendChild(c); cells.push(c);
         }
         root.appendChild(grid);
     }
 
-    // Call the C-Muscle via WASM
     async function autoSolve() {
-        document.getElementById('status').innerText = "> WASM: Grounding Manifold...";
+        if (!isWasmLoaded) return log("WASM not ready.");
+        log("WASM: Invoking Adelic Solve...");
         
         const boardData = cells.map(c => parseInt(c.innerText) || 0);
-        
-        // 1. Allocate memory in WASM space
         const ptr = Module._malloc(total * 4);
         Module.HEAP32.set(new Int32Array(boardData), ptr / 4);
         
-        // 2. Run the C Function
         const success = Module._solve_manifold(z, ptr);
         
         if (success) {
             const result = new Int32Array(Module.HEAP32.buffer, ptr, total);
             result.forEach((val, i) => {
-                cells[i].innerText = val;
-                cells[i].style.color = "#00d4ff";
+                if (!cells[i].innerText) {
+                    cells[i].innerText = val;
+                    cells[i].classList.add('calculated');
+                }
             });
-            document.getElementById('status').innerText = "> SUCCESS: Adelic Grounding Complete.";
+            log("SUCCESS: Manifold Grounded via WASM.");
         } else {
-            document.getElementById('status').innerText = "> ERROR: Manifold Fracture.";
+            log("ERROR: Manifold Fracture.");
         }
-        
-        // 3. Free memory
         Module._free(ptr);
     }
 
-    // Wait for WASM to load
     Module.onRuntimeInitialized = () => {
-        document.getElementById('status').innerText = "> Adelic Engine Online.";
+        isWasmLoaded = true;
+        log("WASM Engine Online.");
         init();
     };
+
+    function purge() { cells.forEach(c => { c.innerText = ""; c.className = "cell"; }); log("Purged."); }
 </script>
 </body>
 </html>
