@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Project NP | Adelic Oracle v8.9 Entropy-Gravity</title>
+    <title>Project NP | Adelic Oracle v9.0 Graph-Bedrock</title>
     <style>
         :root { 
             --sentinel: #00ff41; --bedrock: #050505; --accent: #00d4ff; 
@@ -26,10 +26,7 @@
         .history-item.illegal { color: var(--friction); font-weight: bold; }
         .history-item.legal { color: var(--gold); }
         .stage { display: flex; flex-direction: column; align-items: center; gap: 15px; }
-        .controls { 
-            display: flex; gap: 10px; padding: 15px; background: rgba(0, 255, 65, 0.02); 
-            border: 1px solid #222; width: 100%; justify-content: center;
-        }
+        .controls { display: flex; gap: 10px; padding: 15px; background: rgba(0, 255, 65, 0.02); border: 1px solid #222; width: 100%; justify-content: center; }
         canvas { border: 1px solid var(--accent); background: #000; box-shadow: 0 0 50px rgba(0, 212, 255, 0.05); }
         input, button { background: #000; border: 1px solid #444; color: var(--accent); padding: 6px; font-size: 0.75rem; font-family: inherit; }
         .btn { border-color: var(--sentinel); color: var(--sentinel); cursor: pointer; text-transform: uppercase; transition: 0.2s; }
@@ -40,15 +37,15 @@
 <body>
 
 <div class="header">
-    <strong>PROJECT NP: ADELIC ORACLE v8.9</strong>
-    <div style="font-size: 0.6rem; color: #555; margin-top: 4px;">ENTROPY-GRAVITY SCAN | TRINITY JITTER v2 | CSIE HARDENED</div>
+    <strong>PROJECT NP: ADELIC ORACLE v9.0</strong>
+    <div style="font-size: 0.6rem; color: #555; margin-top: 4px;">GRAPH-BEDROCK INITIALIZATION | PRESSURE-BASED INFERENCE</div>
 </div>
 
 <div class="index-bar">
-    <div style="font-size: 0.65rem; color: #888; margin-bottom: 4px;">ACTIVE ADELIC ADDRESS (GRAVITY DRIFT)</div>
-    <div class="index-value" id="index-val">#AWAITING_RESONANCE</div>
+    <div style="font-size: 0.65rem; color: #888; margin-bottom: 4px;">ADELIC FREQUENCY (TOPOLOGICAL DRIFT)</div>
+    <div class="index-value" id="index-val">#AWAITING_GRAPH_STATE</div>
     <div style="font-size: 0.6rem; color: var(--accent); margin-top: 6px;">
-        Drift Count: <span id="f-val">0</span> | Stability Zone: <span id="filled-val">0</span> / <span id="total-val">0</span>
+        Drifts: <span id="f-val">0</span> | Snap Stability: <span id="filled-val">0</span> / <span id="total-val">0</span>
     </div>
 </div>
 
@@ -56,15 +53,15 @@
     <div class="sidebar">
         <div style="font-size: 0.7rem; color: var(--gold); letter-spacing: 1px;">STATIONARY WAVES</div>
         <div class="history-panel" id="history-list"></div>
-        <button class="btn solidify" onclick="solidifyBoard()" style="width:100%; margin-top: 5px;">Solidify board</button>
+        <button class="btn solidify" onclick="solidifyBoard()" style="width:100%; margin-top: 5px;">Solidify Board</button>
         <button class="btn" onclick="factoryReset()" style="color:var(--friction); border-color:var(--friction); width:100%;">Factory Purge</button>
     </div>
 
     <div class="stage">
         <div class="controls">
             <div>z: <input type="number" id="z-val" value="3" min="2" max="5" style="width: 35px;" onchange="factoryReset()"></div>
-            <div>Base Anchor: <input type="text" id="path-id" value="40947045" style="width: 140px;"></div>
-            <button class="btn" id="inf-btn" onclick="startInference()">Execute Gravity</button>
+            <div>Anchor: <input type="text" id="path-id" value="40947045" style="width: 140px;"></div>
+            <button class="btn" id="inf-btn" onclick="startInference()">Execute Graph</button>
         </div>
         <canvas id="mainCanvas"></canvas>
     </div>
@@ -72,13 +69,28 @@
 
 <script>
 let z, N, totalBits, isRunning = false;
-let board, fixed, inputHistory = [];
+let board, fixed, inputHistory = [], adj = [];
 let rowM, colM, blkM;
 const ADELIC_CONST = 0x517cc1b727220a95n;
 
 const HEX_SENTINEL = "#00ff41", HEX_GOLD = "#d4af37", HEX_FRICTION = "#ff3333";
 const canvas = document.getElementById('mainCanvas');
 const ctx = canvas.getContext('2d');
+
+// --- 1. FIRST STATE: GRAPH INITIALIZATION ---
+function initGraph() {
+    adj = Array.from({ length: totalBits }, () => []);
+    for (let i = 0; i < totalBits; i++) {
+        let r = Math.floor(i / N), c = i % N, b = Math.floor(r / z) * z + Math.floor(c / z);
+        for (let j = 0; j < totalBits; j++) {
+            if (i === j) continue;
+            let rr = Math.floor(j / N), cc = j % N, bb = Math.floor(rr / z) * z + Math.floor(cc / z);
+            if (r === rr || c === cc || b === bb) {
+                adj[i].push(j); 
+            }
+        }
+    }
+}
 
 function factoryReset() {
     z = parseInt(document.getElementById('z-val').value);
@@ -87,6 +99,7 @@ function factoryReset() {
     inputHistory = [];
     document.getElementById('history-list').innerHTML = '';
     document.getElementById('total-val').innerText = totalBits;
+    initGraph();
     softReset();
 }
 
@@ -105,75 +118,73 @@ function softReset() {
     render();
 }
 
-function getConflict(idx, val, checkBoard = true) {
-    if (val === 0) return false;
+function getValidOptions(idx) {
     let r = Math.floor(idx / N), c = idx % N, b = Math.floor(r / z) * z + Math.floor(c / z);
-    for (let i = 0; i < N; i++) {
-        if (i !== c && (fixed[r * N + i] === val || (checkBoard && board[r * N + i] === val))) return true;
-        if (i !== r && (fixed[i * N + c] === val || (checkBoard && board[i * N + c] === val))) return true;
+    let mask = rowM[r] | colM[c] | blkM[b];
+    let opts = [];
+    for (let v = 1; v <= N; v++) if (!(mask & (1n << BigInt(v)))) opts.push(v);
+    return opts;
+}
+
+function countPressure(idx) {
+    let count = 0;
+    for(let neighbor of adj[idx]) {
+        if (!fixed[neighbor] && !board[neighbor]) count++;
     }
-    let sR = Math.floor(r/z)*z, sC = Math.floor(c/z)*z;
-    for(let ir=sR; ir<sR+z; ir++) {
-        for(let ic=sC; ic<sC+z; ic++) {
-            let t = ir*N + ic;
-            if(t !== idx && (fixed[t] === val || (checkBoard && board[t] === val))) return true;
-        }
-    }
-    return false;
+    return count;
 }
 
 function solidifyBoard() {
     for (let i = 0; i < totalBits; i++) {
-        if (!fixed[i] && board[i]) {
-            fixed[i] = board[i];
-            inputHistory.push({idx: i, val: board[i], illegal: getConflict(i, board[i], false)});
-        }
+        if (!fixed[i] && board[i]) fixed[i] = board[i];
     }
     updateHistoryUI();
     softReset();
 }
 
-// --- v8.9 ENTROPY-GRAVITY CORE ---
+// --- 2. v9.0 GRAPH-BEDROCK INFERENCE ---
 async function startInference() {
     if (isRunning) { isRunning = false; return; }
     softReset();
     isRunning = true;
     document.getElementById('inf-btn').innerText = "STOP";
     
-    let anchor = BigInt(document.getElementById('path-id').value);
-    if ((anchor & 1n) === 0n) anchor |= 1n; 
-
-    let driftCount = 0;
-    let activeID = anchor; 
+    let anchor = BigInt(document.getElementById('path-id').value || 40947045) | 1n;
+    let driftCount = 0, activeID = anchor;
 
     while (isRunning) {
-        let bestCell = -1, minOptsCount = N + 1, bestOpts = [], filledCount = 0;
+        let targetNode = -1, minOpts = N + 1, bestOpts = [], maxPressure = -1, filledCount = 0;
 
-        // 1. GLOBAL MANIFOLD SCAN
+        // TOPOLOGICAL SCAN: Find the node with the highest constraint pressure
         for (let i = 0; i < totalBits; i++) {
             if (fixed[i] || board[i]) { filledCount++; continue; }
 
-            let r = Math.floor(i / N), c = i % N, b = Math.floor(r / z) * z + Math.floor(c / z);
-            let mask = rowM[r] | colM[c] | blkM[b];
-            let opts = [];
-            for (let v = 1; v <= N; v++) if (!(mask & (1n << BigInt(v)))) opts.push(v);
+            let opts = getValidOptions(i);
+            if (opts.length === 0) { targetNode = -2; break; } // Paradox
 
-            if (opts.length === 0) { minOptsCount = 0; break; } // Paradox detected
-
-            if (opts.length < minOptsCount) {
-                minOptsCount = opts.length;
-                bestCell = i;
+            // Heuristic: Min Options (Entropy) -> Max Pressure (Degree)
+            if (opts.length < minOpts) {
+                minOpts = opts.length;
+                targetNode = i;
                 bestOpts = opts;
+                maxPressure = countPressure(i);
+            } else if (opts.length === minOpts) {
+                let p = countPressure(i);
+                if (p > maxPressure) {
+                    maxPressure = p;
+                    targetNode = i;
+                    bestOpts = opts;
+                }
             }
         }
 
         if (filledCount === totalBits) { finalize(); break; }
 
-        // 2. PARADOX DRIFT
-        if (minOptsCount === 0) {
+        if (targetNode === -2) {
+            // MANIFOLD DRIFT: Rotate frequency when graph collapses
             driftCount++; activeID++;
             updateStats(activeID, driftCount, filledCount);
-            board.fill(0); // Wipe board, keep fixed
+            board.fill(0); 
             rowM.fill(0n); colM.fill(0n); blkM.fill(0n);
             for(let i=0; i<totalBits; i++) if(fixed[i]) {
                 let r = Math.floor(i/N), c = i%N, b = Math.floor(r/z)*z + Math.floor(c/z);
@@ -184,18 +195,19 @@ async function startInference() {
             continue;
         }
 
-        // 3. THE MARILYN FOLD
-        let val, r = Math.floor(bestCell / N), c = bestCell % N, b = Math.floor(r / z) * z + Math.floor(c / z);
-        if (minOptsCount === 1) {
-            val = bestOpts[0]; // Truth-Lock
+        // RESOLUTION: The Seed is now only a tie-breaker for equal pressure nodes
+        let val;
+        if (minOpts === 1) {
+            val = bestOpts[0];
         } else {
-            // Trinity Jitter v2
+            let r = Math.floor(targetNode/N), c = targetNode%N, b = Math.floor(r/z)*z + Math.floor(c/z);
             let jitter = (BigInt(r) * 13n) ^ (BigInt(c) * 17n) ^ (BigInt(b) * 19n);
-            let h = (activeID ^ BigInt(bestCell) ^ jitter) * ADELIC_CONST;
+            let h = (activeID ^ BigInt(targetNode) ^ jitter) * ADELIC_CONST;
             val = bestOpts[Number(h % BigInt(bestOpts.length))];
         }
 
-        board[bestCell] = val;
+        let r = Math.floor(targetNode/N), c = targetNode%N, b = Math.floor(r/z)*z + Math.floor(c/z);
+        board[targetNode] = val;
         let bit = 1n << BigInt(val);
         rowM[r] |= bit; colM[c] |= bit; blkM[b] |= bit;
 
@@ -205,7 +217,7 @@ async function startInference() {
             await new Promise(r => setTimeout(r, 0));
         }
     }
-    document.getElementById('inf-btn').innerText = "EXECUTE GRAVITY";
+    document.getElementById('inf-btn').innerText = "EXECUTE GRAPH";
 }
 
 function updateStats(id, d, f) {
@@ -218,7 +230,7 @@ function render(final = false) {
     const s = canvas.width / N;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     for(let i=0; i<=z; i++) {
-        ctx.strokeStyle = "rgba(0, 212, 255, 0.2)"; ctx.lineWidth = 2;
+        ctx.strokeStyle = "rgba(0, 212, 255, 0.15)"; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.moveTo(i*s*z, 0); ctx.lineTo(i*s*z, canvas.height); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(0, i*s*z); ctx.lineTo(canvas.width, i*s*z); ctx.stroke();
     }
@@ -228,9 +240,7 @@ function render(final = false) {
         let val = fixed[i] || board[i];
         if (val) {
             let isUser = fixed[i] !== 0;
-            let bad = isUser && getConflict(i, fixed[i], false);
-            ctx.fillStyle = bad ? HEX_FRICTION : (isUser ? HEX_GOLD : (final ? HEX_SENTINEL : "white"));
-            if (bad) { ctx.globalAlpha = 0.2; ctx.fillRect(x,y,s,s); ctx.globalAlpha = 1.0; }
+            ctx.fillStyle = isUser ? HEX_GOLD : (final ? HEX_SENTINEL : "white");
             ctx.font = `bold ${s*0.5}px monospace`; ctx.textAlign = "center";
             ctx.fillText(val, x+s/2, y+s*0.7);
         }
@@ -248,9 +258,9 @@ canvas.addEventListener('mousedown', (e) => {
 });
 
 function updateHistoryUI() {
-    document.getElementById('history-list').innerHTML = inputHistory.slice().map(h => 
-        `<div class="history-item ${h.illegal?'illegal':'legal'}"><span>C${h.idx}</span><span>→ ${h.val}</span></div>`
-    ).reverse().join('');
+    document.getElementById('history-list').innerHTML = inputHistory.slice().reverse().map(h => 
+        `<div class="history-item legal"><span>C${h.idx}</span><span>→ ${h.val}</span></div>`
+    ).join('');
 }
 
 function finalize() { isRunning = false; render(true); }
