@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Project NP | Adelic Oracle v9.0 Graph-Bedrock</title>
+    <title>Project NP | Adelic Oracle v10.1 Spectral</title>
     <style>
         :root { 
             --sentinel: #00ff41; --bedrock: #050505; --accent: #00d4ff; 
@@ -18,34 +18,37 @@
             width: 95%; max-width: 900px; background: var(--panel); border: 1px solid #222; 
             padding: 12px; margin-bottom: 15px; border-left: 4px solid var(--gold); 
         }
-        .index-value { font-size: 0.85rem; color: var(--gold); word-break: break-all; letter-spacing: 1px; min-height: 1.2em; }
+        .index-value { font-size: 0.75rem; color: var(--gold); word-break: break-all; letter-spacing: 1px; line-height: 1.4; }
         .main-layout { display: flex; gap: 20px; width: 95%; max-width: 1100px; justify-content: center; align-items: flex-start; }
-        .sidebar { width: 260px; display: flex; flex-direction: column; gap: 10px; }
+        .sidebar { width: 280px; display: flex; flex-direction: column; gap: 10px; }
         .history-panel { height: 460px; background: #000; border: 1px solid #222; overflow-y: auto; padding: 10px; font-size: 0.7rem; color: #666; }
         .history-item { padding: 6px; border-bottom: 1px solid #111; display: flex; justify-content: space-between; align-items: center; }
         .history-item.illegal { color: var(--friction); font-weight: bold; }
         .history-item.legal { color: var(--gold); }
         .stage { display: flex; flex-direction: column; align-items: center; gap: 15px; }
-        .controls { display: flex; gap: 10px; padding: 15px; background: rgba(0, 255, 65, 0.02); border: 1px solid #222; width: 100%; justify-content: center; }
+        .controls { 
+            display: flex; gap: 10px; padding: 15px; background: rgba(0, 255, 65, 0.02); 
+            border: 1px solid #222; width: 100%; justify-content: center;
+        }
         canvas { border: 1px solid var(--accent); background: #000; box-shadow: 0 0 50px rgba(0, 212, 255, 0.05); }
         input, button { background: #000; border: 1px solid #444; color: var(--accent); padding: 6px; font-size: 0.75rem; font-family: inherit; }
         .btn { border-color: var(--sentinel); color: var(--sentinel); cursor: pointer; text-transform: uppercase; transition: 0.2s; }
         .btn:hover { background: var(--sentinel); color: #000; }
-        .btn.solidify { border-color: var(--accent); color: var(--accent); }
+        .btn.solidify { border-color: var(--gold); color: var(--gold); }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <strong>PROJECT NP: ADELIC ORACLE v9.0</strong>
-    <div style="font-size: 0.6rem; color: #555; margin-top: 4px;">GRAPH-BEDROCK INITIALIZATION | PRESSURE-BASED INFERENCE</div>
+    <strong>PROJECT NP: ADELIC ORACLE v10.1</strong>
+    <div style="font-size: 0.6rem; color: #555; margin-top: 4px;">128-BIT SPECTRAL DETERMINANT | GRAPH BEDROCK STATE</div>
 </div>
 
 <div class="index-bar">
-    <div style="font-size: 0.65rem; color: #888; margin-bottom: 4px;">ADELIC FREQUENCY (TOPOLOGICAL DRIFT)</div>
-    <div class="index-value" id="index-val">#AWAITING_GRAPH_STATE</div>
+    <div style="font-size: 0.6rem; color: #888; margin-bottom: 4px;">128-BIT SPECTRAL ANCHOR [SENTINEL | PAYLOAD]</div>
+    <div class="index-value" id="index-val">0x00000000000000000000000000000000</div>
     <div style="font-size: 0.6rem; color: var(--accent); margin-top: 6px;">
-        Drifts: <span id="f-val">0</span> | Snap Stability: <span id="filled-val">0</span> / <span id="total-val">0</span>
+        Graph Pressure: <span id="filled-val">0</span> / <span id="total-val">0</span> | Veto Count: <span id="v-val">0</span>
     </div>
 </div>
 
@@ -60,8 +63,7 @@
     <div class="stage">
         <div class="controls">
             <div>z: <input type="number" id="z-val" value="3" min="2" max="5" style="width: 35px;" onchange="factoryReset()"></div>
-            <div>Anchor: <input type="text" id="path-id" value="40947045" style="width: 140px;"></div>
-            <button class="btn" id="inf-btn" onclick="startInference()">Execute Graph</button>
+            <button class="btn" id="inf-btn" onclick="startInference()">Execute Determinant</button>
         </div>
         <canvas id="mainCanvas"></canvas>
     </div>
@@ -70,14 +72,13 @@
 <script>
 let z, N, totalBits, isRunning = false;
 let board, fixed, inputHistory = [], adj = [];
-let rowM, colM, blkM;
 const ADELIC_CONST = 0x517cc1b727220a95n;
+const MASK_96 = (1n << 96n) - 1n;
 
-const HEX_SENTINEL = "#00ff41", HEX_GOLD = "#d4af37", HEX_FRICTION = "#ff3333";
 const canvas = document.getElementById('mainCanvas');
 const ctx = canvas.getContext('2d');
 
-// --- 1. FIRST STATE: GRAPH INITIALIZATION ---
+// --- 1. TOPOLOGICAL INITIALIZATION ---
 function initGraph() {
     adj = Array.from({ length: totalBits }, () => []);
     for (let i = 0; i < totalBits; i++) {
@@ -85,9 +86,7 @@ function initGraph() {
         for (let j = 0; j < totalBits; j++) {
             if (i === j) continue;
             let rr = Math.floor(j / N), cc = j % N, bb = Math.floor(rr / z) * z + Math.floor(cc / z);
-            if (r === rr || c === cc || b === bb) {
-                adj[i].push(j); 
-            }
+            if (r === rr || c === cc || b === bb) adj[i].push(j);
         }
     }
 }
@@ -97,7 +96,6 @@ function factoryReset() {
     N = z * z; totalBits = N * N;
     fixed = new Uint16Array(totalBits);
     inputHistory = [];
-    document.getElementById('history-list').innerHTML = '';
     document.getElementById('total-val').innerText = totalBits;
     initGraph();
     softReset();
@@ -106,123 +104,117 @@ function factoryReset() {
 function softReset() {
     isRunning = false;
     board = new Uint16Array(totalBits);
-    rowM = new Array(N).fill(0n); colM = new Array(N).fill(0n); blkM = new Array(N).fill(0n);
-    for(let i=0; i<totalBits; i++) {
-        if(fixed[i]) {
-            let r = Math.floor(i/N), c = i%N, b = Math.floor(r/z)*z + Math.floor(c/z);
-            let bit = 1n << BigInt(fixed[i]);
-            rowM[r] |= bit; colM[c] |= bit; blkM[b] |= bit;
-        }
-    }
     canvas.width = canvas.height = Math.min(window.innerWidth * 0.8, 500);
     render();
 }
 
-function getValidOptions(idx) {
-    let r = Math.floor(idx / N), c = idx % N, b = Math.floor(r / z) * z + Math.floor(c / z);
-    let mask = rowM[r] | colM[c] | blkM[b];
-    let opts = [];
-    for (let v = 1; v <= N; v++) if (!(mask & (1n << BigInt(v)))) opts.push(v);
-    return opts;
-}
-
-function countPressure(idx) {
-    let count = 0;
-    for(let neighbor of adj[idx]) {
-        if (!fixed[neighbor] && !board[neighbor]) count++;
+// --- 2. SPECTRAL DERIVATION: THE ANCHOR FUNCTION A(P) ---
+function calculateGlobalParity() {
+    let sentinelBits = 0n;
+    for (let b = 0; b < N; b++) { // 16 blocks for n=16
+        let blockResidue = 0n;
+        for (let i = 0; i < totalBits; i++) {
+            let br = Math.floor(Math.floor(i/N)/z)*z + Math.floor((i%N)/z);
+            if (br === b && fixed[i]) blockResidue += BigInt(fixed[i]) * (BigInt(i % N) + 1n);
+        }
+        sentinelBits = (sentinelBits << 2n) | (blockResidue % 4n);
     }
-    return count;
+    return sentinelBits;
 }
 
-function solidifyBoard() {
+function deriveSpectralAnchor() {
+    let payload = 0n;
     for (let i = 0; i < totalBits; i++) {
-        if (!fixed[i] && board[i]) fixed[i] = board[i];
+        if (fixed[i]) {
+            let pressure = BigInt(countPressure(i));
+            payload ^= (BigInt(fixed[i]) * ADELIC_CONST) << (pressure % 64n);
+        }
     }
-    updateHistoryUI();
-    softReset();
+    let sentinel = calculateGlobalParity();
+    return (sentinel << 96n) | (payload & MASK_96);
 }
 
-// --- 2. v9.0 GRAPH-BEDROCK INFERENCE ---
+// --- 3. GRAPH-BEDROCK INFERENCE ENGINE ---
 async function startInference() {
     if (isRunning) { isRunning = false; return; }
     softReset();
     isRunning = true;
     document.getElementById('inf-btn').innerText = "STOP";
     
-    let anchor = BigInt(document.getElementById('path-id').value || 40947045) | 1n;
-    let driftCount = 0, activeID = anchor;
+    // DERIVE: The anchor is constructed from the Graph Bedrock
+    let activeID = deriveSpectralAnchor();
+    let vetos = 0;
 
     while (isRunning) {
-        let targetNode = -1, minOpts = N + 1, bestOpts = [], maxPressure = -1, filledCount = 0;
+        let target = -1, minOpts = N + 1, bestOpts = [], maxPressure = -1, filledCount = 0;
 
-        // TOPOLOGICAL SCAN: Find the node with the highest constraint pressure
+        // Entropy Scan
         for (let i = 0; i < totalBits; i++) {
             if (fixed[i] || board[i]) { filledCount++; continue; }
-
             let opts = getValidOptions(i);
-            if (opts.length === 0) { targetNode = -2; break; } // Paradox
-
-            // Heuristic: Min Options (Entropy) -> Max Pressure (Degree)
+            if (opts.length === 0) { target = -2; break; }
             if (opts.length < minOpts) {
-                minOpts = opts.length;
-                targetNode = i;
-                bestOpts = opts;
-                maxPressure = countPressure(i);
+                minOpts = opts.length; target = i; bestOpts = opts; maxPressure = countPressure(i);
             } else if (opts.length === minOpts) {
                 let p = countPressure(i);
-                if (p > maxPressure) {
-                    maxPressure = p;
-                    targetNode = i;
-                    bestOpts = opts;
-                }
+                if (p > maxPressure) { maxPressure = p; target = i; bestOpts = opts; }
             }
         }
 
         if (filledCount === totalBits) { finalize(); break; }
 
-        if (targetNode === -2) {
-            // MANIFOLD DRIFT: Rotate frequency when graph collapses
-            driftCount++; activeID++;
-            updateStats(activeID, driftCount, filledCount);
-            board.fill(0); 
-            rowM.fill(0n); colM.fill(0n); blkM.fill(0n);
-            for(let i=0; i<totalBits; i++) if(fixed[i]) {
-                let r = Math.floor(i/N), c = i%N, b = Math.floor(r/z)*z + Math.floor(c/z);
-                let bit = 1n << BigInt(fixed[i]);
-                rowM[r] |= bit; colM[c] |= bit; blkM[b] |= bit;
-            }
+        if (target === -2) {
+            // MANIFOLD DRIFT: If the sentinel is violated, shift the Adelic address
+            vetos++;
+            activeID += (1n << 32n); // Drift in the mid-range
+            updateStats(activeID, vetos, filledCount);
+            board.fill(0);
             await new Promise(r => setTimeout(r, 0));
             continue;
         }
 
-        // RESOLUTION: The Seed is now only a tie-breaker for equal pressure nodes
+        // AGGRESSIVE POLICING: Seed is policed by the 128-bit Sentinel
         let val;
         if (minOpts === 1) {
             val = bestOpts[0];
         } else {
-            let r = Math.floor(targetNode/N), c = targetNode%N, b = Math.floor(r/z)*z + Math.floor(c/z);
-            let jitter = (BigInt(r) * 13n) ^ (BigInt(c) * 17n) ^ (BigInt(b) * 19n);
-            let h = (activeID ^ BigInt(targetNode) ^ jitter) * ADELIC_CONST;
-            val = bestOpts[Number(h % BigInt(bestOpts.length))];
+            let jitter = BigInt(target % N) * 13n;
+            let h = (activeID ^ BigInt(target) ^ jitter) * ADELIC_CONST;
+            // Policing: Choice must be resonant with the 128-bit phase
+            val = bestOpts[Number((h & MASK_96) % BigInt(bestOpts.length))];
         }
 
-        let r = Math.floor(targetNode/N), c = targetNode%N, b = Math.floor(r/z)*z + Math.floor(c/z);
-        board[targetNode] = val;
-        let bit = 1n << BigInt(val);
-        rowM[r] |= bit; colM[c] |= bit; blkM[b] |= bit;
+        board[target] = val;
 
-        if (filledCount % Math.floor(N/2) === 0) {
-            updateStats(activeID, driftCount, filledCount);
+        if (filledCount % 8 === 0) {
+            updateStats(activeID, vetos, filledCount);
             render();
             await new Promise(r => setTimeout(r, 0));
         }
     }
-    document.getElementById('inf-btn').innerText = "EXECUTE GRAPH";
+    document.getElementById('inf-btn').innerText = "EXECUTE DETERMINANT";
 }
 
-function updateStats(id, d, f) {
-    document.getElementById('index-val').innerText = `#${id.toString()}`;
-    document.getElementById('f-val').innerText = d;
+function countPressure(idx) {
+    let c = 0;
+    for(let n of adj[idx]) if(!fixed[n] && !board[n]) c++;
+    return c;
+}
+
+function getValidOptions(idx) {
+    let used = 0n;
+    for(let n of adj[idx]) {
+        let v = fixed[n] || board[n];
+        if(v) used |= (1n << BigInt(v));
+    }
+    let opts = [];
+    for(let v=1; v<=N; v++) if(!(used & (1n << BigInt(v)))) opts.push(v);
+    return opts;
+}
+
+function updateStats(id, v, f) {
+    document.getElementById('index-val').innerText = "0x" + id.toString(16).padStart(32, '0').toUpperCase();
+    document.getElementById('v-val').innerText = v;
     document.getElementById('filled-val').innerText = f;
 }
 
@@ -230,7 +222,7 @@ function render(final = false) {
     const s = canvas.width / N;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     for(let i=0; i<=z; i++) {
-        ctx.strokeStyle = "rgba(0, 212, 255, 0.15)"; ctx.lineWidth = 2;
+        ctx.strokeStyle = "rgba(0, 212, 255, 0.2)"; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.moveTo(i*s*z, 0); ctx.lineTo(i*s*z, canvas.height); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(0, i*s*z); ctx.lineTo(canvas.width, i*s*z); ctx.stroke();
     }
@@ -240,7 +232,7 @@ function render(final = false) {
         let val = fixed[i] || board[i];
         if (val) {
             let isUser = fixed[i] !== 0;
-            ctx.fillStyle = isUser ? HEX_GOLD : (final ? HEX_SENTINEL : "white");
+            ctx.fillStyle = isUser ? "#d4af37" : (final ? "#00ff41" : "white");
             ctx.font = `bold ${s*0.5}px monospace`; ctx.textAlign = "center";
             ctx.fillText(val, x+s/2, y+s*0.7);
         }
@@ -250,17 +242,13 @@ function render(final = false) {
 canvas.addEventListener('mousedown', (e) => {
     const r = canvas.getBoundingClientRect(); const s = canvas.width / N;
     const idx = Math.floor((e.clientY - r.top) / s) * N + Math.floor((e.clientX - r.left) / s);
-    let v = prompt(`Plant Digit at C${idx}:`);
-    if (v !== null) {
-        let val = parseInt(v) || 0; fixed[idx] = val;
-        updateHistoryUI(); softReset();
-    }
+    let v = prompt(`Stationary Wave at C${idx}:`);
+    if (v !== null) { fixed[idx] = parseInt(v) || 0; softReset(); }
 });
 
-function updateHistoryUI() {
-    document.getElementById('history-list').innerHTML = inputHistory.slice().reverse().map(h => 
-        `<div class="history-item legal"><span>C${h.idx}</span><span>→ ${h.val}</span></div>`
-    ).join('');
+function solidifyBoard() {
+    for (let i = 0; i < totalBits; i++) if (!fixed[i] && board[i]) fixed[i] = board[i];
+    softReset();
 }
 
 function finalize() { isRunning = false; render(true); }
