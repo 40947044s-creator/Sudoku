@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Project NP | Adelic Oracle v12.6</title>
+    <title>Project NP | Adelic Oracle v13.0</title>
     <style>
         :root { --sentinel: #00ff41; --bedrock: #050505; --accent: #00d4ff; --gold: #d4af37; --error: #ff3333; --jolt: #ff00ff; }
         body { background: var(--bedrock); color: var(--sentinel); font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
@@ -15,7 +15,7 @@
         .cell.stress { background: rgba(255, 0, 255, 0.3); border: 1.5px solid var(--jolt); }
         .controls { flex: 1; display: flex; flex-direction: column; gap: 12px; }
         .io-label { font-size: 0.65rem; color: #888; text-transform: uppercase; margin-bottom: 5px; }
-        #truth-url-io { width: 100%; background: #000; color: var(--accent); border: 1px solid #444; padding: 12px; box-sizing: border-box; font-family: inherit; font-size: 0.8rem; word-break: break-all; min-height: 120px; outline: none; text-align: center; resize: none; }
+        #truth-url-io { width: 100%; background: #000; color: var(--accent); border: 1px solid #444; padding: 12px; box-sizing: border-box; font-family: inherit; font-size: 0.75rem; word-break: break-all; min-height: 120px; outline: none; text-align: center; resize: none; }
         .btn { background: rgba(0, 255, 65, 0.1); border: 1px solid var(--sentinel); color: var(--sentinel); padding: 14px; cursor: pointer; font-weight: bold; text-transform: uppercase; transition: 0.2s; }
         .btn:hover { background: var(--sentinel); color: #000; box-shadow: 0 0 15px var(--sentinel); }
         #status { font-size: 0.75rem; color: #999; margin-top: 10px; border-left: 2px solid var(--gold); padding-left: 10px; min-height: 80px; line-height: 1.4; }
@@ -24,8 +24,8 @@
 <body>
 
 <div class="header">
-    <strong>PROJECT NP: ADELIC ORACLE v12.6</strong>
-    <div style="font-size:0.6rem; color:#888;">[ADELIC WAVEGUIDE | BACKPRESSURE TUNER | z=5 READY]</div>
+    <strong>PROJECT NP: ADELIC ORACLE v13.0</strong>
+    <div style="font-size:0.6rem; color:#888;">[SYMMETRY-LOCKED CORE | BLOCK-PRIMARY SNAP | z=5 READY]</div>
 </div>
 
 <div class="panel">
@@ -39,12 +39,12 @@
 
     <div class="controls">
         <div class="io-label">Truth URL (Spectral Anchor A)</div>
-        <textarea id="truth-url-io" placeholder="0x80000000..."></textarea>
+        <textarea id="truth-url-io" placeholder="0x517CC1B727220A959E3779B97F4A7C15..."></textarea>
         
-        <button class="btn" onclick="executeWaveguideSnap()">Execute Resonant Snap</button>
+        <button class="btn" onclick="executeSymmetrySnap()">Execute Symmetry Snap</button>
         <button class="btn" style="border-color:var(--gold); color:var(--gold);" onclick="solidify()">Solidify Waves</button>
         
-        <div id="status">> [SYSTEM] v12.6 Waveguide Active. Complexity Collapse Engaged.</div>
+        <div id="status">> [SYSTEM] v13.0 Core Ready. Breaking Serial Chains...</div>
     </div>
 </div>
 
@@ -52,7 +52,6 @@
     let z, n, total, cells = [], adj = [];
     let isRunning = false;
     const ADELIC_CONST = 0x517cc1b727220a95n;
-    const ENTROPY_PRIME = 0x9e3779b97f4a7c15n;
 
     function log(msg) { document.getElementById('status').innerHTML = `> ${msg}`; }
 
@@ -81,6 +80,7 @@
             }
         }
         root.appendChild(grid);
+        log(`Manifold Restored: n=${n}.`);
     }
 
     function getValidOpts(board, idx) {
@@ -91,7 +91,7 @@
         return opts;
     }
 
-    async function executeWaveguideSnap() {
+    async function executeSymmetrySnap() {
         if (isRunning) { isRunning = false; return; }
         isRunning = true;
         
@@ -100,6 +100,71 @@
         let lockCounter = 0;
         
         let urlInput = document.getElementById('truth-url-io').value.trim();
+        let A = urlInput.startsWith('0x') ? BigInt(urlInput) : 0x517CC1B727220A959E3779B97F4A7C15n;
+
+        // --- BLOCK-PRIMARY ORDERING ---
+        let order = [];
+        for(let b=0; b<n; b++) {
+            for(let i=0; i<total; i++) {
+                let r = Math.floor(i/n), c = i%n;
+                if(Math.floor(r/z)*z + Math.floor(c/z) === b) order.push(i);
+            }
+        }
+
+        while (isRunning && iteration < 1000) {
+            iteration++;
+            let board = cells.map(c => parseInt(c.innerText) || 0);
+            let fixedIdx = board.map((v, i) => v !== 0 ? i : -1).filter(i => i !== -1);
+            let fractureIdx = -1;
+
+            // --- THE SYMMETRY SNAP ---
+            for (let i of order) {
+                if (fixedIdx.includes(i)) continue;
+                let opts = getValidOpts(board, i).sort((a,b) => a-b);
+                
+                if (opts.length === 0) { fractureIdx = i; break; }
+
+                // ADELIC PHASE EXTRACTION
+                let rot = BigInt((i * 31) % 128); 
+                let p = (A >> rot) | (A << (128n - rot));
+                board[i] = opts[Number((p ^ ADELIC_CONST) % BigInt(opts.length))];
+            }
+
+            // UI Refresh
+            board.forEach((v, i) => { if(v && !fixedIdx.includes(i)) { cells[i].innerText = v; cells[i].classList.add('calculated'); } });
+
+            if (fractureIdx === -1) {
+                log(`RESONANCE ACHIEVED: 0x${A.toString(16).toUpperCase()}`);
+                isRunning = false;
+            } else {
+                // AUTO-TUNER
+                if (fractureIdx === lastFracture) lockCounter++;
+                else { lockCounter = 0; lastFracture = fractureIdx; }
+
+                if (lockCounter > 3) {
+                    A ^= (ADELIC_CONST * 61n); // Jolt
+                    log(`<span style="color:var(--jolt)">!! PHASE LOCK AT ${fractureIdx}: JOLT !!</span>`);
+                    lockCounter = 0;
+                } else {
+                    A ^= (BigInt(fractureIdx + 1) * ADELIC_CONST) << BigInt(iteration % 64);
+                    log(`TUNING: Fracture at Node ${fractureIdx}.`);
+                }
+
+                document.getElementById('truth-url-io').value = "0x" + (A & ((1n << 128n) - 1n)).toString(16).toUpperCase();
+                cells[fractureIdx].classList.add('stress');
+                
+                cells.forEach((c, idx) => { if(!fixedIdx.includes(idx)) { c.innerText = ""; c.classList.remove('stress', 'calculated'); } });
+                await new Promise(r => setTimeout(r, 0));
+            }
+        }
+    }
+
+    function solidify() { cells.forEach(c => c.className = 'cell'); log("Waves Solidified."); }
+    function purge() { cells.forEach(c => { c.innerText = ""; c.className = 'cell'; }); log("Manifold Purged."); }
+    init();
+</script>
+</body>
+</html>
         let A = urlInput.startsWith('0x') ? BigInt(urlInput) : 0x80000000000000000000000000000000n;
 
         const startTime = performance.now();
