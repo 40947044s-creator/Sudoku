@@ -2,37 +2,19 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Project NP | Universal Adelic Oracle v8.6</title>
+    <title>Project NP | Adelic Oracle v8.6 Final</title>
     <style>
-        :root { 
-            --sentinel: #00ff41; --bedrock: #050505; --accent: #00d4ff; 
-            --gold: #d4af37; --friction: #ff3333; --void: #111;
-        }
-        body { 
-            background: var(--bedrock); color: var(--sentinel); 
-            font-family: 'Courier New', monospace; margin: 0; padding: 20px;
-            display: flex; flex-direction: column; align-items: center;
-        }
+        :root { --sentinel: #00ff41; --bedrock: #050505; --accent: #00d4ff; --gold: #d4af37; --friction: #ff3333; }
+        body { background: var(--bedrock); color: var(--sentinel); font-family: 'Courier New', monospace; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
         .main-layout { display: flex; gap: 20px; width: 95%; max-width: 1000px; justify-content: center; }
-        
-        /* UI Panels */
         .sidebar { width: 220px; display: flex; flex-direction: column; gap: 10px; }
-        .history-panel { 
-            flex-grow: 1; background: #0a0a0a; border: 1px solid #333; 
-            overflow-y: auto; padding: 10px; font-size: 0.65rem; height: 350px;
-        }
+        .history-panel { flex-grow: 1; background: #0a0a0a; border: 1px solid #333; overflow-y: auto; padding: 10px; font-size: 0.65rem; height: 380px; }
         .history-item { padding: 4px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; }
-        .history-item.illegal { color: var(--friction); text-shadow: 0 0 5px var(--friction); }
+        .history-item.illegal { color: var(--friction); font-weight: bold; }
         .history-item.legal { color: var(--gold); }
-
-        .index-bar {
-            width: 100%; background: #0a0a0a; border: 1px solid #333;
-            margin-bottom: 15px; padding: 10px; border-left: 5px solid var(--gold);
-        }
+        .index-bar { width: 100%; background: #0a0a0a; border: 1px solid #333; margin-bottom: 15px; padding: 10px; border-left: 5px solid var(--gold); }
         .index-value { font-size: 0.85rem; color: var(--gold); word-break: break-all; }
-
-        canvas { border: 1px solid var(--accent); background: #000; box-shadow: 0 0 30px rgba(0, 212, 255, 0.15); cursor: crosshair; }
-        
+        canvas { border: 1px solid var(--accent); background: #000; box-shadow: 0 0 30px rgba(0, 212, 255, 0.1); }
         .controls { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; padding: 15px; background: rgba(0,255,65,0.03); border: 1px solid #222; }
         input, button { background: #000; border: 1px solid #444; color: var(--accent); padding: 5px; font-size: 0.7rem; }
         .btn { border-color: var(--sentinel); color: var(--sentinel); cursor: pointer; text-transform: uppercase; }
@@ -41,59 +23,47 @@
     </style>
 </head>
 <body>
-
 <div class="index-bar">
-    <div style="font-size: 0.6rem; color: #888;">ADELIC ADDRESS (UNIQUE SPACE INDEX)</div>
-    <div class="index-value" id="index-val">#PENDING_INIT</div>
-    <div style="font-size: 0.6rem; color: var(--accent); margin-top: 5px;">
-        Resonance: <span id="perc-val">0.00%</span> | Friction: <span id="f-val">0</span>
-    </div>
+    <div style="font-size: 0.6rem; color: #888;">ADELIC ADDRESS (UNIQUE SPACE INDEX) [cite: 158, 201]</div>
+    <div class="index-value" id="index-val">#00000000000000000000</div>
+    <div style="font-size: 0.6rem; color: var(--accent); margin-top: 5px;">Resonance: <span id="perc-val">0.00%</span> | Friction: <span id="f-val">0</span></div>
 </div>
-
 <div class="main-layout">
     <div class="sidebar">
-        <div style="font-size: 0.7rem; color: var(--gold);">OVERRIDE HISTORY</div>
+        <div style="font-size: 0.7rem; color: var(--gold);">OVERRIDE HISTORY [cite: 182]</div>
         <div class="history-panel" id="history-list"></div>
         <button class="btn" onclick="resetSystem()" style="color:var(--friction); border-color:var(--friction);">Purge System</button>
     </div>
-
     <div style="display: flex; flex-direction: column; align-items: center;">
         <div class="controls">
             <div>z: <input type="number" id="z-val" value="3" min="2" max="5" style="width: 30px;" onchange="initSystem()"></div>
             <div>Anchor: <input type="text" id="path-id" value="40947044" style="width: 120px;"></div>
-            <button class="btn" onclick="startInference()">Inference</button>
-            <button class="btn tuning" onclick="autoTuneResonance()">Auto-Tune</button>
+            <button class="btn" id="inf-btn" onclick="startInference()">Inference</button>
+            <button class="btn tuning" id="tune-btn" onclick="autoTuneResonance()">Auto-Tune [cite: 191]</button>
         </div>
         <canvas id="mainCanvas"></canvas>
     </div>
 </div>
-
 <script>
 let z, N, totalBits, isRunning = false;
 let board, fixed, phase, inputHistory = [];
 let rowM, colM, blkM, shadowR, shadowC, shadowB;
-const ADELIC_CONST = 0x517cc1b727220a95n;
-
-const canvas = document.getElementById('mainCanvas');
-const ctx = canvas.getContext('2d');
+const ADELIC_CONST = 0x517cc1b727220a95n; // Tuning frequency [cite: 163, 187, 205]
+const C_SENTINEL = "#00ff41", C_GOLD = "#d4af37", C_FRICTION = "#ff3333";
 
 function initSystem() {
     isRunning = false;
     z = parseInt(document.getElementById('z-val').value);
-    N = z * z;
-    totalBits = N * N;
-    board = new Uint16Array(totalBits);
-    fixed = new Uint16Array(totalBits);
+    N = z * z; totalBits = N * N;
+    board = new Uint16Array(totalBits); fixed = new Uint16Array(totalBits);
     phase = new Uint16Array(totalBits).fill(0);
     rowM = new Array(N).fill(0n); colM = new Array(N).fill(0n); blkM = new Array(N).fill(0n);
     shadowR = new Array(totalBits); shadowC = new Array(totalBits); shadowB = new Array(totalBits);
-    inputHistory = [];
-    document.getElementById('history-list').innerHTML = '';
+    inputHistory = []; document.getElementById('history-list').innerHTML = '';
     canvas.width = canvas.height = Math.min(window.innerWidth * 0.8, 500);
     render();
 }
 
-// --- Validation Logic (Yellow vs Red) ---
 function getConflict(idx, val) {
     if (val === 0) return false;
     let r = Math.floor(idx / N), c = idx % N, b = Math.floor(r / z) * z + Math.floor(c / z);
@@ -111,81 +81,74 @@ function getConflict(idx, val) {
     return false;
 }
 
-// --- v8.6 Deterministic Inference ---
 async function startInference() {
-    if (isRunning) return;
+    if (isRunning) { isRunning = false; return; }
     isRunning = true;
+    document.getElementById('inf-btn').innerText = "STOP";
     let anchor = BigInt(document.getElementById('path-id').value);
-    if ((anchor & 1n) === 0n) anchor |= (1n << 63n); // Parity Law
-    
+    if ((anchor & 1n) === 0n) anchor |= (1n << 63n); // Odd Parity Law [cite: 156, 176]
     let d = 0, scanStep = 0n, friction = 0, activeID = anchor; 
-
     while (isRunning && d >= 0) {
-        if (d === totalBits) { finalize(); break; }
-
-        if (friction > N * 15) {
+        if (d === totalBits) { isRunning = false; render(true); break; }
+        if (friction > N * 15) { // Friction Reset [cite: 165, 191]
             scanStep++; d = Math.max(0, d - N); activeID = anchor + scanStep;
             friction = 0; updateStats(activeID, friction); continue;
         }
-
         let r = Math.floor(d / N), c = d % N, b = Math.floor(r / z) * z + Math.floor(c / z);
         let mask = rowM[r] | colM[c] | blkM[b];
         let opts = [];
         for (let i = 1; i <= N; i++) if (!(mask & (1n << BigInt(i)))) opts.push(i);
-
         if (opts.length === 0) {
             board[d] = 0; d--;
-            if (d < 0) { isRunning = false; alert("VOID: No Solution at this frequency."); break; }
+            if (d < 0) { isRunning = false; break; }
             rowM = [...shadowR[d]]; colM = [...shadowC[d]]; blkM = [...shadowB[d]];
             phase[d]++; friction++; continue;
         }
-
         shadowR[d] = [...rowM]; shadowC[d] = [...colM]; shadowB[d] = [...blkM];
-
         let val;
         if (fixed[d] !== 0) {
             val = opts.includes(fixed[d]) ? fixed[d] : 0;
             if (val === 0) { d--; friction += 20; continue; }
         } else if (opts.length === 1) {
-            val = opts[0]; // Truth-Lock
+            val = opts[0]; // Truth-Lock [cite: 164, 189]
         } else {
             let seed = Number(((activeID ^ BigInt(d)) * ADELIC_CONST) % 0xFFFFFFFn);
-            val = opts[(Math.abs(seed) + phase[d]) % opts.length];
+            val = opts[(Math.abs(seed) + phase[d]) % opts.length]; // Deterministic Seed [cite: 163, 187]
         }
-
-        board[d] = val;
-        let bit = 1n << BigInt(val);
-        rowM[r] |= bit; colM[c] |= bit; blkM[b] |= bit;
-        d++;
+        board[d] = val; let bit = 1n << BigInt(val);
+        rowM[r] |= bit; colM[c] |= bit; blkM[b] |= bit; d++;
         if (d % N === 0) { updateStats(activeID, friction); render(); await new Promise(r => setTimeout(r, 0)); }
     }
+    document.getElementById('inf-btn').innerText = "INFERENCE";
 }
 
-// --- Resonance Auto-Tune ---
 async function autoTuneResonance() {
+    if (isRunning) return;
+    document.getElementById('tune-btn').innerText = "...";
     let base = BigInt(document.getElementById('path-id').value);
     let bestA = base, maxFit = -1;
     for (let i = 0n; i < 150n; i++) {
         let tA = base + i; if ((tA & 1n) === 0n) tA |= (1n << 63n);
         let fit = await probeFitness(tA);
-        if (fit > maxFit) { maxFit = fit; bestA = tA; }
+        if (fit > maxFit) { maxFit = fit; bestA = tA; updateStats(bestA, 0); }
         if (fit >= totalBits) break;
+        if (i % 10n === 0n) await new Promise(r => setTimeout(r, 0));
     }
     document.getElementById('path-id').value = bestA.toString();
+    document.getElementById('tune-btn').innerText = "AUTO-TUNE";
     initSystem();
 }
 
 async function probeFitness(tA) {
     let d = 0, pR = [...rowM], pC = [...colM], pB = [...blkM], f = 0;
-    while (d < totalBits && f < 5) {
+    while (d < totalBits && f < 3) {
         let r = Math.floor(d / N), c = d % N, b = Math.floor(r / z) * z + Math.floor(c / z);
         let mask = pR[r] | pC[c] | pB[b];
         let opts = [];
         for (let i = 1; i <= N; i++) if (!(mask & (1n << BigInt(i)))) opts.push(i);
         if (opts.length === 0) { f++; break; }
         let val = fixed[d] || opts[Number(((tA ^ BigInt(d)) * ADELIC_CONST) % BigInt(opts.length))];
-        let bit = 1n << BigInt(val);
-        pR[r] |= bit; pC[c] |= bit; pB[b] |= bit; d++;
+        pR[r] |= (1n << BigInt(val)); pC[c] |= (1n << BigInt(val)); pB[b] |= (1n << BigInt(val)); d++;
     }
     return d;
 }
@@ -205,7 +168,7 @@ function render(final = false) {
         if (val) {
             let isFixed = fixed[i] !== 0;
             let isBad = isFixed && getConflict(i, fixed[i]);
-            ctx.fillStyle = isBad ? var(--friction) : (isFixed ? var(--gold) : (final ? var(--sentinel) : "white"));
+            ctx.fillStyle = isBad ? C_FRICTION : (isFixed ? C_GOLD : (final ? C_SENTINEL : "white"));
             if (isBad) { ctx.globalAlpha = 0.2; ctx.fillRect(x,y,s,s); ctx.globalAlpha = 1.0; }
             ctx.font = `bold ${s*0.5}px monospace`; ctx.textAlign = "center";
             ctx.fillText(val, x+s/2, y+s*0.7);
@@ -227,13 +190,13 @@ canvas.addEventListener('mousedown', (e) => {
 
 function updateHistoryUI() {
     const list = document.getElementById('history-list'); list.innerHTML = '';
-    inputHistory.slice().reverse().forEach(h => {
+    inputHistory.slice().reverse().slice(0, 50).forEach(h => {
         list.innerHTML += `<div class="history-item ${h.illegal?'illegal':'legal'}"><span>C${h.idx}</span><span>→${h.val}</span></div>`;
     });
 }
 
-function finalize() { isRunning = false; render(true); }
-function resetSystem() { initSystem(); }
+const canvasElement = document.getElementById('mainCanvas');
+const context = canvasElement.getContext('2d');
 initSystem();
 </script>
 </body>
