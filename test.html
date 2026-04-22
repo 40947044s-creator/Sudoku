@@ -2,215 +2,170 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Project NP | Adelic Oracle v8.8</title>
+    <title>Project NP | Adelic Oracle v18.5</title>
     <style>
-        :root { 
-            --sentinel: #00ff41; --bedrock: #050505; --accent: #00d4ff; 
-            --gold: #d4af37; --friction: #ff3333; --void: #0a0a0a;
-        }
-        body { 
-            background: var(--bedrock); color: var(--sentinel); 
-            font-family: 'Courier New', monospace; display: flex; 
-            flex-direction: column; align-items: center; margin: 0; padding: 20px;
-        }
-        .header { 
-            text-align: center; border-bottom: 2px solid var(--sentinel); 
-            width: 100%; max-width: 900px; letter-spacing: 2px; padding-bottom: 10px; 
-        }
-        .oracle-bridge {
-            display: flex; gap: 15px; width: 100%; max-width: 900px; margin: 15px 0;
-        }
-        .panel { 
-            flex: 1; display: flex; flex-direction: column; gap: 10px; 
-            padding: 15px; border: 1px solid #333; background: var(--void); 
-            border-top: 3px solid var(--accent); position: relative;
-        }
-        .panel-title { font-size: 0.7rem; color: #888; text-transform: uppercase; margin-bottom: 5px; }
-        .controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-        canvas { border: 1px solid var(--sentinel); box-shadow: 0 0 50px rgba(0, 255, 65, 0.1); margin-top: 10px; }
-        .monitor { 
-            width: 100%; max-width: 900px; font-size: 0.75rem; color: var(--gold); 
-            margin: 10px 0; border-left: 3px solid var(--accent); padding-left: 10px; 
-        }
-        .console { 
-            width: 100%; max-width: 900px; height: 160px; background: #000; 
-            border: 1px dashed #444; padding: 10px; font-size: 0.7rem; 
-            overflow-y: auto; color: var(--sentinel); 
-        }
-        .btn { background: #000; border: 1px solid var(--sentinel); color: var(--sentinel); padding: 6px 18px; cursor: pointer; }
+        :root { --sentinel: #00ff41; --bedrock: #050505; --accent: #00d4ff; --gold: #d4af37; --psi: #ff00ff; --error: #ff3333; }
+        body { background: var(--bedrock); color: var(--sentinel); font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
+        .header { text-align: center; border-bottom: 2px solid var(--sentinel); width: 100%; max-width: 900px; padding-bottom: 10px; margin-bottom: 25px; }
+        .panel { display: flex; gap: 20px; background: #111; padding: 20px; border: 1px solid #333; border-top: 4px solid var(--gold); width: 100%; max-width: 1150px; box-sizing: border-box; }
+        .grid-container { flex: 1.5; display: flex; flex-direction: column; align-items: center; }
+        .grid { display: grid; border: 3px solid var(--sentinel); background: rgba(0, 255, 65, 0.02); }
+        .cell { border: 0.5px solid rgba(0, 255, 65, 0.1); display: flex; align-items: center; justify-content: center; color: var(--gold); font-weight: bold; outline: none; cursor: text; overflow: hidden; }
+        .cell.invalid { background: rgba(255, 51, 51, 0.3); color: var(--error); border: 1.5px solid var(--error); }
+        .cell.calculated { color: #fff; font-weight: normal; background: rgba(0, 212, 255, 0.03); }
+        .controls { flex: 1; display: flex; flex-direction: column; gap: 12px; }
+        .io-label { font-size: 0.65rem; color: #888; text-transform: uppercase; margin-bottom: 5px; }
+        #rank-id-io { width: 100%; background: #000; color: var(--accent); border: 1px solid #444; padding: 12px; box-sizing: border-box; font-family: inherit; font-size: 0.85rem; word-break: break-all; min-height: 140px; outline: none; text-align: center; resize: none; }
+        .btn { background: rgba(0, 255, 65, 0.1); border: 1px solid var(--sentinel); color: var(--sentinel); padding: 14px; cursor: pointer; font-weight: bold; text-transform: uppercase; transition: 0.2s; }
         .btn:hover { background: var(--sentinel); color: #000; }
-        .btn-purify { border-color: #ff00ff; color: #ff00ff; }
-        .btn-purify:hover { background: #ff00ff; color: #000; }
-        input { background: #000; border: 1px solid #444; color: var(--accent); text-align: center; padding: 4px; }
+        #status { font-size: 0.75rem; color: #999; margin-top: 10px; border-left: 2px solid var(--gold); padding-left: 10px; min-height: 60px; line-height: 1.4; }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <strong>PROJECT NP: ADELIC ORACLE v8.8</strong>
-    <div style="font-size: 0.6rem; color: #888;">[PRE-RESOLVED ANCHOR PURIFICATION | LAGLESS INFERENCE]</div>
+    <strong>PROJECT NP: ADELIC ORACLE v18.5</strong>
+    <div style="font-size:0.6rem; color:#888;">[BOUNDARY GUARD | ASYNC PROPAGATION]</div>
 </div>
 
-<div class="oracle-bridge">
-    <div class="panel">
-        <div class="panel-title">Stage I: Coordinate Purification</div>
-        <div class="controls">
-            <span>Orbit: <input type="number" id="orbital-index" value="0" min="0" style="width: 50px;"></span>
-            <button class="btn btn-purify" onclick="triggerPurification()">Purify & Solve Anchor</button>
+<div class="panel">
+    <div class="grid-container">
+        <div style="display:flex; gap:10px; width:100%; margin-bottom:10px;">
+            <div style="flex:1;"><div class="io-label">Dim (z)</div><input type="number" id="z-val" value="3" min="2" max="4" style="width:100%; background:#000; color:var(--accent); border:1px solid #444; padding:5px;" onchange="init()"></div>
+            <button class="btn" style="flex:2; font-size:0.65rem; border-color:var(--error); color:var(--error);" onclick="purge()">Purge Grid</button>
         </div>
+        <div id="grid-root"></div>
     </div>
-    
-    <div class="panel" style="border-top-color: var(--sentinel);">
-        <div class="panel-title">Stage II: Deterministic Projection</div>
-        <div class="controls">
-            <span>ActiveID: <input type="text" id="path-id" value="0" style="width: 240px;" readonly></span>
-            <button class="btn" onclick="runLaglessInference()">Instant Execute</button>
-            <button class="btn" onclick="resetSystem()" style="color:var(--friction); border-color:var(--friction);">Purge</button>
-        </div>
+    <div class="controls">
+        <div class="io-label">Adelic Rank-ID</div>
+        <textarea id="rank-id-io" placeholder="Enter ID..."></textarea>
+        <button class="btn" onclick="executeSnap()">Path A: Snap Pointer</button>
+        <button class="btn" style="border-color:var(--psi); color:var(--psi);" onclick="executeInference()">Path B: Infer Plant</button>
+        <div id="status">> [SYSTEM] Safety Governor Active. Max z=4.</div>
     </div>
 </div>
-
-<div class="monitor" id="monitor">FRICTION: 0.000 | STATE: VACUUM | COORD: NULL</div>
-<canvas id="mainCanvas"></canvas>
-<div class="console" id="log">> [SENTINEL] v8.8 Engine Online. Anchor purification required for lagless projection.</div>
 
 <script>
-let z, N, totalBits, isRunning = false;
-let board, fixed, rowM, colM, blkM, shadowR, shadowC, shadowB;
+    let z, n, total, cells = [];
+    let isRunning = false;
 
-const canvas = document.getElementById('mainCanvas');
-const ctx = canvas.getContext('2d');
+    function log(msg) { document.getElementById('status').innerHTML = `> ${msg}`; }
 
-function log(msg) {
-    const l = document.getElementById('log');
-    l.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}<br>` + l.innerHTML;
-    l.scrollTop = 0;
-}
-
-function initSystem() {
-    isRunning = false;
-    z = parseInt(document.getElementById('z-val')?.value || 3);
-    N = z * z;
-    totalBits = N * N;
-    board = new Uint16Array(totalBits);
-    fixed = new Uint16Array(totalBits);
-    rowM = new Array(N).fill(0n); colM = new Array(N).fill(0n); blkM = new Array(N).fill(0n);
-    shadowR = new Array(totalBits); shadowC = new Array(totalBits); shadowB = new Array(totalBits);
-    canvas.width = canvas.height = Math.min(window.innerWidth * 0.9, 450);
-    render();
-}
-
-// ==========================================
-// v8.8 CORE: ANCHOR PURIFICATION
-// ==========================================
-function triggerPurification() {
-    log("<b>STAGE I:</b> Initiating Meta-Inference on Adelic Coordinate...");
-    
-    // 1. Lossless Kummer Projection
-    let baseSeed = 1n << 127n;
-    for (let d = 0; d < totalBits; d++) {
-        if (fixed[d] !== 0) {
-            let grayD = BigInt(d ^ (d >> 1));
-            let shiftAmount = 126n - (grayD * BigInt(N));
-            baseSeed += (BigInt(fixed[d]) << (shiftAmount < 0n ? 0n : shiftAmount));
+    function init() {
+        let zInput = parseInt(document.getElementById('z-val').value);
+        if (zInput > 4) { zInput = 4; document.getElementById('z-val').value = 4; log("WARN: z limited to 4 to prevent manifold collapse."); }
+        z = zInput; n = z * z; total = n * n;
+        const root = document.getElementById('grid-root'); root.innerHTML = '';
+        const grid = document.createElement('div');
+        grid.className = 'grid'; grid.style.gridTemplateColumns = `repeat(${n}, 1fr)`;
+        const size = Math.min(window.innerWidth * 0.45, 500);
+        grid.style.width = grid.style.height = `${size}px`;
+        cells = [];
+        for (let i = 0; i < total; i++) {
+            const c = document.createElement('div'); c.className = 'cell'; c.contentEditable = "true";
+            c.style.fontSize = `${(size/n) * (n > 9 ? 0.35 : 0.5)}px`;
+            if ((Math.floor(i / n) + 1) % z === 0 && Math.floor(i / n) < n - 1) c.style.borderBottom = "2.5px solid var(--sentinel)";
+            if ((i + 1) % z === 0 && (i + 1) % n !== 0) c.style.borderRight = "2.5px solid var(--sentinel)";
+            c.oninput = () => { validate(); };
+            grid.appendChild(c); cells.push(c);
         }
+        root.appendChild(grid);
+        log(`Scaled: n=${n} (${total} cells). Ready.`);
     }
 
-    // 2. Orbital Injection
-    let orbit = BigInt(document.getElementById('orbital-index').value);
-    let anchor = baseSeed + ((orbit ^ (orbit >> 1n)) << 12n);
-    if ((anchor & 1n) === 0n) anchor |= 1n; // Parity Law
-
-    // 3. The Purification Loop (Eliminating "Dancing Digits")
-    // In v8.8, we pre-check the trajectory's structural density (Kummer)
-    // To simplify for JS, we simulate the purification by locking the coordinate.
-    document.getElementById('path-id').value = anchor.toString();
-    
-    log(`<b>PURIFICATION COMPLETE:</b> Coordinate 0x${anchor.toString(16)} solved.`);
-    document.getElementById('monitor').innerText = `FRICTION: 0.000 | STATE: PURIFIED | COORD: #${anchor.toString()}`;
-}
-
-// ==========================================
-// v8.8 CORE: LAGLESS PROJECTION
-// ==========================================
-async function runLaglessInference() {
-    if (isRunning) return;
-    isRunning = true;
-    let activeID = BigInt(document.getElementById('path-id').value);
-    
-    let d = 0;
-    log("<b>STAGE II:</b> Projecting frictionless graph...");
-
-    // v8.8 removes the 'scanStep' loop inside the inference. 
-    // It assumes the purified anchor is a direct singularity.
-    while (isRunning && d >= 0) {
-        if (d === totalBits) { finalize(); break; }
-
-        let r = Math.floor(d / N), c = d % N, b = Math.floor(r / z) * z + Math.floor(c / z);
-        let mask = rowM[r] | colM[c] | blkM[b];
+    function getOpts(board, d) {
+        let r = Math.floor(d / n), c = d % n, b = Math.floor(r / z) * z + Math.floor(c / z);
+        let mask = 0;
+        for (let j = 0; j < n; j++) {
+            mask |= (1 << (board[r * n + j] - 1));
+            mask |= (1 << (board[j * n + c] - 1));
+        }
+        let br = Math.floor(r / z) * z, bc = Math.floor(c / z) * z;
+        for (let i = 0; i < z; i++) for (let j = 0; j < z; j++) mask |= (1 << (board[(br + i) * n + (bc + j)] - 1));
         let opts = [];
-        for (let i = 1; i <= N; i++) if (!(mask & (1n << BigInt(i)))) opts.push(i);
-
-        if (opts.length === 0) {
-            // If friction still exists, we trigger a microscopic shadow-rewind 
-            // but NOT a full address shift (dancing digits eliminated).
-            board[d] = 0; d--;
-            if (d < 0) { log("PARADOX: Manifold fracture detected."); isRunning = false; break; }
-            rowM = [...shadowR[d]]; colM = [...shadowC[d]]; blkM = [...shadowB[d]];
-            continue;
-        }
-
-        shadowR[d] = [...rowM]; shadowC[d] = [...colM]; shadowB[d] = [...blkM];
-
-        let val;
-        if (fixed[d] !== 0) {
-            val = opts.includes(fixed[d]) ? fixed[d] : 0;
-        } else if (opts.length === 1) {
-            val = opts[0];
-        } else {
-            // Pure Deterministic O(1) Peeling
-            let seed = Number(((activeID ^ BigInt(d)) * 0x517cc1b727220a95n) % 0xFFFFFFFn);
-            val = opts[Math.abs(seed) % opts.length];
-        }
-
-        board[d] = val;
-        let bit = 1n << BigInt(val);
-        rowM[r] |= bit; colM[c] |= bit; blkM[b] |= bit;
-        d++;
-        
-        // Render only at block completion to eliminate visual lag
-        if (d % N === 0) { render(); await new Promise(r => setTimeout(r, 0)); }
+        for (let i = 1; i <= n; i++) if (!(mask & (1 << (i - 1)))) opts.push(i);
+        return opts;
     }
-}
 
-function render(final = false) {
-    const s = canvas.width / N;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    for (let i = 0; i < totalBits; i++) {
-        let x = (i % N) * s, y = Math.floor(i / N) * s;
-        ctx.strokeStyle = "rgba(0, 212, 255, 0.08)"; ctx.strokeRect(x, y, s, s);
-        let val = fixed[i] || board[i];
-        if (val) {
-            ctx.fillStyle = fixed[i] ? "var(--gold)" : (final ? "var(--sentinel)" : "white");
-            ctx.font = `bold ${s * 0.5}px monospace`;
-            ctx.textAlign = "center"; ctx.fillText(val, x + s/2, y + s * 0.7);
+    function validate() {
+        let board = cells.map(c => parseInt(c.innerText) || 0);
+        let violations = new Set();
+        for (let i = 0; i < total; i++) {
+            if (board[i] === 0) continue;
+            let r = Math.floor(i/n), c = i%n, b = Math.floor(r/z)*z + Math.floor(c/z);
+            for(let j=0; j<total; j++) {
+                if(i===j || board[j]===0) continue;
+                if((Math.floor(j/n)===r || j%n===c || (Math.floor(Math.floor(j/n)/z)*z + Math.floor((j%n)/z))===b) && board[i]===board[j]) violations.add(i);
+            }
         }
+        cells.forEach((c, idx) => violations.has(idx) ? c.classList.add('invalid') : c.classList.remove('invalid'));
+        return violations.size === 0;
     }
-}
 
-function finalize() { isRunning = false; render(true); log("<b>SINGULARITY ATTAINED.</b>"); }
-function resetSystem() { initSystem(); log("System Purged."); }
+    async function executeSnap() {
+        let input = document.getElementById('rank-id-io').value.replace(/\D/g, '');
+        let idVal = BigInt(input || "0");
+        let board = new Uint32Array(total);
+        log("Snap: Async Projection...");
+        for (let d = 0; d < total; d++) {
+            let opts = getOpts(board, d).sort((a,b) => a-b);
+            if (opts.length === 0) return log("<span style='color:var(--error)'>WA: Out of Bounds.</span>");
+            let choiceIdx = Number(idVal % BigInt(opts.length));
+            idVal /= BigInt(opts.length);
+            board[d] = opts[choiceIdx];
+            cells[d].innerText = board[d];
+            cells[d].classList.add('calculated');
+            if (d % n === 0) await new Promise(r => requestAnimationFrame(r));
+        }
+        log("SUCCESS.");
+    }
 
-canvas.addEventListener('mousedown', (e) => {
-    const rect = canvas.getBoundingClientRect();
-    const s = canvas.width / N;
-    const idx = Math.floor((e.clientY - rect.top) / s) * N + Math.floor((e.clientX - rect.left) / s);
-    let v = prompt(`Fix Bit ${idx}:`); 
-    if (v !== null) { fixed[idx] = Math.min(N, Math.max(0, parseInt(v) || 0)); render(); }
-});
+    async function executeInference() {
+        if (isRunning || !validate()) return;
+        isRunning = true;
+        let board = cells.map(c => parseInt(c.innerText) || 0);
+        let fixed = board.map((v, i) => v !== 0 ? i : -1).filter(i => i !== -1);
+        function solve() {
+            let bestCell = -1, minOpts = n + 1, bestOpts = [];
+            for (let i = 0; i < total; i++) {
+                if (board[i] === 0) {
+                    let opts = getOpts(board, i);
+                    if (opts.length === 0) return false;
+                    if (opts.length < minOpts) { minOpts = opts.length; bestCell = i; bestOpts = opts; }
+                }
+            }
+            if (bestCell === -1) return true;
+            for (let val of bestOpts) {
+                board[bestCell] = val;
+                if (solve()) return true;
+                board[bestCell] = 0;
+            }
+            return false;
+        }
+        const t0 = performance.now();
+        let success = solve();
+        const t1 = performance.now();
+        if (success) {
+            board.forEach((v, i) => { cells[i].innerText = v; if (!fixed.includes(i)) cells[i].classList.add('calculated'); });
+            log(`Truth URL Grounded in ${(t1-t0).toFixed(1)}ms.`);
+            synthesis();
+        } else log("<span style='color:var(--error)'>WA: Irrational.</span>");
+        isRunning = false;
+    }
 
-initSystem();
+    function synthesis() {
+        let board = cells.map(c => parseInt(c.innerText) || 0);
+        let id = 0n, mult = 1n, tBoard = new Uint32Array(total);
+        for (let d = 0; d < total; d++) {
+            let opts = getOpts(tBoard, d).sort((a,b) => a-b);
+            if (board[d] !== 0) { id += BigInt(opts.indexOf(board[d])) * mult; tBoard[d] = board[d]; }
+            mult *= BigInt(opts.length || 1);
+        }
+        document.getElementById('rank-id-io').value = id.toString();
+    }
+
+    function purge() { cells.forEach(c => { c.innerText = ""; c.className = 'cell'; }); log("Purged."); }
+    init();
 </script>
 </body>
 </html>
-
