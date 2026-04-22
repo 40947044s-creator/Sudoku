@@ -1,0 +1,33 @@
+async function triggerAutomaticSolve() {
+    if (isRunning) return;
+    
+    const zVal = document.getElementById('z-val').value;
+    const board = cells.map(c => parseInt(c.innerText) || 0).join(',');
+    
+    log("SYSTEM: Dispatching to Native C Engine...");
+    isRunning = true;
+
+    try {
+        const response = await fetch('/api/solve', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ z: zVal, sequence: board })
+        });
+
+        const data = await response.json();
+        
+        if (data.success) {
+            // "seq:" format check to match your feed logic
+            const rawOutput = data.output.includes('seq:') ? data.output : "seq:" + data.output;
+            document.getElementById('c-sequence-input').value = rawOutput;
+            groundNativeSequence(); // Use your existing grounding logic
+            log("SUCCESS: C-Engine grounded the manifold.");
+        } else {
+            log("<span style='color:var(--error)'>ERROR: " + data.error + "</span>");
+        }
+    } catch (err) {
+        log("<span style='color:var(--error)'>BRIDGE FAIL: Is bridge.py running?</span>");
+    } finally {
+        isRunning = false;
+    }
+}
