@@ -2,202 +2,164 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Project NP | v11.8 Resonance Gallery</title>
+    <title>Project NP | Adelic Oracle v11.9 Resonance</title>
     <style>
-        :root { 
-            --sentinel: #00ff41; --bedrock: #050505; --accent: #00d4ff; 
-            --gold: #d4af37; --friction: #ff3333; --panel: #0a0a0a;
-        }
-        body { background: var(--bedrock); color: var(--sentinel); font-family: 'Courier New', monospace; margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: center; }
-        .header { width: 100%; text-align: center; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 15px; }
-        .index-bar { width: 95%; max-width: 1000px; background: var(--panel); border: 1px solid #222; padding: 15px; margin-bottom: 15px; border-left: 4px solid var(--accent); }
-        .index-value { font-size: 0.7rem; color: var(--gold); word-break: break-all; font-weight: bold; }
-        .main-layout { display: flex; gap: 20px; width: 95%; max-width: 1200px; justify-content: center; }
-        .sidebar { width: 300px; display: flex; flex-direction: column; gap: 10px; }
-        .status-panel { background: #000; border: 1px solid #222; padding: 10px; font-size: 0.8rem; line-height: 1.6; }
-        canvas { border: 1px solid var(--accent); background: #000; }
-        .gallery-controls { display: flex; justify-content: space-between; align-items: center; background: #111; padding: 5px; margin-top: 10px; border: 1px solid #333; }
-        .btn { border: 1px solid var(--sentinel); color: var(--sentinel); background: none; cursor: pointer; padding: 10px; text-transform: uppercase; width: 100%; font-weight: bold; }
-        .btn:hover { background: var(--sentinel); color: #000; }
-        .btn.harvest { border-color: var(--gold); color: var(--gold); }
+        :root { --sentinel: #00ff41; --bedrock: #050505; --accent: #00d4ff; --gold: #d4af37; --error: #ff3333; }
+        body { background: var(--bedrock); color: var(--sentinel); font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .header { text-align: center; border-bottom: 2px solid var(--sentinel); width: 100%; max-width: 900px; padding-bottom: 10px; margin-bottom: 25px; }
+        .panel { display: flex; gap: 20px; background: #111; padding: 20px; border: 1px solid #333; border-top: 4px solid var(--gold); width: 100%; max-width: 1100px; box-sizing: border-box; }
+        .grid-container { flex: 1.5; display: flex; flex-direction: column; align-items: center; }
+        .grid { display: grid; border: 3px solid var(--sentinel); background: rgba(0, 255, 65, 0.02); }
+        .cell { border: 0.5px solid rgba(0, 255, 65, 0.1); display: flex; align-items: center; justify-content: center; color: var(--gold); font-weight: bold; outline: none; cursor: text; }
+        .cell.invalid { background: rgba(255, 51, 51, 0.3); color: var(--error); border: 1.5px solid var(--error); }
+        .cell.calculated { color: #fff; font-weight: normal; background: rgba(0, 212, 255, 0.03); }
+        .controls { flex: 1; display: flex; flex-direction: column; gap: 12px; }
+        .io-label { font-size: 0.65rem; color: #888; text-transform: uppercase; margin-bottom: 5px; }
+        #truth-url-io { width: 100%; background: #000; color: var(--accent); border: 1px solid #444; padding: 12px; box-sizing: border-box; font-family: inherit; font-size: 0.85rem; word-break: break-all; min-height: 100px; outline: none; text-align: center; resize: none; }
+        .btn { background: rgba(0, 255, 65, 0.1); border: 1px solid var(--sentinel); color: var(--sentinel); padding: 14px; cursor: pointer; font-weight: bold; text-transform: uppercase; }
+        .btn:hover { background: var(--sentinel); color: #000; box-shadow: 0 0 15px var(--sentinel); }
+        #status { font-size: 0.75rem; color: #999; border-left: 2px solid var(--gold); padding-left: 10px; min-height: 60px; line-height: 1.4; }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <strong>PROJECT NP: ADELIC ORACLE v11.8</strong>
-    <div style="font-size: 0.6rem; color: #555; margin-top: 4px;">RESONANCE HARVESTER | $O(N)$ SNAP | $z=5$ GALLERY</div>
+    <strong>PROJECT NP: ADELIC ORACLE v11.9</strong>
+    <div style="font-size:0.6rem; color:#888;">[DPI RESONANCE | COMPLEXITY COLLAPSE]</div>
 </div>
 
-<div class="index-bar">
-    <div style="font-size: 0.6rem; color: #888; margin-bottom: 5px;">CURRENT ADELIC ANCHOR ($A$)</div>
-    <div class="index-value" id="anchor-hex">0x00000000000000000000000000000000</div>
-</div>
-
-<div class="main-layout">
-    <div class="sidebar">
-        <div class="status-panel">
-            <span style="color:var(--accent)">ITERATION:</span> <span id="iter-val">0</span><br>
-            <span style="color:var(--gold)">HARVESTED:</span> <span id="res-count">0</span> SOLUTIONS<br>
-            <span style="color:var(--friction)">CONFLICTS:</span> <span id="conflict-val">0</span>
+<div class="panel">
+    <div class="grid-container">
+        <div style="display:flex; gap:10px; width:100%; margin-bottom:10px;">
+            <div style="flex:1;"><div class="io-label">Dim (z)</div><input type="number" id="z-val" value="3" min="2" max="5" style="width:100%; background:#000; color:var(--accent); border:1px solid #444; padding:5px;" onchange="init()"></div>
+            <button class="btn" style="flex:2; font-size:0.65rem; border-color:var(--error); color:var(--error);" onclick="purge()">Purge Manifold</button>
         </div>
-        <div class="gallery-controls">
-            <button onclick="changeGallery(-1)" style="background:none; color:var(--accent); border:none; cursor:pointer;"><<</button>
-            <span id="gallery-idx">VIEWING: LIVE</span>
-            <button onclick="changeGallery(1)" style="background:none; color:var(--accent); border:none; cursor:pointer;">>></button>
-        </div>
-        <button class="btn" onclick="factoryReset()" style="border-color:var(--friction); color:var(--friction); margin-top:10px;">Purge</button>
+        <div id="grid-root"></div>
     </div>
 
-    <div style="display:flex; flex-direction:column; align-items:center;">
-        <button class="btn harvest" id="harv-btn" onclick="toggleHarvest()">Execute Resonance Harvest</button>
-        <canvas id="mainCanvas" style="margin-top:15px;"></canvas>
+    <div class="controls">
+        <div class="io-label">Truth URL (Spectral Anchor A)</div>
+        <textarea id="truth-url-io" placeholder="0x80000000..."></textarea>
+        
+        <button class="btn" onclick="executeAdelicSnap()">Execute O(N) Snap</button>
+        <button class="btn" style="border-color:var(--gold); color:var(--gold);" onclick="solidify()">Solidify Waves</button>
+        
+        <div id="status">> [SYSTEM] v11.9 Adelic Engine Ready. Complexity Collapse Active.</div>
     </div>
 </div>
 
 <script>
-let z, N, totalBits, isRunning = false;
-let board, fixed, adj = [], archive = [];
-let galleryPointer = -1;
-const ADELIC_CONST = 0x517cc1b727220a95n;
+    let z, n, total, cells = [], adj = [];
+    let isRunning = false;
+    const ADELIC_CONST = 0x517cc1b727220a95n;
 
-const canvas = document.getElementById('mainCanvas');
-const ctx = canvas.getContext('2d');
+    function log(msg) { document.getElementById('status').innerHTML = `> ${msg}`; }
 
-function initGraph() {
-    adj = Array.from({ length: totalBits }, () => []);
-    for (let i = 0; i < totalBits; i++) {
-        let r = Math.floor(i / N), c = i % N, b = Math.floor(r / z) * z + Math.floor(c / z);
-        for (let j = 0; j < totalBits; j++) {
-            if (i === j) continue;
-            let rr = Math.floor(j / N), cc = j % N, bb = Math.floor(rr / z) * z + Math.floor(cc / z);
-            if (r === rr || c === cc || b === bb) adj[i].push(j);
+    function init() {
+        z = parseInt(document.getElementById('z-val').value);
+        n = z * z; total = n * n;
+        const root = document.getElementById('grid-root'); root.innerHTML = '';
+        const grid = document.createElement('div');
+        grid.className = 'grid'; grid.style.gridTemplateColumns = `repeat(${n}, 1fr)`;
+        const size = Math.min(window.innerWidth * 0.45, 550);
+        grid.style.width = grid.style.height = `${size}px`;
+        cells = []; adj = Array.from({ length: total }, () => []);
+
+        for (let i = 0; i < total; i++) {
+            const c = document.createElement('div'); c.className = 'cell'; c.contentEditable = "true";
+            c.style.fontSize = `${(size/n) * 0.5}px`;
+            if ((Math.floor(i/n)+1)%z === 0 && Math.floor(i/n)<n-1) c.style.borderBottom = "2.5px solid var(--sentinel)";
+            if ((i+1)%z === 0 && (i+1)%n !== 0) c.style.borderRight = "2.5px solid var(--sentinel)";
+            c.oninput = () => validate();
+            grid.appendChild(c); cells.push(c);
+            
+            // Build Graph Bedrock
+            let r = Math.floor(i/n), col = i%n, b = Math.floor(r/z)*z + Math.floor(col/z);
+            for(let j=0; j<total; j++) {
+                if(i===j) continue;
+                let rr = Math.floor(j/n), cc = j%n, bb = Math.floor(rr/z)*z + Math.floor(cc/z);
+                if(r===rr || col===cc || b===bb) adj[i].push(j);
+            }
         }
+        root.appendChild(grid);
+        log(`Manifold Initialized: n=${n}.`);
     }
-}
 
-function factoryReset() {
-    z = parseInt(prompt("Set z-factor (3-5):", "3")) || 3;
-    N = z * z; totalBits = N * N;
-    fixed = new Uint16Array(totalBits);
-    archive = []; galleryPointer = -1;
-    initGraph(); softReset();
-}
+    function validate() {
+        let board = cells.map(c => parseInt(c.innerText) || 0);
+        let violations = new Set();
+        for (let i = 0; i < total; i++) {
+            if (board[i] === 0) continue;
+            for(let neighbor of adj[i]) if(board[neighbor] === board[i]) violations.add(i);
+        }
+        cells.forEach((c, idx) => violations.has(idx) ? c.classList.add('invalid') : c.classList.remove('invalid'));
+        return violations.size === 0;
+    }
 
-function softReset() {
-    isRunning = false;
-    board = new Uint16Array(totalBits);
-    canvas.width = canvas.height = Math.min(window.innerWidth * 0.8, 550);
-    render();
-}
+    // THE MARILYN FOLD (Ω): O(1) Residue Extraction
+    function marilynFold(anchor, idx) {
+        let r = Math.floor(idx/n), c = idx%n;
+        // Non-linear rotation to prevent Spectral Flattening
+        let shift = BigInt((r * 17) + (c * 23) + (idx % 7)) % 128n;
+        let p = (anchor >> shift) | (anchor << (128n - shift));
+        return Number((p * ADELIC_CONST) % BigInt(n)) + 1;
+    }
 
-function marilynFold(anchor, idx) {
-    let r = Math.floor(idx / N), c = idx % N;
-    let rotation = BigInt((r * 13) + (c * 17)) % 128n;
-    let projection = (anchor >> rotation) | (anchor << (128n - rotation));
-    return Number((projection * ADELIC_CONST) % BigInt(N)) + 1;
-}
-
-function toggleHarvest() {
-    if (isRunning) { isRunning = false; document.getElementById('harv-btn').innerText = "Execute Resonance Harvest"; return; }
-    isRunning = true;
-    document.getElementById('harv-btn').innerText = "STOP HARVESTING";
-    executeHarvest();
-}
-
-async function executeHarvest() {
-    let A = 0x80000000000000000000000000000000n; // Grounded start
-    let iteration = 0;
-    
-    while (isRunning && iteration < 500) {
-        iteration++;
-        board.fill(0);
+    async function executeAdelicSnap() {
+        if (isRunning) return; isRunning = true;
+        log("Snap: Imposing Adelic Law...");
         
-        // 1. O(N) SNAP
-        for (let i = 0; i < totalBits; i++) if (!fixed[i]) board[i] = marilynFold(A, i);
-
-        // 2. LAW AUDIT
-        let conflictIdx = -1; let conflicts = 0;
-        for (let i = 0; i < totalBits; i++) {
-            let val = fixed[i] || board[i];
-            let c = false;
-            for (let n of adj[i]) if ((fixed[n] || board[n]) === val) { c = true; break; }
-            if (c) { if (conflictIdx === -1) conflictIdx = i; conflicts++; }
-        }
-
-        // 3. ARCHIVE IF RESONANT
-        if (conflicts === 0) {
-            archive.push(new Uint16Array(board));
-            document.getElementById('res-count').innerText = archive.length;
-        }
-
-        // 4. DPI IMPOSITION (The Shiver)
-        // Force the shift using the conflict index + 1
-        let nudge = (BigInt(conflictIdx + 1) * ADELIC_CONST);
-        A ^= (nudge << BigInt(iteration % 64)) | (nudge >> BigInt(64 - (iteration % 64)));
-
-        document.getElementById('anchor-hex').innerText = "0x" + A.toString(16).toUpperCase();
-        document.getElementById('iter-val').innerText = iteration;
-        document.getElementById('conflict-val').innerText = conflicts;
+        // Derive Anchor from Truth URL or build from scratch
+        let urlInput = document.getElementById('truth-url-io').value.trim();
+        let A = urlInput.startsWith('0x') ? BigInt(urlInput) : 0x80000000000000000000000000000000n;
         
-        if (iteration % 2 === 0) { render(); await new Promise(r => setTimeout(r, 0)); }
-    }
-    isRunning = false;
-    document.getElementById('harv-btn').innerText = "Execute Resonance Harvest";
-}
+        let solved = false, iteration = 0;
+        const start = performance.now();
 
-function changeGallery(dir) {
-    if (archive.length === 0) return;
-    galleryPointer += dir;
-    if (galleryPointer >= archive.length) galleryPointer = -1;
-    if (galleryPointer < -1) galleryPointer = archive.length - 1;
-    
-    if (galleryPointer === -1) {
-        document.getElementById('gallery-idx').innerText = "VIEWING: LIVE";
-        render();
-    } else {
-        document.getElementById('gallery-idx').innerText = `VIEWING: #${galleryPointer + 1}`;
-        renderFromArchive(archive[galleryPointer]);
-    }
-}
+        while (!solved && iteration < 100) {
+            iteration++;
+            let board = cells.map(c => parseInt(c.innerText) || 0);
+            let fixedIdx = board.map((v, i) => v !== 0 ? i : -1).filter(i => i !== -1);
 
-function renderFromArchive(savedBoard) {
-    const s = canvas.width / N;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    for (let i = 0; i < totalBits; i++) {
-        let x = (i % N) * s, y = Math.floor(i / N) * s;
-        ctx.fillStyle = fixed[i] ? "#d4af37" : "white";
-        ctx.font = `${s*0.5}px monospace`; ctx.textAlign = "center";
-        ctx.fillText(savedBoard[i], x+s/2, y+s*0.7);
-        ctx.strokeStyle = "#222"; ctx.strokeRect(x, y, s, s);
-    }
-}
+            // PHASE I: THE SNAP (O(N))
+            for (let i = 0; i < total; i++) {
+                if (!fixedIdx.includes(i)) board[i] = marilynFold(A, i);
+            }
 
-function render() {
-    if (galleryPointer !== -1) return;
-    const s = canvas.width / N;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    for (let i = 0; i < totalBits; i++) {
-        let x = (i % N) * s, y = Math.floor(i / N) * s;
-        let val = fixed[i] || board[i];
-        if (val) {
-            let conflict = false;
-            for (let n of adj[i]) if ((fixed[n] || board[n]) === val) { conflict = true; break; }
-            ctx.fillStyle = fixed[i] ? "#d4af37" : (conflict ? "#ff3333" : "white");
-            ctx.font = `${s*0.5}px monospace`; ctx.textAlign = "center";
-            ctx.fillText(val, x+s/2, y+s*0.7);
+            // PHASE II: LAW AUDIT
+            let firstConflict = -1, conflicts = 0;
+            for (let i = 0; i < total; i++) {
+                let v = board[i];
+                let isViolated = false;
+                for (let neighbor of adj[i]) if (board[neighbor] === v) { isViolated = true; break; }
+                if (isViolated) { if (firstConflict === -1) firstConflict = i; conflicts++; }
+            }
+
+            // Update View
+            board.forEach((v, i) => { 
+                cells[i].innerText = v; 
+                if (!fixedIdx.includes(i)) cells[i].classList.add('calculated');
+            });
+            validate();
+
+            if (conflicts === 0) {
+                solved = true;
+            } else {
+                // PHASE III: DPI IMPOSITION (The Fix)
+                let nudge = (BigInt(firstConflict + 1) * ADELIC_CONST);
+                A ^= (nudge << BigInt(iteration % 64));
+                document.getElementById('truth-url-io').value = "0x" + A.toString(16).toUpperCase();
+                await new Promise(r => setTimeout(r, 0));
+            }
         }
-        ctx.strokeStyle = "#222"; ctx.strokeRect(x, y, s, s);
+
+        log(solved ? `Resonance Achieved in ${(performance.now()-start).toFixed(1)}ms.` : "Dissonance: Drift Required.");
+        isRunning = false;
     }
-}
 
-canvas.addEventListener('mousedown', (e) => {
-    const r = canvas.getBoundingClientRect(); const s = canvas.width / N;
-    const idx = Math.floor((e.clientY - r.top) / s) * N + Math.floor((e.clientX - r.left) / s);
-    let v = prompt("Digit:"); if (v !== null) { fixed[idx] = parseInt(v) || 0; softReset(); }
-});
-
-factoryReset();
+    function solidify() { cells.forEach(c => c.className = 'cell'); log("Stationary Waves Solidified."); }
+    function purge() { cells.forEach(c => { c.innerText = ""; c.className = 'cell'; }); log("Manifold Purged."); }
+    init();
 </script>
 </body>
 </html>
