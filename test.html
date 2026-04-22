@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Project NP | v11.2 Eternal Law Audit</title>
+    <title>Project NP | v11.3 Spectral Inference</title>
     <style>
         :root { 
             --sentinel: #00ff41; --bedrock: #050505; --accent: #00d4ff; 
@@ -16,7 +16,7 @@
         .header { width: 100%; text-align: center; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 15px; }
         .index-bar { 
             width: 95%; max-width: 1000px; background: var(--panel); border: 1px solid #222; 
-            padding: 15px; margin-bottom: 15px; border-left: 4px solid var(--friction); 
+            padding: 15px; margin-bottom: 15px; border-left: 4px solid var(--accent); 
         }
         .index-value { font-size: 0.7rem; color: var(--gold); word-break: break-all; font-weight: bold; }
         .main-layout { display: flex; gap: 20px; width: 95%; max-width: 1200px; justify-content: center; }
@@ -25,51 +25,51 @@
         canvas { border: 1px solid var(--accent); background: #000; }
         .btn { border: 1px solid var(--sentinel); color: var(--sentinel); background: none; cursor: pointer; padding: 8px; text-transform: uppercase; width: 100%; }
         .btn:hover { background: var(--sentinel); color: #000; }
-        .btn.snap { border-color: var(--friction); color: var(--friction); font-weight: bold; }
+        .btn.solidify { border-color: var(--gold); color: var(--gold); }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <strong>PROJECT NP: ADELIC ORACLE v11.2</strong>
-    <div style="font-size: 0.6rem; color: #555; margin-top: 4px;">ETERNAL LAW AUDIT | RED DIGIT DISSONANCE | $z=5$ READY</div>
+    <strong>PROJECT NP: ADELIC ORACLE v11.3</strong>
+    <div style="font-size: 0.6rem; color: #555; margin-top: 4px;">TOPOLOGICAL INFERENCE | 128-BIT ANCHOR | ETERNAL LAW AUDIT</div>
 </div>
 
 <div class="index-bar">
-    <div style="font-size: 0.6rem; color: #888; margin-bottom: 5px;">128-BIT SPECTRAL ANCHOR (LAW-BOUND)</div>
+    <div style="font-size: 0.6rem; color: #888; margin-bottom: 5px;">128-BIT SPECTRAL ANCHOR $\mathcal{A}(P)$</div>
     <div class="index-value" id="anchor-hex">0x00000000000000000000000000000000</div>
 </div>
 
 <div class="main-layout">
     <div class="sidebar">
         <div class="status-panel">
-            <span style="color:var(--accent)">MODE:</span> ETERNAL LAW AUDIT<br>
+            <span style="color:var(--accent)">MODE:</span> SPECTRAL INFERENCE<br>
             <span style="color:var(--accent)">NODES:</span> <span id="node-count">0</span><br>
-            <span style="color:var(--friction)">DISSONANCE:</span> <span id="conflict-val">0</span> RED CELLS<br>
+            <span style="color:var(--friction)">VETO COUNT:</span> <span id="v-val">0</span><br>
             <span style="color:var(--accent)">LATENCY:</span> <span id="ms-val">0ms</span>
         </div>
         <button class="btn" onclick="factoryReset()">Factory Purge</button>
-        <button class="btn" onclick="solidifyBoard()" style="border-color:var(--gold); color:var(--gold);">Solidify Waves</button>
+        <button class="btn solidify" onclick="solidifyBoard()">Solidify Waves</button>
     </div>
 
     <div style="display:flex; flex-direction:column; align-items:center;">
         <div class="controls" style="display:flex; gap:10px; margin-bottom:15px;">
             <div>z: <input type="number" id="z-val" value="3" min="2" max="5" style="width: 40px; background:#000; border:1px solid #444; color:white;" onchange="factoryReset()"></div>
-            <button class="btn snap" onclick="executeLawSnap()">Execute Law Snap</button>
+            <button class="btn" onclick="startInference()" style="font-weight:bold;">Execute Inference</button>
         </div>
         <canvas id="mainCanvas"></canvas>
     </div>
 </div>
 
 <script>
-let z, N, totalBits;
+let z, N, totalBits, isRunning = false;
 let board, fixed, adj = [];
 const ADELIC_CONST = 0x517cc1b727220a95n;
 
 const canvas = document.getElementById('mainCanvas');
 const ctx = canvas.getContext('2d');
 
-function initSudokuGraph() {
+function initGraph() {
     adj = Array.from({ length: totalBits }, () => []);
     for (let i = 0; i < totalBits; i++) {
         let r = Math.floor(i / N), c = i % N, b = Math.floor(r / z) * z + Math.floor(c / z);
@@ -86,103 +86,151 @@ function factoryReset() {
     N = z * z; totalBits = N * N;
     fixed = new Uint16Array(totalBits);
     document.getElementById('node-count').innerText = totalBits;
-    initSudokuGraph();
+    initGraph();
     softReset();
 }
 
 function softReset() {
+    isRunning = false;
     board = new Uint16Array(totalBits);
     canvas.width = canvas.height = Math.min(window.innerWidth * 0.8, 600);
     render();
 }
 
-// --- v11.2 ETERNAL LAW SNAP ---
+// --- v11.3 SPECTRAL INFERENCE LOGIC ---
 
-function getDeterminantSignature() {
-    let signature = 0n;
-    for (let b = 0; b < N; b++) {
-        let blockSum = 0n;
-        for (let i = 0; i < totalBits; i++) {
-            let br = Math.floor(Math.floor(i/N)/z)*z + Math.floor((i%N)/z);
-            if (br === b && fixed[i]) blockSum += BigInt(fixed[i]);
-        }
-        signature = (signature << 2n) | (blockSum % 4n);
-    }
-    return signature;
-}
-
-function deriveAnchor() {
+function deriveSpectralAnchor() {
     let payload = 0n;
     for (let i = 0; i < totalBits; i++) {
         if (fixed[i]) payload ^= (BigInt(fixed[i]) * ADELIC_CONST) << BigInt(i % 64);
     }
-    let sentinel = getDeterminantSignature();
+    // High-Order Sentinel bits (Top 32)
+    let sentinel = calculateMatrixTrace();
     return (sentinel << 96n) | (payload & ((1n << 96n) - 1n));
 }
 
-function marilynFold(anchor, sentinel, idx) {
+function calculateMatrixTrace() {
+    let trace = 0n;
+    for (let b = 0; b < N; b++) {
+        let bSum = 0n;
+        for (let i = 0; i < totalBits; i++) {
+            let br = Math.floor(Math.floor(i/N)/z)*z + Math.floor((i%N)/z);
+            if (br === b && fixed[i]) bSum += BigInt(fixed[i]);
+        }
+        trace = (trace << 2n) | (bSum % 4n);
+    }
+    return trace;
+}
+
+// The Tie-Breaker: Selecting the residue most resonant with the Anchor
+function selectResonantValue(idx, opts, anchor, sentinel) {
+    if (opts.length === 1) return opts[0];
+    
     let blockIdx = Math.floor(Math.floor(idx/N)/z)*z + Math.floor((idx%N)/z);
     let law = (sentinel >> BigInt(blockIdx * 2)) & 3n;
+    
     let rotation = BigInt(idx % 128);
     let projection = (anchor >> rotation) | (anchor << (128n - rotation));
-    return Number((projection * (law + 1n)) % BigInt(N)) + 1;
+    
+    // Select the option whose residue is 2-adically closest to the projection
+    let target = Number((projection * (law + 1n)) % BigInt(N)) + 1;
+    
+    // Find value in opts closest to our target projection
+    return opts.reduce((prev, curr) => Math.abs(curr - target) < Math.abs(prev - target) ? curr : prev);
 }
 
-async function executeLawSnap() {
-    const start = performance.now();
+async function startInference() {
+    if (isRunning) { isRunning = false; return; }
     softReset();
-    const anchor = deriveAnchor();
-    const sentinel = (anchor >> 96n);
-    document.getElementById('anchor-hex').innerText = "0x" + anchor.toString(16).toUpperCase();
+    isRunning = true;
+    
+    const startTime = performance.now();
+    let activeID = deriveSpectralAnchor();
+    let sentinel = activeID >> 96n;
+    let vetos = 0;
 
-    // 1. THE WAVEFRONT SNAP
-    for (let i = 0; i < totalBits; i++) {
-        if (!fixed[i]) board[i] = marilynFold(anchor, sentinel, i);
+    document.getElementById('anchor-hex').innerText = "0x" + activeID.toString(16).toUpperCase();
+
+    while (isRunning) {
+        let target = -1, minOpts = N + 1, bestOpts = [], maxPressure = -1, filledCount = 0;
+
+        // TOPOLOGICAL SCAN (Least Constraints First)
+        for (let i = 0; i < totalBits; i++) {
+            if (fixed[i] || board[i]) { filledCount++; continue; }
+            let opts = getValidOptions(i);
+            if (opts.length === 0) { target = -2; break; } // Paradox
+            
+            if (opts.length < minOpts) {
+                minOpts = opts.length; target = i; bestOpts = opts; maxPressure = countPressure(i);
+            } else if (opts.length === minOpts) {
+                let p = countPressure(i);
+                if (p > maxPressure) { maxPressure = p; target = i; bestOpts = opts; }
+            }
+        }
+
+        if (filledCount === totalBits || target === -1) { finalize(); break; }
+
+        if (target === -2) {
+            // MANIFOLD DRIFT
+            vetos++;
+            activeID += (1n << 64n); // Shift the phase
+            sentinel = activeID >> 96n;
+            board.fill(0);
+            updateStats(activeID, vetos);
+            await new Promise(r => setTimeout(r, 0));
+            continue;
+        }
+
+        // RESOLVE: Use the Anchor to pick the resonant path
+        board[target] = selectResonantValue(target, bestOpts, activeID, sentinel);
+
+        if (filledCount % 10 === 0) {
+            render();
+            updateStats(activeID, vetos);
+            await new Promise(r => setTimeout(r, 0));
+        }
     }
-
-    // 2. THE FINAL LAW CHECK: Identify "Red Digits"
-    let conflicts = 0;
-    for (let i = 0; i < totalBits; i++) {
-        if (checkConflict(i)) conflicts++;
-    }
-
-    document.getElementById('conflict-val').innerText = conflicts;
-    document.getElementById('ms-val').innerText = `${(performance.now() - start).toFixed(2)}ms`;
-    render();
+    
+    document.getElementById('ms-val').innerText = `${(performance.now() - startTime).toFixed(2)}ms`;
 }
 
-function checkConflict(idx) {
-    let val = fixed[idx] || board[idx];
-    if (!val) return false;
-    for (let neighbor of adj[idx]) {
-        if ((fixed[neighbor] || board[neighbor]) === val) return true;
-    }
-    return false;
+function countPressure(idx) {
+    let c = 0;
+    for(let n of adj[idx]) if(!fixed[n] && !board[n]) c++;
+    return c;
 }
 
-function render() {
+function getValidOptions(idx) {
+    let used = 0n;
+    for(let n of adj[idx]) {
+        let v = fixed[n] || board[n];
+        if(v) used |= (1n << BigInt(v));
+    }
+    let opts = [];
+    for(let v=1; v<=N; v++) if(!(used & (1n << BigInt(v)))) opts.push(v);
+    return opts;
+}
+
+function updateStats(id, v) {
+    document.getElementById('anchor-hex').innerText = "0x" + id.toString(16).toUpperCase();
+    document.getElementById('v-val').innerText = v;
+}
+
+function render(final = false) {
     const s = canvas.width / N;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // Draw Grid
     for(let i=0; i<=z; i++) {
         ctx.strokeStyle = "rgba(0, 212, 255, 0.2)"; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.moveTo(i*s*z, 0); ctx.lineTo(i*s*z, canvas.height); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(0, i*s*z); ctx.lineTo(canvas.width, i*s*z); ctx.stroke();
     }
-
     for (let i = 0; i < totalBits; i++) {
         let x = (i % N) * s, y = Math.floor(i / N) * s;
         ctx.lineWidth = 1; ctx.strokeStyle = "#111"; ctx.strokeRect(x, y, s, s);
-        
         let val = fixed[i] || board[i];
         if (val) {
-            let hasConflict = checkConflict(i);
             let isUser = fixed[i] !== 0;
-            
-            // THE AUDIT COLOR LOGIC: User-Fixed Gold | Correct White | Illegal Red
-            ctx.fillStyle = isUser ? "#d4af37" : (hasConflict ? "#ff3333" : "white");
-            
+            ctx.fillStyle = isUser ? "#d4af37" : (final ? "#00ff41" : "white");
             ctx.font = `bold ${s*0.5}px monospace`; ctx.textAlign = "center";
             ctx.fillText(val, x+s/2, y+s*0.7);
         }
@@ -192,7 +240,7 @@ function render() {
 canvas.addEventListener('mousedown', (e) => {
     const r = canvas.getBoundingClientRect(); const s = canvas.width / N;
     const idx = Math.floor((e.clientY - r.top) / s) * N + Math.floor((e.clientX - r.left) / s);
-    let v = prompt(`Planted Digit at C${idx}:`);
+    let v = prompt(`Planted Waveform at C${idx}:`);
     if (v !== null) { fixed[idx] = parseInt(v) || 0; softReset(); }
 });
 
@@ -201,6 +249,7 @@ function solidifyBoard() {
     softReset();
 }
 
+function finalize() { isRunning = false; render(true); }
 factoryReset();
 </script>
 </body>
