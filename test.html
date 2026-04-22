@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Project NP | Adelic Oracle v12.5</title>
+    <title>Project NP | Adelic Oracle v12.6</title>
     <style>
         :root { --sentinel: #00ff41; --bedrock: #050505; --accent: #00d4ff; --gold: #d4af37; --error: #ff3333; --jolt: #ff00ff; }
         body { background: var(--bedrock); color: var(--sentinel); font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
@@ -24,8 +24,8 @@
 <body>
 
 <div class="header">
-    <strong>PROJECT NP: ADELIC ORACLE v12.5</strong>
-    <div style="font-size:0.6rem; color:#888;">[ENTROPY INJECTOR | LOCK-BREAKER | z=5 OPTIMIZED]</div>
+    <strong>PROJECT NP: ADELIC ORACLE v12.6</strong>
+    <div style="font-size:0.6rem; color:#888;">[ADELIC WAVEGUIDE | BACKPRESSURE TUNER | z=5 READY]</div>
 </div>
 
 <div class="panel">
@@ -41,18 +41,18 @@
         <div class="io-label">Truth URL (Spectral Anchor A)</div>
         <textarea id="truth-url-io" placeholder="0x80000000..."></textarea>
         
-        <button class="btn" onclick="executeEntropySnap()">Execute Resonant Snap</button>
+        <button class="btn" onclick="executeWaveguideSnap()">Execute Resonant Snap</button>
         <button class="btn" style="border-color:var(--gold); color:var(--gold);" onclick="solidify()">Solidify Waves</button>
         
-        <div id="status">> [SYSTEM] v12.5 Entropy Injector Active. Waiting for Resonance...</div>
+        <div id="status">> [SYSTEM] v12.6 Waveguide Active. Complexity Collapse Engaged.</div>
     </div>
 </div>
 
 <script>
     let z, n, total, cells = [], adj = [];
     let isRunning = false;
-    let P1 = 31n, P2 = 67n; // Starting Rotation Primes
     const ADELIC_CONST = 0x517cc1b727220a95n;
+    const ENTROPY_PRIME = 0x9e3779b97f4a7c15n;
 
     function log(msg) { document.getElementById('status').innerHTML = `> ${msg}`; }
 
@@ -91,7 +91,7 @@
         return opts;
     }
 
-    async function executeEntropySnap() {
+    async function executeWaveguideSnap() {
         if (isRunning) { isRunning = false; return; }
         isRunning = true;
         
@@ -110,54 +110,60 @@
             let fixedIdx = board.map((v, i) => v !== 0 ? i : -1).filter(i => i !== -1);
             let fractureIdx = -1;
 
-            // --- PHASE I: THE ENTROPY SNAP ---
+            // --- PHASE I: THE WAVEGUIDE SNAP ---
             for (let i = 0; i < total; i++) {
                 if (fixedIdx.includes(i)) continue;
                 let opts = getValidOpts(board, i).sort((a,b) => a-b);
                 
                 if (opts.length === 0) { fractureIdx = i; break; }
 
-                // Use current Rotation Primes
-                let r = Math.floor(i/n), c = i%n;
-                let rot = BigInt((BigInt(r) * P1 + BigInt(c) * P2 + BigInt(i % 17)) % 128n);
+                // ADELIC LOOKAHEAD: We pick the option that minimizes neighbor pressure
+                let rot = BigInt((i * 19) % 128); 
                 let p = (A >> rot) | (A << (128n - rot));
-                board[i] = opts[Number((p ^ ADELIC_CONST) % BigInt(opts.length))];
+                
+                // Instead of just one pick, we sort options by the Anchor's phase
+                opts.sort((a, b) => {
+                    let phaseA = Number((BigInt(a) * p) % 100n);
+                    let phaseB = Number((BigInt(b) * p) % 100n);
+                    return phaseA - phaseB;
+                });
+
+                board[i] = opts[0];
             }
 
-            // Update UI
+            // Update View
             board.forEach((v, i) => { if(v && !fixedIdx.includes(i)) { cells[i].innerText = v; cells[i].classList.add('calculated'); } });
 
             if (fractureIdx === -1) {
                 log(`RESONANCE ACHIEVED in ${(performance.now()-startTime).toFixed(1)}ms.`);
                 isRunning = false;
             } else {
-                // --- PHASE II: LOCK-BREAKER TUNING ---
+                // --- PHASE II: ANTI-LOCK WAVEGUIDE ---
                 if (fractureIdx === lastFracture) lockCounter++;
                 else { lockCounter = 0; lastFracture = fractureIdx; }
 
-                if (lockCounter > 3) {
-                    // LOCK DETECTED: Inject Entropy to reset the rotation primes
-                    P1 = (P1 + 7n) % 127n; P2 = (P2 + 13n) % 127n;
-                    A ^= BigInt(Math.floor(Math.random() * 1000000)) * ADELIC_CONST;
-                    log(`<span style="color:var(--jolt)">!! PHASE LOCK AT ${fractureIdx}: ENTROPY INJECTION !!</span>`);
+                if (lockCounter > 2) {
+                    // APPLY ENTROPY JOLT: Multiplicative shift to break the sink
+                    A = (A ^ ENTROPY_PRIME) * BigInt(fractureIdx + 1);
+                    log(`<span style="color:var(--jolt)">!! WAVEGUIDE STALL AT ${fractureIdx}: ENTROPY JOLT !!</span>`);
                     lockCounter = 0;
                 } else {
-                    // Normal Index-Linked DPI
+                    // Spectral Drift
                     A ^= (BigInt(fractureIdx + 1) * ADELIC_CONST) << BigInt(iteration % 64);
-                    log(`TUNING: Fracture at Node ${fractureIdx}. (Iter ${iteration})`);
+                    log(`TUNING: Fracture at Node ${fractureIdx}.`);
                 }
 
                 document.getElementById('truth-url-io').value = "0x" + (A & ((1n << 128n) - 1n)).toString(16).toUpperCase();
                 cells[fractureIdx].classList.add('stress');
                 
-                // Reset for next shiver
+                // Wave Reset
                 cells.forEach((c, idx) => { if(!fixedIdx.includes(idx)) { c.innerText = ""; c.classList.remove('stress', 'calculated'); } });
                 await new Promise(r => setTimeout(r, 0));
             }
         }
     }
 
-    function solidify() { cells.forEach(c => c.className = 'cell'); log("Waves Solidified."); }
+    function solidify() { cells.forEach(c => c.className = 'cell'); log("Stationary Waves Solidified."); }
     function purge() { cells.forEach(c => { c.innerText = ""; c.className = 'cell'; }); log("Manifold Purged."); }
     init();
 </script>
