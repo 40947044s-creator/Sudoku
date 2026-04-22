@@ -2,170 +2,239 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Project NP | Adelic Oracle v18.5</title>
+    <title>Project NP | Universal Adelic Oracle v8.6</title>
     <style>
-        :root { --sentinel: #00ff41; --bedrock: #050505; --accent: #00d4ff; --gold: #d4af37; --psi: #ff00ff; --error: #ff3333; }
-        body { background: var(--bedrock); color: var(--sentinel); font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
-        .header { text-align: center; border-bottom: 2px solid var(--sentinel); width: 100%; max-width: 900px; padding-bottom: 10px; margin-bottom: 25px; }
-        .panel { display: flex; gap: 20px; background: #111; padding: 20px; border: 1px solid #333; border-top: 4px solid var(--gold); width: 100%; max-width: 1150px; box-sizing: border-box; }
-        .grid-container { flex: 1.5; display: flex; flex-direction: column; align-items: center; }
-        .grid { display: grid; border: 3px solid var(--sentinel); background: rgba(0, 255, 65, 0.02); }
-        .cell { border: 0.5px solid rgba(0, 255, 65, 0.1); display: flex; align-items: center; justify-content: center; color: var(--gold); font-weight: bold; outline: none; cursor: text; overflow: hidden; }
-        .cell.invalid { background: rgba(255, 51, 51, 0.3); color: var(--error); border: 1.5px solid var(--error); }
-        .cell.calculated { color: #fff; font-weight: normal; background: rgba(0, 212, 255, 0.03); }
-        .controls { flex: 1; display: flex; flex-direction: column; gap: 12px; }
-        .io-label { font-size: 0.65rem; color: #888; text-transform: uppercase; margin-bottom: 5px; }
-        #rank-id-io { width: 100%; background: #000; color: var(--accent); border: 1px solid #444; padding: 12px; box-sizing: border-box; font-family: inherit; font-size: 0.85rem; word-break: break-all; min-height: 140px; outline: none; text-align: center; resize: none; }
-        .btn { background: rgba(0, 255, 65, 0.1); border: 1px solid var(--sentinel); color: var(--sentinel); padding: 14px; cursor: pointer; font-weight: bold; text-transform: uppercase; transition: 0.2s; }
+        :root { 
+            --sentinel: #00ff41; --bedrock: #050505; --accent: #00d4ff; 
+            --gold: #d4af37; --friction: #ff3333; --void: #111;
+        }
+        body { 
+            background: var(--bedrock); color: var(--sentinel); 
+            font-family: 'Courier New', monospace; margin: 0; padding: 20px;
+            display: flex; flex-direction: column; align-items: center;
+        }
+        .main-layout { display: flex; gap: 20px; width: 95%; max-width: 1000px; justify-content: center; }
+        
+        /* UI Panels */
+        .sidebar { width: 220px; display: flex; flex-direction: column; gap: 10px; }
+        .history-panel { 
+            flex-grow: 1; background: #0a0a0a; border: 1px solid #333; 
+            overflow-y: auto; padding: 10px; font-size: 0.65rem; height: 350px;
+        }
+        .history-item { padding: 4px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; }
+        .history-item.illegal { color: var(--friction); text-shadow: 0 0 5px var(--friction); }
+        .history-item.legal { color: var(--gold); }
+
+        .index-bar {
+            width: 100%; background: #0a0a0a; border: 1px solid #333;
+            margin-bottom: 15px; padding: 10px; border-left: 5px solid var(--gold);
+        }
+        .index-value { font-size: 0.85rem; color: var(--gold); word-break: break-all; }
+
+        canvas { border: 1px solid var(--accent); background: #000; box-shadow: 0 0 30px rgba(0, 212, 255, 0.15); cursor: crosshair; }
+        
+        .controls { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; padding: 15px; background: rgba(0,255,65,0.03); border: 1px solid #222; }
+        input, button { background: #000; border: 1px solid #444; color: var(--accent); padding: 5px; font-size: 0.7rem; }
+        .btn { border-color: var(--sentinel); color: var(--sentinel); cursor: pointer; text-transform: uppercase; }
         .btn:hover { background: var(--sentinel); color: #000; }
-        #status { font-size: 0.75rem; color: #999; margin-top: 10px; border-left: 2px solid var(--gold); padding-left: 10px; min-height: 60px; line-height: 1.4; }
+        .btn.tuning { border-color: var(--gold); color: var(--gold); }
     </style>
 </head>
 <body>
 
-<div class="header">
-    <strong>PROJECT NP: ADELIC ORACLE v18.5</strong>
-    <div style="font-size:0.6rem; color:#888;">[BOUNDARY GUARD | ASYNC PROPAGATION]</div>
+<div class="index-bar">
+    <div style="font-size: 0.6rem; color: #888;">ADELIC ADDRESS (UNIQUE SPACE INDEX)</div>
+    <div class="index-value" id="index-val">#PENDING_INIT</div>
+    <div style="font-size: 0.6rem; color: var(--accent); margin-top: 5px;">
+        Resonance: <span id="perc-val">0.00%</span> | Friction: <span id="f-val">0</span>
+    </div>
 </div>
 
-<div class="panel">
-    <div class="grid-container">
-        <div style="display:flex; gap:10px; width:100%; margin-bottom:10px;">
-            <div style="flex:1;"><div class="io-label">Dim (z)</div><input type="number" id="z-val" value="3" min="2" max="4" style="width:100%; background:#000; color:var(--accent); border:1px solid #444; padding:5px;" onchange="init()"></div>
-            <button class="btn" style="flex:2; font-size:0.65rem; border-color:var(--error); color:var(--error);" onclick="purge()">Purge Grid</button>
-        </div>
-        <div id="grid-root"></div>
+<div class="main-layout">
+    <div class="sidebar">
+        <div style="font-size: 0.7rem; color: var(--gold);">OVERRIDE HISTORY</div>
+        <div class="history-panel" id="history-list"></div>
+        <button class="btn" onclick="resetSystem()" style="color:var(--friction); border-color:var(--friction);">Purge System</button>
     </div>
-    <div class="controls">
-        <div class="io-label">Adelic Rank-ID</div>
-        <textarea id="rank-id-io" placeholder="Enter ID..."></textarea>
-        <button class="btn" onclick="executeSnap()">Path A: Snap Pointer</button>
-        <button class="btn" style="border-color:var(--psi); color:var(--psi);" onclick="executeInference()">Path B: Infer Plant</button>
-        <div id="status">> [SYSTEM] Safety Governor Active. Max z=4.</div>
+
+    <div style="display: flex; flex-direction: column; align-items: center;">
+        <div class="controls">
+            <div>z: <input type="number" id="z-val" value="3" min="2" max="5" style="width: 30px;" onchange="initSystem()"></div>
+            <div>Anchor: <input type="text" id="path-id" value="40947044" style="width: 120px;"></div>
+            <button class="btn" onclick="startInference()">Inference</button>
+            <button class="btn tuning" onclick="autoTuneResonance()">Auto-Tune</button>
+        </div>
+        <canvas id="mainCanvas"></canvas>
     </div>
 </div>
 
 <script>
-    let z, n, total, cells = [];
-    let isRunning = false;
+let z, N, totalBits, isRunning = false;
+let board, fixed, phase, inputHistory = [];
+let rowM, colM, blkM, shadowR, shadowC, shadowB;
+const ADELIC_CONST = 0x517cc1b727220a95n;
 
-    function log(msg) { document.getElementById('status').innerHTML = `> ${msg}`; }
+const canvas = document.getElementById('mainCanvas');
+const ctx = canvas.getContext('2d');
 
-    function init() {
-        let zInput = parseInt(document.getElementById('z-val').value);
-        if (zInput > 4) { zInput = 4; document.getElementById('z-val').value = 4; log("WARN: z limited to 4 to prevent manifold collapse."); }
-        z = zInput; n = z * z; total = n * n;
-        const root = document.getElementById('grid-root'); root.innerHTML = '';
-        const grid = document.createElement('div');
-        grid.className = 'grid'; grid.style.gridTemplateColumns = `repeat(${n}, 1fr)`;
-        const size = Math.min(window.innerWidth * 0.45, 500);
-        grid.style.width = grid.style.height = `${size}px`;
-        cells = [];
-        for (let i = 0; i < total; i++) {
-            const c = document.createElement('div'); c.className = 'cell'; c.contentEditable = "true";
-            c.style.fontSize = `${(size/n) * (n > 9 ? 0.35 : 0.5)}px`;
-            if ((Math.floor(i / n) + 1) % z === 0 && Math.floor(i / n) < n - 1) c.style.borderBottom = "2.5px solid var(--sentinel)";
-            if ((i + 1) % z === 0 && (i + 1) % n !== 0) c.style.borderRight = "2.5px solid var(--sentinel)";
-            c.oninput = () => { validate(); };
-            grid.appendChild(c); cells.push(c);
-        }
-        root.appendChild(grid);
-        log(`Scaled: n=${n} (${total} cells). Ready.`);
+function initSystem() {
+    isRunning = false;
+    z = parseInt(document.getElementById('z-val').value);
+    N = z * z;
+    totalBits = N * N;
+    board = new Uint16Array(totalBits);
+    fixed = new Uint16Array(totalBits);
+    phase = new Uint16Array(totalBits).fill(0);
+    rowM = new Array(N).fill(0n); colM = new Array(N).fill(0n); blkM = new Array(N).fill(0n);
+    shadowR = new Array(totalBits); shadowC = new Array(totalBits); shadowB = new Array(totalBits);
+    inputHistory = [];
+    document.getElementById('history-list').innerHTML = '';
+    canvas.width = canvas.height = Math.min(window.innerWidth * 0.8, 500);
+    render();
+}
+
+// --- Validation Logic (Yellow vs Red) ---
+function getConflict(idx, val) {
+    if (val === 0) return false;
+    let r = Math.floor(idx / N), c = idx % N, b = Math.floor(r / z) * z + Math.floor(c / z);
+    for (let i = 0; i < N; i++) {
+        if (i !== c && fixed[r * N + i] === val) return true;
+        if (i !== r && fixed[i * N + c] === val) return true;
     }
-
-    function getOpts(board, d) {
-        let r = Math.floor(d / n), c = d % n, b = Math.floor(r / z) * z + Math.floor(c / z);
-        let mask = 0;
-        for (let j = 0; j < n; j++) {
-            mask |= (1 << (board[r * n + j] - 1));
-            mask |= (1 << (board[j * n + c] - 1));
+    let startR = Math.floor(r / z) * z, startC = Math.floor(c / z) * z;
+    for (let ir = startR; ir < startR + z; ir++) {
+        for (let ic = startC; ic < startC + z; ic++) {
+            let tIdx = ir * N + ic;
+            if (tIdx !== idx && fixed[tIdx] === val) return true;
         }
-        let br = Math.floor(r / z) * z, bc = Math.floor(c / z) * z;
-        for (let i = 0; i < z; i++) for (let j = 0; j < z; j++) mask |= (1 << (board[(br + i) * n + (bc + j)] - 1));
+    }
+    return false;
+}
+
+// --- v8.6 Deterministic Inference ---
+async function startInference() {
+    if (isRunning) return;
+    isRunning = true;
+    let anchor = BigInt(document.getElementById('path-id').value);
+    if ((anchor & 1n) === 0n) anchor |= (1n << 63n); // Parity Law
+    
+    let d = 0, scanStep = 0n, friction = 0, activeID = anchor; 
+
+    while (isRunning && d >= 0) {
+        if (d === totalBits) { finalize(); break; }
+
+        if (friction > N * 15) {
+            scanStep++; d = Math.max(0, d - N); activeID = anchor + scanStep;
+            friction = 0; updateStats(activeID, friction); continue;
+        }
+
+        let r = Math.floor(d / N), c = d % N, b = Math.floor(r / z) * z + Math.floor(c / z);
+        let mask = rowM[r] | colM[c] | blkM[b];
         let opts = [];
-        for (let i = 1; i <= n; i++) if (!(mask & (1 << (i - 1)))) opts.push(i);
-        return opts;
-    }
+        for (let i = 1; i <= N; i++) if (!(mask & (1n << BigInt(i)))) opts.push(i);
 
-    function validate() {
-        let board = cells.map(c => parseInt(c.innerText) || 0);
-        let violations = new Set();
-        for (let i = 0; i < total; i++) {
-            if (board[i] === 0) continue;
-            let r = Math.floor(i/n), c = i%n, b = Math.floor(r/z)*z + Math.floor(c/z);
-            for(let j=0; j<total; j++) {
-                if(i===j || board[j]===0) continue;
-                if((Math.floor(j/n)===r || j%n===c || (Math.floor(Math.floor(j/n)/z)*z + Math.floor((j%n)/z))===b) && board[i]===board[j]) violations.add(i);
-            }
+        if (opts.length === 0) {
+            board[d] = 0; d--;
+            if (d < 0) { isRunning = false; alert("VOID: No Solution at this frequency."); break; }
+            rowM = [...shadowR[d]]; colM = [...shadowC[d]]; blkM = [...shadowB[d]];
+            phase[d]++; friction++; continue;
         }
-        cells.forEach((c, idx) => violations.has(idx) ? c.classList.add('invalid') : c.classList.remove('invalid'));
-        return violations.size === 0;
-    }
 
-    async function executeSnap() {
-        let input = document.getElementById('rank-id-io').value.replace(/\D/g, '');
-        let idVal = BigInt(input || "0");
-        let board = new Uint32Array(total);
-        log("Snap: Async Projection...");
-        for (let d = 0; d < total; d++) {
-            let opts = getOpts(board, d).sort((a,b) => a-b);
-            if (opts.length === 0) return log("<span style='color:var(--error)'>WA: Out of Bounds.</span>");
-            let choiceIdx = Number(idVal % BigInt(opts.length));
-            idVal /= BigInt(opts.length);
-            board[d] = opts[choiceIdx];
-            cells[d].innerText = board[d];
-            cells[d].classList.add('calculated');
-            if (d % n === 0) await new Promise(r => requestAnimationFrame(r));
+        shadowR[d] = [...rowM]; shadowC[d] = [...colM]; shadowB[d] = [...blkM];
+
+        let val;
+        if (fixed[d] !== 0) {
+            val = opts.includes(fixed[d]) ? fixed[d] : 0;
+            if (val === 0) { d--; friction += 20; continue; }
+        } else if (opts.length === 1) {
+            val = opts[0]; // Truth-Lock
+        } else {
+            let seed = Number(((activeID ^ BigInt(d)) * ADELIC_CONST) % 0xFFFFFFFn);
+            val = opts[(Math.abs(seed) + phase[d]) % opts.length];
         }
-        log("SUCCESS.");
-    }
 
-    async function executeInference() {
-        if (isRunning || !validate()) return;
-        isRunning = true;
-        let board = cells.map(c => parseInt(c.innerText) || 0);
-        let fixed = board.map((v, i) => v !== 0 ? i : -1).filter(i => i !== -1);
-        function solve() {
-            let bestCell = -1, minOpts = n + 1, bestOpts = [];
-            for (let i = 0; i < total; i++) {
-                if (board[i] === 0) {
-                    let opts = getOpts(board, i);
-                    if (opts.length === 0) return false;
-                    if (opts.length < minOpts) { minOpts = opts.length; bestCell = i; bestOpts = opts; }
-                }
-            }
-            if (bestCell === -1) return true;
-            for (let val of bestOpts) {
-                board[bestCell] = val;
-                if (solve()) return true;
-                board[bestCell] = 0;
-            }
-            return false;
+        board[d] = val;
+        let bit = 1n << BigInt(val);
+        rowM[r] |= bit; colM[c] |= bit; blkM[b] |= bit;
+        d++;
+        if (d % N === 0) { updateStats(activeID, friction); render(); await new Promise(r => setTimeout(r, 0)); }
+    }
+}
+
+// --- Resonance Auto-Tune ---
+async function autoTuneResonance() {
+    let base = BigInt(document.getElementById('path-id').value);
+    let bestA = base, maxFit = -1;
+    for (let i = 0n; i < 150n; i++) {
+        let tA = base + i; if ((tA & 1n) === 0n) tA |= (1n << 63n);
+        let fit = await probeFitness(tA);
+        if (fit > maxFit) { maxFit = fit; bestA = tA; }
+        if (fit >= totalBits) break;
+    }
+    document.getElementById('path-id').value = bestA.toString();
+    initSystem();
+}
+
+async function probeFitness(tA) {
+    let d = 0, pR = [...rowM], pC = [...colM], pB = [...blkM], f = 0;
+    while (d < totalBits && f < 5) {
+        let r = Math.floor(d / N), c = d % N, b = Math.floor(r / z) * z + Math.floor(c / z);
+        let mask = pR[r] | pC[c] | pB[b];
+        let opts = [];
+        for (let i = 1; i <= N; i++) if (!(mask & (1n << BigInt(i)))) opts.push(i);
+        if (opts.length === 0) { f++; break; }
+        let val = fixed[d] || opts[Number(((tA ^ BigInt(d)) * ADELIC_CONST) % BigInt(opts.length))];
+        let bit = 1n << BigInt(val);
+        pR[r] |= bit; pC[c] |= bit; pB[b] |= bit; d++;
+    }
+    return d;
+}
+
+function updateStats(id, f) {
+    document.getElementById('index-val').innerText = `#${id.toString()}`;
+    document.getElementById('f-val').innerText = f;
+}
+
+function render(final = false) {
+    const s = canvas.width / N;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (let i = 0; i < totalBits; i++) {
+        let x = (i % N) * s, y = Math.floor(i / N) * s;
+        ctx.strokeStyle = "#222"; ctx.strokeRect(x, y, s, s);
+        let val = fixed[i] || board[i];
+        if (val) {
+            let isFixed = fixed[i] !== 0;
+            let isBad = isFixed && getConflict(i, fixed[i]);
+            ctx.fillStyle = isBad ? var(--friction) : (isFixed ? var(--gold) : (final ? var(--sentinel) : "white"));
+            if (isBad) { ctx.globalAlpha = 0.2; ctx.fillRect(x,y,s,s); ctx.globalAlpha = 1.0; }
+            ctx.font = `bold ${s*0.5}px monospace`; ctx.textAlign = "center";
+            ctx.fillText(val, x+s/2, y+s*0.7);
         }
-        const t0 = performance.now();
-        let success = solve();
-        const t1 = performance.now();
-        if (success) {
-            board.forEach((v, i) => { cells[i].innerText = v; if (!fixed.includes(i)) cells[i].classList.add('calculated'); });
-            log(`Truth URL Grounded in ${(t1-t0).toFixed(1)}ms.`);
-            synthesis();
-        } else log("<span style='color:var(--error)'>WA: Irrational.</span>");
-        isRunning = false;
     }
+}
 
-    function synthesis() {
-        let board = cells.map(c => parseInt(c.innerText) || 0);
-        let id = 0n, mult = 1n, tBoard = new Uint32Array(total);
-        for (let d = 0; d < total; d++) {
-            let opts = getOpts(tBoard, d).sort((a,b) => a-b);
-            if (board[d] !== 0) { id += BigInt(opts.indexOf(board[d])) * mult; tBoard[d] = board[d]; }
-            mult *= BigInt(opts.length || 1);
-        }
-        document.getElementById('rank-id-io').value = id.toString();
+canvas.addEventListener('mousedown', (e) => {
+    const r = canvas.getBoundingClientRect(); const s = canvas.width / N;
+    const idx = Math.floor((e.clientY - r.top) / s) * N + Math.floor((e.clientX - r.left) / s);
+    let v = prompt(`Fix Cell ${idx}:`);
+    if (v !== null) {
+        let val = parseInt(v) || 0; fixed[idx] = val;
+        let bad = getConflict(idx, val);
+        inputHistory.push({idx, val, illegal: bad});
+        updateHistoryUI(); render();
     }
+});
 
-    function purge() { cells.forEach(c => { c.innerText = ""; c.className = 'cell'; }); log("Purged."); }
-    init();
+function updateHistoryUI() {
+    const list = document.getElementById('history-list'); list.innerHTML = '';
+    inputHistory.slice().reverse().forEach(h => {
+        list.innerHTML += `<div class="history-item ${h.illegal?'illegal':'legal'}"><span>C${h.idx}</span><span>→${h.val}</span></div>`;
+    });
+}
+
+function finalize() { isRunning = false; render(true); }
+function resetSystem() { initSystem(); }
+initSystem();
 </script>
 </body>
 </html>
