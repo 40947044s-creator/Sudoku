@@ -2,17 +2,13 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Project NP | v11.5 DPI Resonance</title>
+    <title>Project NP | v11.8 Resonance Gallery</title>
     <style>
         :root { 
             --sentinel: #00ff41; --bedrock: #050505; --accent: #00d4ff; 
             --gold: #d4af37; --friction: #ff3333; --panel: #0a0a0a;
         }
-        body { 
-            background: var(--bedrock); color: var(--sentinel); 
-            font-family: 'Courier New', monospace; margin: 0; padding: 15px;
-            display: flex; flex-direction: column; align-items: center;
-        }
+        body { background: var(--bedrock); color: var(--sentinel); font-family: 'Courier New', monospace; margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: center; }
         .header { width: 100%; text-align: center; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 15px; }
         .index-bar { width: 95%; max-width: 1000px; background: var(--panel); border: 1px solid #222; padding: 15px; margin-bottom: 15px; border-left: 4px solid var(--accent); }
         .index-value { font-size: 0.7rem; color: var(--gold); word-break: break-all; font-weight: bold; }
@@ -20,47 +16,49 @@
         .sidebar { width: 300px; display: flex; flex-direction: column; gap: 10px; }
         .status-panel { background: #000; border: 1px solid #222; padding: 10px; font-size: 0.8rem; line-height: 1.6; }
         canvas { border: 1px solid var(--accent); background: #000; }
+        .gallery-controls { display: flex; justify-content: space-between; align-items: center; background: #111; padding: 5px; margin-top: 10px; border: 1px solid #333; }
         .btn { border: 1px solid var(--sentinel); color: var(--sentinel); background: none; cursor: pointer; padding: 10px; text-transform: uppercase; width: 100%; font-weight: bold; }
         .btn:hover { background: var(--sentinel); color: #000; }
-        .btn.snap { border-color: var(--accent); color: var(--accent); font-size: 1.1rem; }
+        .btn.harvest { border-color: var(--gold); color: var(--gold); }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <strong>PROJECT NP: ADELIC ORACLE v11.5</strong>
-    <div style="font-size: 0.6rem; color: #555; margin-top: 4px;">GLOBAL INDEX-LINKED DPI | $O(N)$ COMPLEXITY | MARILYN-ADELIC CONSENSUS</div>
+    <strong>PROJECT NP: ADELIC ORACLE v11.8</strong>
+    <div style="font-size: 0.6rem; color: #555; margin-top: 4px;">RESONANCE HARVESTER | $O(N)$ SNAP | $z=5$ GALLERY</div>
 </div>
 
 <div class="index-bar">
-    <div style="font-size: 0.6rem; color: #888; margin-bottom: 5px;">128-BIT SPECTRAL ANCHOR ($\mathcal{A}$)</div>
+    <div style="font-size: 0.6rem; color: #888; margin-bottom: 5px;">CURRENT ADELIC ANCHOR ($A$)</div>
     <div class="index-value" id="anchor-hex">0x00000000000000000000000000000000</div>
 </div>
 
 <div class="main-layout">
     <div class="sidebar">
         <div class="status-panel">
-            <span style="color:var(--accent)">MODE:</span> INDEX-DPI RESONANCE<br>
-            <span style="color:var(--accent)">NODES:</span> <span id="node-count">0</span><br>
             <span style="color:var(--accent)">ITERATION:</span> <span id="iter-val">0</span><br>
-            <span style="color:var(--friction)">CONFLICTS:</span> <span id="conflict-val">0</span> RED CELLS
+            <span style="color:var(--gold)">HARVESTED:</span> <span id="res-count">0</span> SOLUTIONS<br>
+            <span style="color:var(--friction)">CONFLICTS:</span> <span id="conflict-val">0</span>
         </div>
-        <button class="btn" onclick="factoryReset()" style="border-color:var(--friction); color:var(--friction);">Factory Purge</button>
-        <button class="btn" onclick="solidifyBoard()" style="border-color:var(--gold); color:var(--gold);">Solidify Waves</button>
+        <div class="gallery-controls">
+            <button onclick="changeGallery(-1)" style="background:none; color:var(--accent); border:none; cursor:pointer;"><<</button>
+            <span id="gallery-idx">VIEWING: LIVE</span>
+            <button onclick="changeGallery(1)" style="background:none; color:var(--accent); border:none; cursor:pointer;">>></button>
+        </div>
+        <button class="btn" onclick="factoryReset()" style="border-color:var(--friction); color:var(--friction); margin-top:10px;">Purge</button>
     </div>
 
     <div style="display:flex; flex-direction:column; align-items:center;">
-        <div class="controls" style="display:flex; gap:10px; margin-bottom:15px;">
-            <div>z: <input type="number" id="z-val" value="3" min="2" max="5" style="width: 40px; background:#000; border:1px solid #444; color:white;" onchange="factoryReset()"></div>
-            <button class="btn snap" onclick="executeDPISnap()">Execute DPI Snap</button>
-        </div>
-        <canvas id="mainCanvas"></canvas>
+        <button class="btn harvest" id="harv-btn" onclick="toggleHarvest()">Execute Resonance Harvest</button>
+        <canvas id="mainCanvas" style="margin-top:15px;"></canvas>
     </div>
 </div>
 
 <script>
-let z, N, totalBits;
-let board, fixed, adj = [];
+let z, N, totalBits, isRunning = false;
+let board, fixed, adj = [], archive = [];
+let galleryPointer = -1;
 const ADELIC_CONST = 0x517cc1b727220a95n;
 
 const canvas = document.getElementById('mainCanvas');
@@ -79,31 +77,18 @@ function initGraph() {
 }
 
 function factoryReset() {
-    z = parseInt(document.getElementById('z-val').value);
+    z = parseInt(prompt("Set z-factor (3-5):", "3")) || 3;
     N = z * z; totalBits = N * N;
     fixed = new Uint16Array(totalBits);
-    document.getElementById('node-count').innerText = totalBits;
-    initGraph();
-    softReset();
+    archive = []; galleryPointer = -1;
+    initGraph(); softReset();
 }
 
 function softReset() {
+    isRunning = false;
     board = new Uint16Array(totalBits);
-    canvas.width = canvas.height = Math.min(window.innerWidth * 0.8, 600);
+    canvas.width = canvas.height = Math.min(window.innerWidth * 0.8, 550);
     render();
-}
-
-// --- MARILYN FOLD (Ω) & DPI LOGIC ---
-
-function deriveInitialAnchor() {
-    let payload = 0n;
-    for (let i = 0; i < totalBits; i++) {
-        if (fixed[i]) {
-            let rot = BigInt((Math.floor(i/N)*13) + ((i%N)*17)) % 128n;
-            payload ^= (BigInt(fixed[i]) * ADELIC_CONST) << rot;
-        }
-    }
-    return payload | (1n << 127n);
 }
 
 function marilynFold(anchor, idx) {
@@ -113,86 +98,104 @@ function marilynFold(anchor, idx) {
     return Number((projection * ADELIC_CONST) % BigInt(N)) + 1;
 }
 
-async function executeDPISnap() {
-    let A = deriveInitialAnchor();
-    let solved = false;
-    let iteration = 0;
-    const maxIters = 50;
+function toggleHarvest() {
+    if (isRunning) { isRunning = false; document.getElementById('harv-btn').innerText = "Execute Resonance Harvest"; return; }
+    isRunning = true;
+    document.getElementById('harv-btn').innerText = "STOP HARVESTING";
+    executeHarvest();
+}
 
-    while (!solved && iteration < maxIters) {
+async function executeHarvest() {
+    let A = 0x80000000000000000000000000000000n; // Grounded start
+    let iteration = 0;
+    
+    while (isRunning && iteration < 500) {
         iteration++;
         board.fill(0);
         
-        // 1. WAVEFRONT SNAP - O(N)
+        // 1. O(N) SNAP
+        for (let i = 0; i < totalBits; i++) if (!fixed[i]) board[i] = marilynFold(A, i);
+
+        // 2. LAW AUDIT
+        let conflictIdx = -1; let conflicts = 0;
         for (let i = 0; i < totalBits; i++) {
-            if (!fixed[i]) board[i] = marilynFold(A, i);
+            let val = fixed[i] || board[i];
+            let c = false;
+            for (let n of adj[i]) if ((fixed[n] || board[n]) === val) { c = true; break; }
+            if (c) { if (conflictIdx === -1) conflictIdx = i; conflicts++; }
         }
 
-        // 2. REALITY CHECK - Identify the first dissonant index
-        let conflictIdx = -1;
-        let conflicts = 0;
-        for (let i = 0; i < totalBits; i++) {
-            if (checkConflict(i)) {
-                if (conflictIdx === -1) conflictIdx = i;
-                conflicts++;
-            }
+        // 3. ARCHIVE IF RESONANT
+        if (conflicts === 0) {
+            archive.push(new Uint16Array(board));
+            document.getElementById('res-count').innerText = archive.length;
         }
+
+        // 4. DPI IMPOSITION (The Shiver)
+        // Force the shift using the conflict index + 1
+        let nudge = (BigInt(conflictIdx + 1) * ADELIC_CONST);
+        A ^= (nudge << BigInt(iteration % 64)) | (nudge >> BigInt(64 - (iteration % 64)));
 
         document.getElementById('anchor-hex').innerText = "0x" + A.toString(16).toUpperCase();
         document.getElementById('iter-val').innerText = iteration;
         document.getElementById('conflict-val').innerText = conflicts;
-        render();
+        
+        if (iteration % 2 === 0) { render(); await new Promise(r => setTimeout(r, 0)); }
+    }
+    isRunning = false;
+    document.getElementById('harv-btn').innerText = "Execute Resonance Harvest";
+}
 
-        if (conflicts === 0) {
-            solved = true;
-        } else {
-            // 3. INDEX-LINKED DPI: Correct the Anchor using the conflict index
-            // We use the dissonance to nudge the phase toward the Eternal Law
-            A ^= (BigInt(conflictIdx) * ADELIC_CONST);
-            await new Promise(r => setTimeout(r, 0)); // Visual snap
-        }
+function changeGallery(dir) {
+    if (archive.length === 0) return;
+    galleryPointer += dir;
+    if (galleryPointer >= archive.length) galleryPointer = -1;
+    if (galleryPointer < -1) galleryPointer = archive.length - 1;
+    
+    if (galleryPointer === -1) {
+        document.getElementById('gallery-idx').innerText = "VIEWING: LIVE";
+        render();
+    } else {
+        document.getElementById('gallery-idx').innerText = `VIEWING: #${galleryPointer + 1}`;
+        renderFromArchive(archive[galleryPointer]);
     }
 }
 
-function checkConflict(idx) {
-    let val = fixed[idx] || board[idx];
-    if (!val) return false;
-    for (let neighbor of adj[idx]) if ((fixed[neighbor] || board[neighbor]) === val) return true;
-    return false;
+function renderFromArchive(savedBoard) {
+    const s = canvas.width / N;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (let i = 0; i < totalBits; i++) {
+        let x = (i % N) * s, y = Math.floor(i / N) * s;
+        ctx.fillStyle = fixed[i] ? "#d4af37" : "white";
+        ctx.font = `${s*0.5}px monospace`; ctx.textAlign = "center";
+        ctx.fillText(savedBoard[i], x+s/2, y+s*0.7);
+        ctx.strokeStyle = "#222"; ctx.strokeRect(x, y, s, s);
+    }
 }
 
 function render() {
+    if (galleryPointer !== -1) return;
     const s = canvas.width / N;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    for(let i=0; i<=z; i++) {
-        ctx.strokeStyle = "rgba(0, 212, 255, 0.2)"; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.moveTo(i*s*z, 0); ctx.lineTo(i*s*z, canvas.height); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(0, i*s*z); ctx.lineTo(canvas.width, i*s*z); ctx.stroke();
-    }
     for (let i = 0; i < totalBits; i++) {
         let x = (i % N) * s, y = Math.floor(i / N) * s;
-        ctx.lineWidth = 1; ctx.strokeStyle = "#111"; ctx.strokeRect(x, y, s, s);
         let val = fixed[i] || board[i];
         if (val) {
-            let conflict = checkConflict(i);
+            let conflict = false;
+            for (let n of adj[i]) if ((fixed[n] || board[n]) === val) { conflict = true; break; }
             ctx.fillStyle = fixed[i] ? "#d4af37" : (conflict ? "#ff3333" : "white");
-            ctx.font = `bold ${s*0.5}px monospace`; ctx.textAlign = "center";
+            ctx.font = `${s*0.5}px monospace`; ctx.textAlign = "center";
             ctx.fillText(val, x+s/2, y+s*0.7);
         }
+        ctx.strokeStyle = "#222"; ctx.strokeRect(x, y, s, s);
     }
 }
 
 canvas.addEventListener('mousedown', (e) => {
     const r = canvas.getBoundingClientRect(); const s = canvas.width / N;
     const idx = Math.floor((e.clientY - r.top) / s) * N + Math.floor((e.clientX - r.left) / s);
-    let v = prompt(`Waveform Input:`);
-    if (v !== null) { fixed[idx] = parseInt(v) || 0; softReset(); }
+    let v = prompt("Digit:"); if (v !== null) { fixed[idx] = parseInt(v) || 0; softReset(); }
 });
-
-function solidifyBoard() {
-    for (let i = 0; i < totalBits; i++) if (!fixed[i] && board[i]) fixed[i] = board[i];
-    softReset();
-}
 
 factoryReset();
 </script>
