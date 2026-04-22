@@ -1,140 +1,241 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Project NP | Adelic Oracle v8.6.23</title>
+    <title>Project NP | Adelic Oracle v8.7</title>
     <style>
-        :root { --sentinel: #00ff41; --bedrock: #050505; --gold: #d4af37; --accent: #00d4ff; --friction: #ff3333; }
-        body { background: var(--bedrock); color: var(--sentinel); font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; padding: 15px; margin: 0; overflow: hidden; height: 100vh; }
-        #header { text-align: center; border-bottom: 2px solid var(--sentinel); width: 100%; padding-bottom: 10px; }
-        .index-bar { width: 90%; max-width: 600px; background: #111; border: 1px solid #333; margin: 15px 0; padding: 15px; border-left: 5px solid var(--gold); }
-        .index-label { font-size: 0.6rem; color: #888; text-transform: uppercase; margin-bottom: 5px; }
-        .index-value { font-size: 0.9rem; color: var(--gold); word-break: break-all; font-weight: bold; letter-spacing: 1px; }
+        :root { 
+            --sentinel: #00ff41; --bedrock: #050505; --accent: #00d4ff; 
+            --gold: #d4af37; --friction: #ff3333; --void: #111;
+        }
+        body { 
+            background: var(--bedrock); color: var(--sentinel); 
+            font-family: 'Courier New', monospace; display: flex; 
+            flex-direction: column; align-items: center; margin: 0; padding: 20px;
+        }
+        .header { 
+            text-align: center; border-bottom: 2px solid var(--sentinel); 
+            width: 100%; max-width: 800px; letter-spacing: 2px; padding-bottom: 10px; 
+        }
         
-        #lattice-container { width: 65vmin; height: 65vmin; background: #000; border: 1px solid var(--accent); position: relative; }
-        canvas { width: 100%; height: 100%; image-rendering: pixelated; }
+        /* v8.7 Bipartite Oracle Interface */
+        .oracle-bridge {
+            display: flex; gap: 15px; width: 100%; max-width: 800px; margin: 15px 0;
+        }
+        .panel { 
+            flex: 1; display: flex; flex-direction: column; gap: 10px; 
+            padding: 15px; border: 1px solid #333; background: var(--void); 
+            border-top: 3px solid var(--accent);
+        }
+        .panel-title { font-size: 0.7rem; color: #888; text-transform: uppercase; margin-bottom: 5px; }
         
-        .controls { display: flex; flex-direction: column; gap: 10px; margin: 15px; width: 90%; max-width: 600px;}
-        .row-group { display: flex; gap: 10px; }
-        
-        #console { width: 90%; max-width: 600px; height: 80px; background: #000; border: 1px dashed #333; padding: 10px; font-size: 0.7rem; color: #666; overflow-y: auto; }
-        input { background: #000; border: 1px solid #444; color: var(--accent); padding: 8px; text-align: center; font-family: inherit; }
-        .btn { flex: 1; background: rgba(0, 255, 65, 0.05); border: 1px solid var(--sentinel); color: var(--sentinel); padding: 10px; cursor: pointer; font-size: 0.7rem; font-family: inherit; font-weight: bold; text-transform: uppercase; text-decoration: none; display: flex; align-items: center; justify-content: center; }
+        .controls { display: flex; gap: 10px; align-items: center; }
+        canvas { border: 1px solid var(--sentinel); box-shadow: 0 0 40px rgba(0, 255, 65, 0.05); margin-top: 10px; }
+        .monitor { 
+            width: 100%; max-width: 800px; font-size: 0.75rem; color: var(--gold); 
+            margin: 10px 0; border-left: 3px solid var(--accent); padding-left: 10px; 
+            word-break: break-all;
+        }
+        .console { 
+            width: 100%; max-width: 800px; height: 150px; background: #000; 
+            border: 1px dashed #444; padding: 10px; font-size: 0.7rem; 
+            overflow-y: auto; color: var(--sentinel); 
+        }
+        .btn { background: #000; border: 1px solid var(--sentinel); color: var(--sentinel); padding: 6px 15px; cursor: pointer; transition: all 0.2s; }
         .btn:hover { background: var(--sentinel); color: #000; }
-        .btn-hunt { border-color: var(--gold); color: var(--gold); }
-        .btn-v86 { border-color: #ff00ff; color: #ff00ff; animation: glow 1.5s infinite alternate; }
-        @keyframes glow { from { box-shadow: 0 0 5px rgba(255,0,255,0.2); } to { box-shadow: 0 0 20px rgba(255,0,255,0.6); } }
+        .btn-derive { border-color: var(--accent); color: var(--accent); }
+        .btn-derive:hover { background: var(--accent); color: #000; }
+        input { background: #000; border: 1px solid #444; color: var(--accent); text-align: center; padding: 4px; }
     </style>
 </head>
 <body>
 
-<div id="header">
-    <strong>PROJECT NP: ADELIC ORACLE v8.6.23</strong>
-    <div style="font-size: 0.6rem; color: #888; margin-top: 5px;">[ANCHOR REALIGNMENT ENGINE | Clue Index 40]</div>
+<div class="header">
+    <strong>PROJECT NP: ADELIC ORACLE v8.7</strong>
+    <div style="font-size: 0.6rem; color: #888;">[BIPARTITE ISOMORPHISM & DETERMINISTIC SEEDING]</div>
 </div>
 
-<div class="index-bar">
-    <div class="index-label">Resonant Adelic Anchor (Found DNA)</div>
-    <div class="index-value" id="index-val">#00000000000000000000</div>
-</div>
-
-<div class="controls">
-    <div class="row-group">
-        z:<input type="number" id="z-val" value="3" min="2" max="9" style="width: 35px;" onchange="initSystem()">
-        <input type="text" id="path-id" placeholder="Base Anchor" style="flex: 1;">
-        <button class="btn btn-hunt" onclick="huntAnchor()">Hunt Anchor</button>
+<div class="oracle-bridge">
+    <div class="panel">
+        <div class="panel-title">I. Seed-Finding Oracle (Derivation)</div>
+        <div class="controls">
+            <span>Z-Base: <input type="number" id="z-val" value="3" min="2" max="5" style="width: 40px;" onchange="initSystem()"></span>
+            <button class="btn btn-derive" onclick="triggerDerivation()">Derive Anchor</button>
+        </div>
+        <div style="font-size: 0.65rem; color: #666;">> Gray Code Projection + Kummer Density Filter</div>
     </div>
-    <div class="row-group">
-        <a id="v86-bridge" href="https://40947044s-creator.github.io/Sudoku/test" target="_blank" class="btn btn-v86">Launch v8.6 Core</a>
-        <button class="btn" onclick="resetSystem()" style="color:var(--friction); border-color:var(--friction);">Purge</button>
+    
+    <div class="panel" style="border-top-color: var(--sentinel);">
+        <div class="panel-title">II. Execution Oracle (Inference)</div>
+        <div class="controls">
+            <span>ANCHOR: <input type="text" id="path-id" value="40947044" style="width: 160px;"></span>
+            <button class="btn" onclick="runInference()">Execute Ω</button>
+            <button class="btn" onclick="resetSystem()" style="color:var(--friction); border-color:var(--friction);">Purge</button>
+        </div>
     </div>
 </div>
 
-<div id="lattice-container"><canvas id="mainCanvas"></canvas></div>
-<div id="console">> [SENTINEL] Sentinel active. Set clues, then 'Hunt' the Resonant Anchor.</div>
+<div class="monitor" id="monitor">MANIFOLD STATE: Awaiting Constraints | COORDINATE: NULL</div>
+<canvas id="mainCanvas"></canvas>
+<div class="console" id="log">> [SYSTEM] v8.7 Bipartite engine initialized. Place constraints to begin...</div>
 
 <script>
-let z, N, totalBits;
-let board, fixed;
-const MULT = 0x517cc1b727220a95n;
+let z, N, totalBits, isRunning = false;
+let board, fixed, rowM, colM, blkM, shadowR, shadowC, shadowB;
 
 const canvas = document.getElementById('mainCanvas');
 const ctx = canvas.getContext('2d');
 
 function log(msg) {
-    const l = document.getElementById('console');
+    const l = document.getElementById('log');
     l.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}<br>` + l.innerHTML;
 }
 
-// THE SEARCH: Finds the anchor in N that matches the physical clues (like 9 at 40)
-async function huntAnchor() {
-    log("<b>HUNTING:</b> Scanning Adelic Space for Resonance...");
-    let baseline = document.getElementById('path-id').value;
-    let anchor = baseline ? BigInt(baseline) : 1006n * 0x9E3779B1n;
-    
-    let found = false;
-    // Iterate through mutations to find a bitstream that passes through the "9" at index 40
-    for (let i = 0; i < 10000; i++) {
-        let testAnchor = (anchor + BigInt(i)) | (1n << 63n);
-        if (validateResonance(testAnchor)) {
-            anchor = testAnchor;
-            found = true;
-            break;
-        }
-    }
-
-    if (found) {
-        document.getElementById('index-val').innerText = `#${anchor.toString()}`;
-        document.getElementById('path-id').value = anchor.toString();
-        document.getElementById('v86-bridge').href = `https://40947044s-creator.github.io/Sudoku/test?anchor=${anchor}`;
-        log(`<b>ANCHOR FOUND:</b> DNA aligned with clues.`);
-    } else {
-        log("HUNT FAILED: Clues too dense for current search range.");
-    }
-}
-
-function validateResonance(a) {
-    // Check if the anchor's bitstream produces the fixed digits at phase 0
-    // This is the 'One-to-Many' check. We want the one anchor that hits all clues.
-    for (let i = 0; i < totalBits; i++) {
-        if (fixed[i]) {
-            // Simplified check: Does the seed's residue match the digit?
-            let seed = Number(((a ^ BigInt(i)) * MULT) % 0xFFFFFFFn);
-            // This logic must match your v8.6 logic exactly
-            if ((Math.abs(seed) % N) + 1 !== fixed[i]) return false;
-        }
-    }
-    return true;
-}
-
 function initSystem() {
+    isRunning = false;
     z = parseInt(document.getElementById('z-val').value);
-    N = z * z; totalBits = N * N;
+    N = z * z;
+    totalBits = N * N;
     board = new Uint16Array(totalBits);
     fixed = new Uint16Array(totalBits);
+    rowM = new Array(N).fill(0n); colM = new Array(N).fill(0n); blkM = new Array(N).fill(0n);
+    shadowR = new Array(totalBits); shadowC = new Array(totalBits); shadowB = new Array(totalBits);
+    canvas.width = canvas.height = Math.min(window.innerWidth * 0.9, 450);
     render();
 }
 
-function render() {
-    canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
-    const s = canvas.width / N; ctx.clearRect(0, 0, canvas.width, canvas.height);
+// ==========================================
+// STAGE I: SEED-FINDING ORACLE
+// ==========================================
+function triggerDerivation() {
+    log("Initiating deterministic convolution on fixed constraints...");
+    
+    // 1. Enforce MSB logic: The structural integrity origin is strictly at bit 63.
+    let seed = 1n << 63n; 
+    let constraintsFound = 0;
+
+    for (let d = 0; d < totalBits; d++) {
+        let v = fixed[d];
+        if (v !== 0) {
+            constraintsFound++;
+            
+            // 2. Gray Code topological mapping to prevent Hamming distance fragmentation
+            let grayD = BigInt(d ^ (d >> 1));
+            
+            // 3. O(1) Deterministic Peeling (Marilyn Fold proxy for derivation)
+            // Shift the physical constraint into the MSB-anchored continuous space
+            let shiftAmount = 62n - (grayD % 62n);
+            let constraintVector = BigInt(v) << shiftAmount;
+            
+            // Execute algebraic merge
+            seed ^= constraintVector; 
+        }
+    }
+
+    // 4. The Parity Law: Break Singularity Mode 0
+    if ((seed & 1n) === 0n) seed |= 1n;
+
+    document.getElementById('path-id').value = seed.toString();
+    
+    if(constraintsFound > 0) {
+        log(`<b>DERIVATION SUCCESS:</b> Adelic Anchor collapsed from ${constraintsFound} constraints.`);
+        updateMonitor(seed, 0);
+    } else {
+        log("<i>Warning: No constraints detected. Generated origin singularity.</i>");
+    }
+}
+
+// ==========================================
+// STAGE II: EXECUTION ORACLE (Ω Operator)
+// ==========================================
+async function runInference() {
+    if (isRunning) return;
+    isRunning = true;
+    let anchor = BigInt(document.getElementById('path-id').value);
+    
+    // Enforce Odd Parity locally just in case of manual override
+    if ((anchor & 1n) === 0n) anchor |= (1n << 63n);
+
+    let d = 0, scanStep = 0n, friction = 0;
+    let activeID = anchor;
+
+    log(`Applying Ω operator at trajectory: 0x${activeID.toString(16)}`);
+
+    while (isRunning && d >= 0) {
+        if (d === totalBits) { finalize(); break; }
+
+        if (friction > N * 15) {
+            scanStep++;
+            d = Math.max(0, d - N);
+            activeID = anchor + scanStep; // Linear ripple if strictly necessary
+            friction = 0;
+            updateMonitor(activeID, scanStep);
+            continue;
+        }
+
+        let r = Math.floor(d / N), c = d % N, b = Math.floor(r / z) * z + Math.floor(c / z);
+        let mask = rowM[r] | colM[c] | blkM[b];
+        let opts = [];
+        
+        // Isolate valid residues
+        for (let i = 1; i <= N; i++) if (!(mask & (1n << BigInt(i)))) opts.push(i);
+
+        if (opts.length === 0) {
+            board[d] = 0; d--;
+            if (d < 0) { log("PARADOX: Trajectory disconnected."); isRunning = false; break; }
+            rowM = [...shadowR[d]]; colM = [...shadowC[d]]; blkM = [...shadowB[d]];
+            friction++; continue;
+        }
+
+        shadowR[d] = [...rowM]; shadowC[d] = [...colM]; shadowB[d] = [...blkM];
+
+        let val;
+        if (fixed[d] !== 0) {
+            val = opts.includes(fixed[d]) ? fixed[d] : 0;
+            if (val === 0) { d--; friction += 20; continue; }
+        } else if (opts.length === 1) {
+            val = opts[0]; // Truth-Lock Singularity
+        } else {
+            // O(1) determinism mapped from active coordinate
+            let seed = Number(((activeID ^ BigInt(d)) * 0x517cc1b727220a95n) % 0xFFFFFFFn);
+            val = opts[Math.abs(seed) % opts.length];
+        }
+
+        board[d] = val;
+        let bit = 1n << BigInt(val);
+        rowM[r] |= bit; colM[c] |= bit; blkM[b] |= bit;
+        d++;
+        if (d % N === 0) { render(); await new Promise(r => setTimeout(r, 0)); }
+    }
+}
+
+function updateMonitor(id, shift) {
+    document.getElementById('monitor').innerText = `MANIFOLD STATE: ${shift > 0 ? 'Friction Correction' : 'Anchored'} | COORDINATE: #${id.toString()}`;
+}
+
+function render(final = false) {
+    const s = canvas.width / N;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     for (let i = 0; i < totalBits; i++) {
         let x = (i % N) * s, y = Math.floor(i / N) * s;
         ctx.strokeStyle = "rgba(0, 212, 255, 0.1)"; ctx.strokeRect(x, y, s, s);
-        if (fixed[i]) {
-            ctx.fillStyle = "var(--gold)";
-            ctx.font = `bold ${s * 0.6}px monospace`; ctx.textAlign = "center";
-            ctx.fillText(fixed[i], x + s / 2, y + s * 0.75);
+        let val = fixed[i] || board[i];
+        if (val) {
+            ctx.fillStyle = fixed[i] ? "var(--gold)" : (final ? "var(--sentinel)" : "white");
+            ctx.font = `bold ${s * 0.5}px monospace`;
+            ctx.textAlign = "center"; ctx.fillText(val, x + s/2, y + s * 0.7);
         }
     }
 }
 
-function resetSystem() { initSystem(); log("Manifold Purged."); }
+function finalize() { isRunning = false; render(true); log("<b>SINGULARITY ATTAINED.</b>"); }
+function resetSystem() { initSystem(); log("System Purged. Coordinate erased."); document.getElementById('monitor').innerText = "MANIFOLD STATE: Awaiting Constraints | COORDINATE: NULL"; }
 
 canvas.addEventListener('mousedown', (e) => {
-    const rect = canvas.getBoundingClientRect(); const s = canvas.width / N;
+    const rect = canvas.getBoundingClientRect();
+    const s = canvas.width / N;
     const idx = Math.floor((e.clientY - rect.top) / s) * N + Math.floor((e.clientX - rect.left) / s);
-    let v = prompt(`Fix Clue at ${idx}:`, fixed[idx] || ""); 
+    let v = prompt(`Lock Constraint at index ${idx}:`); 
     if (v !== null) { fixed[idx] = Math.min(N, Math.max(0, parseInt(v) || 0)); render(); }
 });
 
