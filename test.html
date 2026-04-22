@@ -2,52 +2,64 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Project NP | v11.4 DPI Phase</title>
+    <title>Project NP | v11.5 DPI Resonance</title>
     <style>
         :root { 
             --sentinel: #00ff41; --bedrock: #050505; --accent: #00d4ff; 
             --gold: #d4af37; --friction: #ff3333; --panel: #0a0a0a;
         }
-        body { background: var(--bedrock); color: var(--sentinel); font-family: 'Courier New', monospace; margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: center; }
+        body { 
+            background: var(--bedrock); color: var(--sentinel); 
+            font-family: 'Courier New', monospace; margin: 0; padding: 15px;
+            display: flex; flex-direction: column; align-items: center;
+        }
         .header { width: 100%; text-align: center; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 15px; }
         .index-bar { width: 95%; max-width: 1000px; background: var(--panel); border: 1px solid #222; padding: 15px; margin-bottom: 15px; border-left: 4px solid var(--accent); }
         .index-value { font-size: 0.7rem; color: var(--gold); word-break: break-all; font-weight: bold; }
-        .status-panel { background: #000; border: 1px solid #222; padding: 10px; font-size: 0.8rem; line-height: 1.6; margin-bottom: 10px; width: 280px; }
+        .main-layout { display: flex; gap: 20px; width: 95%; max-width: 1200px; justify-content: center; }
+        .sidebar { width: 300px; display: flex; flex-direction: column; gap: 10px; }
+        .status-panel { background: #000; border: 1px solid #222; padding: 10px; font-size: 0.8rem; line-height: 1.6; }
         canvas { border: 1px solid var(--accent); background: #000; }
-        .btn { border: 1px solid var(--sentinel); color: var(--sentinel); background: none; cursor: pointer; padding: 10px; text-transform: uppercase; width: 100%; font-weight: bold; margin: 5px 0; }
+        .btn { border: 1px solid var(--sentinel); color: var(--sentinel); background: none; cursor: pointer; padding: 10px; text-transform: uppercase; width: 100%; font-weight: bold; }
         .btn:hover { background: var(--sentinel); color: #000; }
-        .btn.dpi { border-color: var(--accent); color: var(--accent); }
+        .btn.snap { border-color: var(--accent); color: var(--accent); font-size: 1.1rem; }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <strong>PROJECT NP: ADELIC ORACLE v11.4</strong>
-    <div style="font-size: 0.6rem; color: #555; margin-top: 4px;">DPI PHASE INTEGRATION | O(N) WAVEFRONT | MANIFOLD RESONANCE</div>
+    <strong>PROJECT NP: ADELIC ORACLE v11.5</strong>
+    <div style="font-size: 0.6rem; color: #555; margin-top: 4px;">GLOBAL INDEX-LINKED DPI | $O(N)$ COMPLEXITY | MARILYN-ADELIC CONSENSUS</div>
 </div>
 
 <div class="index-bar">
-    <div style="font-size: 0.6rem; color: #888; margin-bottom: 5px;">128-BIT ANCHOR (ACTIVE PHASE)</div>
+    <div style="font-size: 0.6rem; color: #888; margin-bottom: 5px;">128-BIT SPECTRAL ANCHOR ($\mathcal{A}$)</div>
     <div class="index-value" id="anchor-hex">0x00000000000000000000000000000000</div>
 </div>
 
-<div style="display:flex; gap:20px; align-items:flex-start;">
+<div class="main-layout">
     <div class="sidebar">
         <div class="status-panel">
-            <span style="color:var(--accent)">STATUS:</span> <span id="stat-text">READY</span><br>
-            <span style="color:var(--accent)">RESONANCE:</span> <span id="res-val">0%</span><br>
-            <span style="color:var(--friction)">CONFLICTS:</span> <span id="conflict-val">0</span><br>
-            <span style="color:var(--accent)">DPI DRIFTS:</span> <span id="dpi-val">0</span>
+            <span style="color:var(--accent)">MODE:</span> INDEX-DPI RESONANCE<br>
+            <span style="color:var(--accent)">NODES:</span> <span id="node-count">0</span><br>
+            <span style="color:var(--accent)">ITERATION:</span> <span id="iter-val">0</span><br>
+            <span style="color:var(--friction)">CONFLICTS:</span> <span id="conflict-val">0</span> RED CELLS
         </div>
-        <button class="btn" onclick="factoryReset()">Purge</button>
-        <button class="btn" onclick="solidifyBoard()">Solidify</button>
-        <button class="btn dpi" onclick="executeDPIPhase()">Execute DPI Snap</button>
+        <button class="btn" onclick="factoryReset()" style="border-color:var(--friction); color:var(--friction);">Factory Purge</button>
+        <button class="btn" onclick="solidifyBoard()" style="border-color:var(--gold); color:var(--gold);">Solidify Waves</button>
     </div>
-    <canvas id="mainCanvas"></canvas>
+
+    <div style="display:flex; flex-direction:column; align-items:center;">
+        <div class="controls" style="display:flex; gap:10px; margin-bottom:15px;">
+            <div>z: <input type="number" id="z-val" value="3" min="2" max="5" style="width: 40px; background:#000; border:1px solid #444; color:white;" onchange="factoryReset()"></div>
+            <button class="btn snap" onclick="executeDPISnap()">Execute DPI Snap</button>
+        </div>
+        <canvas id="mainCanvas"></canvas>
+    </div>
 </div>
 
 <script>
-let z, N, totalBits, activeID = 0n, dpiCount = 0;
+let z, N, totalBits;
 let board, fixed, adj = [];
 const ADELIC_CONST = 0x517cc1b727220a95n;
 
@@ -67,18 +79,31 @@ function initGraph() {
 }
 
 function factoryReset() {
-    z = parseInt(prompt("Enter Z (3, 4, 5):", "3")) || 3;
+    z = parseInt(document.getElementById('z-val').value);
     N = z * z; totalBits = N * N;
     fixed = new Uint16Array(totalBits);
-    dpiCount = 0;
+    document.getElementById('node-count').innerText = totalBits;
     initGraph();
     softReset();
 }
 
 function softReset() {
     board = new Uint16Array(totalBits);
-    canvas.width = canvas.height = Math.min(window.innerWidth * 0.7, 550);
+    canvas.width = canvas.height = Math.min(window.innerWidth * 0.8, 600);
     render();
+}
+
+// --- MARILYN FOLD (Ω) & DPI LOGIC ---
+
+function deriveInitialAnchor() {
+    let payload = 0n;
+    for (let i = 0; i < totalBits; i++) {
+        if (fixed[i]) {
+            let rot = BigInt((Math.floor(i/N)*13) + ((i%N)*17)) % 128n;
+            payload ^= (BigInt(fixed[i]) * ADELIC_CONST) << rot;
+        }
+    }
+    return payload | (1n << 127n);
 }
 
 function marilynFold(anchor, idx) {
@@ -88,84 +113,80 @@ function marilynFold(anchor, idx) {
     return Number((projection * ADELIC_CONST) % BigInt(N)) + 1;
 }
 
-function deriveAnchor(conflictIdx = -1) {
-    let payload = 0n;
-    for (let i = 0; i < totalBits; i++) {
-        if (fixed[i]) {
-            let rot = BigInt((Math.floor(i/N)*13) + ((i%N)*17)) % 128n;
-            payload ^= (BigInt(fixed[i]) * ADELIC_CONST) << rot;
+async function executeDPISnap() {
+    let A = deriveInitialAnchor();
+    let solved = false;
+    let iteration = 0;
+    const maxIters = 50;
+
+    while (!solved && iteration < maxIters) {
+        iteration++;
+        board.fill(0);
+        
+        // 1. WAVEFRONT SNAP - O(N)
+        for (let i = 0; i < totalBits; i++) {
+            if (!fixed[i]) board[i] = marilynFold(A, i);
+        }
+
+        // 2. REALITY CHECK - Identify the first dissonant index
+        let conflictIdx = -1;
+        let conflicts = 0;
+        for (let i = 0; i < totalBits; i++) {
+            if (checkConflict(i)) {
+                if (conflictIdx === -1) conflictIdx = i;
+                conflicts++;
+            }
+        }
+
+        document.getElementById('anchor-hex').innerText = "0x" + A.toString(16).toUpperCase();
+        document.getElementById('iter-val').innerText = iteration;
+        document.getElementById('conflict-val').innerText = conflicts;
+        render();
+
+        if (conflicts === 0) {
+            solved = true;
+        } else {
+            // 3. INDEX-LINKED DPI: Correct the Anchor using the conflict index
+            // We use the dissonance to nudge the phase toward the Eternal Law
+            A ^= (BigInt(conflictIdx) * ADELIC_CONST);
+            await new Promise(r => setTimeout(r, 0)); // Visual snap
         }
     }
-    // DPI Injection: If we have a conflict, use its topological weight to nudge the phase
-    if (conflictIdx !== -1) {
-        payload ^= (BigInt(conflictIdx) * ADELIC_CONST);
-    }
-    return payload | (1n << 127n); // Maintain high-order sentinel bit
 }
 
-async function executeDPIPhase() {
-    const start = performance.now();
-    let conflicts = [];
-    
-    // 1. Initial Snap
-    activeID = deriveAnchor();
-    for (let i = 0; i < totalBits; i++) if (!fixed[i]) board[i] = marilynFold(activeID, i);
-
-    // 2. Law Audit
-    for (let i = 0; i < totalBits; i++) {
-        let val = fixed[i] || board[i];
-        for (let n of adj[i]) {
-            if ((fixed[n] || board[n]) === val) { conflicts.push(i); break; }
-        }
-    }
-
-    // 3. DPI Loop: If not real, inject interference and re-snap
-    if (conflicts.length > 0 && dpiCount < 10) {
-        document.getElementById('stat-text').innerText = "DPI TUNING...";
-        dpiCount++;
-        activeID = deriveAnchor(conflicts[0]); // Inject first conflict into phase
-        for (let i = 0; i < totalBits; i++) if (!fixed[i]) board[i] = marilynFold(activeID, i);
-    }
-
-    // Final Stats
-    let finalConflicts = 0;
-    for (let i = 0; i < totalBits; i++) {
-        let val = fixed[i] || board[i];
-        let c = false;
-        for (let n of adj[i]) if ((fixed[n] || board[n]) === val) { c = true; break; }
-        if (c) finalConflicts++;
-    }
-
-    document.getElementById('anchor-hex').innerText = "0x" + activeID.toString(16).toUpperCase();
-    document.getElementById('conflict-val').innerText = finalConflicts;
-    document.getElementById('dpi-val').innerText = dpiCount;
-    document.getElementById('res-val').innerText = Math.round(((totalBits - finalConflicts) / totalBits) * 100) + "%";
-    document.getElementById('stat-text').innerText = finalConflicts === 0 ? "RESONANT" : "DISSONANT";
-    
-    render();
+function checkConflict(idx) {
+    let val = fixed[idx] || board[idx];
+    if (!val) return false;
+    for (let neighbor of adj[idx]) if ((fixed[neighbor] || board[neighbor]) === val) return true;
+    return false;
 }
 
 function render() {
     const s = canvas.width / N;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for(let i=0; i<=z; i++) {
+        ctx.strokeStyle = "rgba(0, 212, 255, 0.2)"; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(i*s*z, 0); ctx.lineTo(i*s*z, canvas.height); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, i*s*z); ctx.lineTo(canvas.width, i*s*z); ctx.stroke();
+    }
     for (let i = 0; i < totalBits; i++) {
         let x = (i % N) * s, y = Math.floor(i / N) * s;
+        ctx.lineWidth = 1; ctx.strokeStyle = "#111"; ctx.strokeRect(x, y, s, s);
         let val = fixed[i] || board[i];
         if (val) {
-            let conflict = false;
-            for (let n of adj[i]) if ((fixed[n] || board[n]) === val) { conflict = true; break; }
+            let conflict = checkConflict(i);
             ctx.fillStyle = fixed[i] ? "#d4af37" : (conflict ? "#ff3333" : "white");
-            ctx.font = `${s*0.5}px monospace`; ctx.textAlign = "center";
+            ctx.font = `bold ${s*0.5}px monospace`; ctx.textAlign = "center";
             ctx.fillText(val, x+s/2, y+s*0.7);
         }
-        ctx.strokeStyle = "#222"; ctx.strokeRect(x, y, s, s);
     }
 }
 
 canvas.addEventListener('mousedown', (e) => {
     const r = canvas.getBoundingClientRect(); const s = canvas.width / N;
     const idx = Math.floor((e.clientY - r.top) / s) * N + Math.floor((e.clientX - r.left) / s);
-    let v = prompt("Digit:"); if (v !== null) { fixed[idx] = parseInt(v) || 0; softReset(); }
+    let v = prompt(`Waveform Input:`);
+    if (v !== null) { fixed[idx] = parseInt(v) || 0; softReset(); }
 });
 
 function solidifyBoard() {
@@ -177,4 +198,3 @@ factoryReset();
 </script>
 </body>
 </html>
-
