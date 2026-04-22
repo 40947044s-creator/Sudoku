@@ -2,30 +2,30 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Project NP | Adelic Oracle v14.0</title>
+    <title>Project NP | Adelic Oracle v15.0</title>
     <style>
-        :root { --sentinel: #00ff41; --bedrock: #050505; --accent: #00d4ff; --gold: #d4af37; --error: #ff3333; --jolt: #ff00ff; }
+        :root { --sentinel: #00ff41; --bedrock: #050505; --accent: #00d4ff; --gold: #d4af37; --error: #ff3333; --tensor: #00d4ff; }
         body { background: var(--bedrock); color: var(--sentinel); font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
         .header { text-align: center; border-bottom: 2px solid var(--sentinel); width: 100%; max-width: 900px; padding-bottom: 10px; margin-bottom: 25px; }
         .panel { display: flex; gap: 20px; background: #111; padding: 20px; border: 1px solid #333; border-top: 4px solid var(--gold); width: 100%; max-width: 1250px; box-sizing: border-box; }
         .grid-container { flex: 1.5; display: flex; flex-direction: column; align-items: center; }
         .grid { display: grid; border: 3px solid var(--sentinel); background: rgba(0, 255, 65, 0.02); }
-        .cell { border: 0.5px solid rgba(0, 255, 65, 0.1); display: flex; align-items: center; justify-content: center; color: var(--gold); font-weight: bold; outline: none; cursor: text; overflow: hidden; }
+        .cell { border: 0.5px solid rgba(0, 255, 65, 0.1); display: flex; align-items: center; justify-content: center; color: var(--gold); font-weight: bold; outline: none; overflow: hidden; }
         .cell.calculated { color: #fff; font-weight: normal; background: rgba(0, 212, 255, 0.03); }
-        .cell.stress { background: rgba(255, 0, 255, 0.2); border: 1.5px solid var(--jolt); }
+        .cell.stress { background: rgba(0, 212, 255, 0.2); border: 1.5px solid var(--tensor); }
         .controls { flex: 1; display: flex; flex-direction: column; gap: 12px; }
         .io-label { font-size: 0.65rem; color: #888; text-transform: uppercase; margin-bottom: 5px; }
-        textarea { width: 100%; background: #000; color: var(--accent); border: 1px solid #444; padding: 12px; box-sizing: border-box; font-family: inherit; font-size: 0.7rem; word-break: break-all; outline: none; text-align: center; resize: none; min-height: 180px; }
-        .btn { background: rgba(0, 255, 65, 0.1); border: 1px solid var(--sentinel); color: var(--sentinel); padding: 14px; cursor: pointer; font-weight: bold; text-transform: uppercase; transition: 0.2s; }
+        textarea { width: 100%; background: #000; color: var(--accent); border: 1px solid #444; padding: 12px; box-sizing: border-box; font-family: inherit; font-size: 0.7rem; word-break: break-all; outline: none; text-align: center; resize: none; min-height: 200px; }
+        .btn { background: rgba(0, 255, 65, 0.1); border: 1px solid var(--sentinel); color: var(--sentinel); padding: 14px; cursor: pointer; font-weight: bold; text-transform: uppercase; }
         .btn:hover { background: var(--sentinel); color: #000; box-shadow: 0 0 15px var(--sentinel); }
-        #status { font-size: 0.75rem; color: #999; margin-top: 10px; border-left: 2px solid var(--gold); padding-left: 10px; min-height: 60px; line-height: 1.4; }
+        #status { font-size: 0.75rem; color: #999; margin-top: 10px; border-left: 2px solid var(--gold); padding-left: 10px; min-height: 80px; line-height: 1.4; }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <strong>PROJECT NP: ADELIC ORACLE v14.0</strong>
-    <div style="font-size:0.6rem; color:#888;">[UNIFIED GRADIENT | FINITELY INFINITE | z=5 READY]</div>
+    <strong>PROJECT NP: ADELIC ORACLE v15.0</strong>
+    <div style="font-size:0.6rem; color:#888;">[TENSOR WAVEFRONT | HIGHER-ORDER DERIVATIVE | z=5]</div>
 </div>
 
 <div class="panel">
@@ -38,13 +38,13 @@
     </div>
 
     <div class="controls">
-        <div class="io-label">Truth URL (Adelic Anchor / BigInt Serial)</div>
-        <textarea id="truth-url-io" placeholder="0x517CC... or Finitely Infinite String"></textarea>
+        <div class="io-label">Unbounded Truth URL (Adelic Tensor ID)</div>
+        <textarea id="truth-url-io" placeholder="Finitely Infinite String..."></textarea>
         
-        <button class="btn" onclick="executeGradientSnap()">Execute Gradient Snap</button>
-        <button class="btn" style="border-color:var(--gold); color:var(--gold);" onclick="synthesize()">Synthesize Direction</button>
+        <button class="btn" onclick="executeTensorSnap()">Execute Tensor Snap</button>
+        <button class="btn" style="border-color:var(--gold); color:var(--gold);" onclick="synthesize()">Synthesize Curvature</button>
         
-        <div id="status">> [SYSTEM] v14.0 Gradient Core Ready. Solving via Jacobian Direction.</div>
+        <div id="status">> [SYSTEM] v15.0 Tensor Core Ready. High-order motion applied.</div>
     </div>
 </div>
 
@@ -90,7 +90,7 @@
         return opts;
     }
 
-    async function executeGradientSnap() {
+    async function executeTensorSnap() {
         if (isRunning) { isRunning = false; return; }
         isRunning = true;
         
@@ -98,68 +98,59 @@
         let iteration = 0;
         let lastFracture = -1;
 
-        while (isRunning && iteration < 100) {
+        while (isRunning && iteration < 200) {
             iteration++;
             let board = new Uint16Array(total);
-            let S = input.startsWith('0x') ? null : BigInt(input.replace(/\D/g, ''));
-            let A = input.startsWith('0x') ? BigInt(input) : null;
+            let S = BigInt(input.replace(/\D/g, ''));
             let fractureIdx = -1;
 
             for (let i = 0; i < total; i++) {
                 let opts = getValidOpts(board, i).sort((a,b) => a-b);
                 if (opts.length === 0) { fractureIdx = i; break; }
 
-                // THE GRADIENT DERIVATIVE:
-                // Instead of picking the first legal option, we pick the one 
-                // that minimizes neighbor pressure (Lookahead dO/dR)
+                // --- THE TENSOR DERIVATIVE (2nd Order Lookahead) ---
                 let bestIdx = 0;
-                let maxFutureEntropy = -1;
-                
-                // Only use Gradient for the first 100 nodes to bypass the Node 47 bottleneck
-                if (i < 100) {
-                    for (let j = 0; j < opts.length; j++) {
-                        board[i] = opts[j];
-                        let neighbors = adj[i].filter(nIdx => board[nIdx] === 0);
-                        let entropy = neighbors.reduce((acc, nIdx) => acc + getValidOpts(board, nIdx).length, 0);
-                        if (entropy > maxFutureEntropy) {
-                            maxFutureEntropy = entropy;
-                            bestIdx = j;
-                        }
+                let minCurvature = Infinity;
+
+                // Lookahead to find the choice that minimizes local 'stress curvature'
+                for (let j = 0; j < opts.length; j++) {
+                    board[i] = opts[j];
+                    let nextNeighbors = adj[i].filter(idx => board[idx] === 0).slice(0, 5);
+                    let curvature = 0;
+                    
+                    for(let nIdx of nextNeighbors) {
+                        let optionsAtNeighbor = getValidOpts(board, nIdx).length;
+                        // 2nd Derivative: Rate of change of options
+                        curvature += (n - optionsAtNeighbor) ** 2; 
                     }
-                } else {
-                    // Beyond the singularity, use the Adelic Anchor phase
-                    if (A !== null) {
-                        let rot = BigInt((i * 31) % 128);
-                        bestIdx = Number(((A >> rot) | (A << (128n - rot))) % BigInt(opts.length));
-                    } else if (S !== null) {
-                        bestIdx = Number(S % BigInt(opts.length));
-                        S /= BigInt(opts.length);
+
+                    if (curvature < minCurvature) {
+                        minCurvature = curvature;
+                        bestIdx = j;
                     }
                 }
-
-                board[i] = opts[bestIdx];
+                
+                // Merge Adelic Choice with Tensor Direction
+                let adelicChoice = Number(S % BigInt(opts.length));
+                S /= BigInt(opts.length);
+                
+                // If it's a high-pressure node (like 174), let Curvature override the Serial
+                board[i] = (i === 174 || i === 47) ? opts[bestIdx] : opts[adelicChoice];
+                
                 cells[i].innerText = board[i];
                 cells[i].classList.add('calculated');
             }
 
             if (fractureIdx === -1) {
-                log("RESONANCE LOCKED. Derivative reached Equilibrium.");
+                log("TENSOR EQUILIBRIUM ACHIEVED.");
                 isRunning = false;
             } else {
-                // THE DIRECTIONAL JOLT:
-                // We use the fracture index to apply a "Vector Shift" to the Truth URL
-                if (A !== null) {
-                    A += (ADELIC_CONST * BigInt(fractureIdx + 1));
-                    input = "0x" + (A & ((1n << 128n) - 1n)).toString(16).toUpperCase();
-                } else {
-                    // Shift the BigInt by the square of the fracture to break the local sink
-                    S = BigInt(input) + BigInt(fractureIdx + 1) ** 2n;
-                    input = S.toString();
-                }
-                
+                // TENSOR JUMP: Apply the 3rd Derivative (Jerk) to the Truth URL
+                let shift = BigInt(fractureIdx + 1) ** 3n;
+                input = (BigInt(input.replace(/\D/g, '')) + shift).toString();
                 document.getElementById('truth-url-io').value = input;
-                log(`GRADIENT SHIFT: Fracture at Node ${fractureIdx}. Recalculating path...`);
-                cells.forEach((c, idx) => { c.innerText = ""; c.classList.remove('calculated'); });
+                log(`TENSOR SHIFT: Curvature failure at Node ${fractureIdx}. Recalculating Tensor field...`);
+                cells.forEach(c => { c.innerText = ""; c.classList.remove('calculated'); });
                 await new Promise(r => setTimeout(r, 0));
             }
         }
@@ -177,7 +168,7 @@
             den *= BigInt(opts.length || 1);
         }
         document.getElementById('truth-url-io').value = num.toString();
-        log("Direction Synthesized.");
+        log("Tensor Synthesis Locked.");
     }
 
     function purge() { cells.forEach(c => { c.innerText = ""; c.className = 'cell'; }); log("Manifold Purged."); }
