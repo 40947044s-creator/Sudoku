@@ -1,33 +1,83 @@
-async function triggerAutomaticSolve() {
-    if (isRunning) return;
-    
-    const zVal = document.getElementById('z-val').value;
-    const board = cells.map(c => parseInt(c.innerText) || 0).join(',');
-    
-    log("SYSTEM: Dispatching to Native C Engine...");
-    isRunning = true;
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>Project NP | GitHub Oracle v19.0</title>
+    <style>
+        :root { --sentinel: #00ff41; --bedrock: #050505; --accent: #00d4ff; --gold: #d4af37; }
+        body { background: var(--bedrock); color: var(--sentinel); font-family: monospace; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .panel { background: #111; padding: 20px; border-top: 4px solid var(--gold); width: 100%; max-width: 900px; }
+        .grid { display: grid; border: 3px solid var(--sentinel); margin: 20px auto; }
+        .cell { border: 1px solid #222; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; color: var(--gold); }
+        .btn { width: 100%; padding: 15px; background: rgba(0, 255, 65, 0.1); border: 1px solid var(--sentinel); color: var(--sentinel); cursor: pointer; font-weight: bold; margin-top: 10px; }
+        #status { font-size: 0.7rem; color: #888; margin-top: 10px; }
+    </style>
+</head>
+<body>
 
-    try {
-        const response = await fetch('/api/solve', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ z: zVal, sequence: board })
-        });
+<div class="panel">
+    <strong>PROJECT NP: HOSTED ORACLE</strong>
+    <div id="grid-root"></div>
+    
+    <div style="display:flex; gap:10px;">
+        <input type="number" id="z-val" value="3" min="2" max="4" style="background:#000; color:#fff; border:1px solid #444;">
+        <button class="btn" onclick="autoSolve()">AUTOMATIC WASM SOLVE</button>
+    </div>
+    <div id="status">> Initializing WASM Engine...</div>
+</div>
 
-        const data = await response.json();
-        
-        if (data.success) {
-            // "seq:" format check to match your feed logic
-            const rawOutput = data.output.includes('seq:') ? data.output : "seq:" + data.output;
-            document.getElementById('c-sequence-input').value = rawOutput;
-            groundNativeSequence(); // Use your existing grounding logic
-            log("SUCCESS: C-Engine grounded the manifold.");
-        } else {
-            log("<span style='color:var(--error)'>ERROR: " + data.error + "</span>");
+<script src="np_engine.js"></script>
+
+<script>
+    let z, n, total, cells = [];
+    
+    // Initialize Grid
+    function init() {
+        z = parseInt(document.getElementById('z-val').value); n = z * z; total = n * n;
+        const root = document.getElementById('grid-root'); root.innerHTML = '';
+        const grid = document.createElement('div');
+        grid.className = 'grid'; grid.style.gridTemplateColumns = `repeat(${n}, 1fr)`;
+        cells = [];
+        for (let i = 0; i < total; i++) {
+            const c = document.createElement('div'); c.className = 'cell'; c.contentEditable = "true";
+            grid.appendChild(c); cells.push(c);
         }
-    } catch (err) {
-        log("<span style='color:var(--error)'>BRIDGE FAIL: Is bridge.py running?</span>");
-    } finally {
-        isRunning = false;
+        root.appendChild(grid);
     }
-}
+
+    // Call the C-Muscle via WASM
+    async function autoSolve() {
+        document.getElementById('status').innerText = "> WASM: Grounding Manifold...";
+        
+        const boardData = cells.map(c => parseInt(c.innerText) || 0);
+        
+        // 1. Allocate memory in WASM space
+        const ptr = Module._malloc(total * 4);
+        Module.HEAP32.set(new Int32Array(boardData), ptr / 4);
+        
+        // 2. Run the C Function
+        const success = Module._solve_manifold(z, ptr);
+        
+        if (success) {
+            const result = new Int32Array(Module.HEAP32.buffer, ptr, total);
+            result.forEach((val, i) => {
+                cells[i].innerText = val;
+                cells[i].style.color = "#00d4ff";
+            });
+            document.getElementById('status').innerText = "> SUCCESS: Adelic Grounding Complete.";
+        } else {
+            document.getElementById('status').innerText = "> ERROR: Manifold Fracture.";
+        }
+        
+        // 3. Free memory
+        Module._free(ptr);
+    }
+
+    // Wait for WASM to load
+    Module.onRuntimeInitialized = () => {
+        document.getElementById('status').innerText = "> Adelic Engine Online.";
+        init();
+    };
+</script>
+</body>
+</html>
