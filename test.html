@@ -2,48 +2,49 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Project NP | Adelic Oracle v12.1 Tuner</title>
+    <title>Project NP | Adelic Oracle v12.3</title>
     <style>
-        :root { --sentinel: #00ff41; --bedrock: #050505; --accent: #00d4ff; --gold: #d4af37; --friction: #ff3333; }
-        body { background: var(--bedrock); color: var(--sentinel); font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        :root { --sentinel: #00ff41; --bedrock: #050505; --accent: #00d4ff; --gold: #d4af37; --error: #ff3333; --jolt: #ff00ff; }
+        body { background: var(--bedrock); color: var(--sentinel); font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
         .header { text-align: center; border-bottom: 2px solid var(--sentinel); width: 100%; max-width: 900px; padding-bottom: 10px; margin-bottom: 25px; }
-        .panel { display: flex; gap: 20px; background: #111; padding: 20px; border: 1px solid #333; border-top: 4px solid var(--gold); width: 100%; max-width: 1100px; box-sizing: border-box; }
+        .panel { display: flex; gap: 20px; background: #111; padding: 20px; border: 1px solid #333; border-top: 4px solid var(--gold); width: 100%; max-width: 1150px; box-sizing: border-box; }
         .grid-container { flex: 1.5; display: flex; flex-direction: column; align-items: center; }
         .grid { display: grid; border: 3px solid var(--sentinel); background: rgba(0, 255, 65, 0.02); }
-        .cell { border: 0.5px solid rgba(0, 255, 65, 0.1); display: flex; align-items: center; justify-content: center; color: var(--gold); font-weight: bold; outline: none; }
+        .cell { border: 0.5px solid rgba(0, 255, 65, 0.1); display: flex; align-items: center; justify-content: center; color: var(--gold); font-weight: bold; outline: none; cursor: text; overflow: hidden; }
         .cell.calculated { color: #fff; font-weight: normal; background: rgba(0, 212, 255, 0.03); }
-        .cell.stress { background: rgba(255, 51, 51, 0.2); }
+        .cell.stress { background: rgba(255, 51, 51, 0.3); border: 1px solid var(--error); }
         .controls { flex: 1; display: flex; flex-direction: column; gap: 12px; }
-        #truth-url-io { width: 100%; background: #000; color: var(--accent); border: 1px solid #444; padding: 12px; font-family: inherit; font-size: 0.75rem; word-break: break-all; min-height: 110px; resize: none; text-align: center; }
+        .io-label { font-size: 0.65rem; color: #888; text-transform: uppercase; margin-bottom: 5px; }
+        #truth-url-io { width: 100%; background: #000; color: var(--accent); border: 1px solid #444; padding: 12px; box-sizing: border-box; font-family: inherit; font-size: 0.8rem; word-break: break-all; min-height: 120px; outline: none; text-align: center; resize: none; }
         .btn { background: rgba(0, 255, 65, 0.1); border: 1px solid var(--sentinel); color: var(--sentinel); padding: 14px; cursor: pointer; font-weight: bold; text-transform: uppercase; transition: 0.2s; }
         .btn:hover { background: var(--sentinel); color: #000; box-shadow: 0 0 15px var(--sentinel); }
-        #status { font-size: 0.75rem; color: #999; border-left: 2px solid var(--gold); padding-left: 10px; min-height: 80px; line-height: 1.4; }
+        #status { font-size: 0.75rem; color: #999; margin-top: 10px; border-left: 2px solid var(--gold); padding-left: 10px; min-height: 80px; line-height: 1.4; }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <strong>PROJECT NP: ADELIC ORACLE v12.1</strong>
-    <div style="font-size:0.6rem; color:#888;">[RESONANT TUNER | FRACTURE-LINKED DPI]</div>
+    <strong>PROJECT NP: ADELIC ORACLE v12.3</strong>
+    <div style="font-size:0.6rem; color:#888;">[SPECTRAL JOLT | RESONANCE TUNER | $O(N)$ WAVEFRONT]</div>
 </div>
 
 <div class="panel">
     <div class="grid-container">
         <div style="display:flex; gap:10px; width:100%; margin-bottom:10px;">
-            <div style="flex:1;"><input type="number" id="z-val" value="3" min="2" max="5" style="width:100%; background:#000; color:var(--accent); border:1px solid #444; padding:5px;" onchange="init()"></div>
-            <button class="btn" style="flex:2; font-size:0.65rem; border-color:var(--friction); color:var(--friction);" onclick="purge()">Purge Manifold</button>
+            <div style="flex:1;"><div class="io-label">Dim (z)</div><input type="number" id="z-val" value="3" min="2" max="5" style="width:100%; background:#000; color:var(--accent); border:1px solid #444; padding:5px;" onchange="init()"></div>
+            <button class="btn" style="flex:2; font-size:0.65rem; border-color:var(--error); color:var(--error);" onclick="purge()">Purge Manifold</button>
         </div>
         <div id="grid-root"></div>
     </div>
 
     <div class="controls">
-        <div style="font-size: 0.65rem; color: #888; text-transform: uppercase;">Truth URL (Adelic Anchor A)</div>
-        <textarea id="truth-url-io" placeholder="0x8000..."></textarea>
+        <div class="io-label">Truth URL (Spectral Anchor A)</div>
+        <textarea id="truth-url-io" placeholder="0x80000000..."></textarea>
         
-        <button class="btn" onclick="executeTunedSnap()">Execute Tuned Snap</button>
+        <button class="btn" onclick="executeUnifiedSnap()">Execute Resonant Snap</button>
         <button class="btn" style="border-color:var(--gold); color:var(--gold);" onclick="solidify()">Solidify Waves</button>
         
-        <div id="status">> [SYSTEM] v12.1 Tuner Ready. Shiver protocol initialized.</div>
+        <div id="status">> [SYSTEM] v12.3 Unified Core Ready. Anti-Lock Tuning Active.</div>
     </div>
 </div>
 
@@ -67,7 +68,7 @@
         for (let i = 0; i < total; i++) {
             const c = document.createElement('div'); c.className = 'cell'; c.contentEditable = "true";
             c.style.fontSize = `${(size/n) * 0.5}px`;
-            if ((Math.floor(i/n)+1)%z === 0 && Math.floor(i/n)<n-1) c.style.borderBottom = "2.5px solid var(--sentinel)";
+            if ((Math.floor(i/n)+1)%z === 0 && Math.floor(i/n)<n - 1) c.style.borderBottom = "2.5px solid var(--sentinel)";
             if ((i+1)%z === 0 && (i+1)%n !== 0) c.style.borderRight = "2.5px solid var(--sentinel)";
             grid.appendChild(c); cells.push(c);
             
@@ -79,6 +80,7 @@
             }
         }
         root.appendChild(grid);
+        log(`Manifold Reset: n=${n}. Resonance Ready.`);
     }
 
     function getValidOpts(board, idx) {
@@ -89,63 +91,91 @@
         return opts;
     }
 
-    async function executeTunedSnap() {
+    async function executeUnifiedSnap() {
         if (isRunning) { isRunning = false; return; }
         isRunning = true;
+        
         let iteration = 0;
+        let lastFracture = -1;
+        let lockCounter = 0;
+        
         let urlInput = document.getElementById('truth-url-io').value.trim();
-        // The Root Anchor: Either from the URL or grounded in the 128-bit identity
         let A = urlInput.startsWith('0x') ? BigInt(urlInput) : 0x80000000000000000000000000000000n;
 
-        while (isRunning && iteration < 500) {
+        const startTime = performance.now();
+
+        while (isRunning && iteration < 1000) {
             iteration++;
             let board = cells.map(c => parseInt(c.innerText) || 0);
             let fixedIdx = board.map((v, i) => v !== 0 ? i : -1).filter(i => i !== -1);
             let fractureIdx = -1;
+            let stressSum = 0n;
 
-            // --- THE RESONANT WAVEFRONT ---
+            // --- PHASE I: THE WAVEFRONT SNAP ---
             for (let i = 0; i < total; i++) {
                 if (fixedIdx.includes(i)) continue;
                 let opts = getValidOpts(board, i).sort((a,b) => a-b);
                 
                 if (opts.length === 0) {
-                    fractureIdx = i; // The Tuner identifies a resonance failure
+                    fractureIdx = i; // Resonance Fracture
                     break;
                 }
 
-                // ADELIC SELECTION: Pick option based on Anchor's phase at this coordinate
+                stressSum += BigInt(opts.length);
+
+                // Adelic Selection: O(1) Phase Extraction
                 let rot = BigInt((i * 13) % 128); 
                 let p = (A >> rot) | (A << (128n - rot));
                 board[i] = opts[Number((p ^ ADELIC_CONST) % BigInt(opts.length))];
             }
 
-            // Update Visualization
-            board.forEach((v, i) => { if(v) { cells[i].innerText = v; cells[i].classList.add('calculated'); } });
+            // --- PHASE II: VIEW UPDATE ---
+            board.forEach((v, i) => { 
+                if(v && !fixedIdx.includes(i)) {
+                    cells[i].innerText = v; 
+                    cells[i].classList.add('calculated'); 
+                }
+            });
 
             if (fractureIdx === -1) {
-                log(`RESONANCE ACHIEVED: Anchor 0x${A.toString(16).toUpperCase()} is Real.`);
+                log(`RESONANCE LOCKED. Complexity collapsed in ${(performance.now()-startTime).toFixed(1)}ms.`);
                 isRunning = false;
             } else {
-                // THE GOOD TUNER: Inject interference from the fracture index
-                // We use the Index + iteration to shiver the 128-bit field
-                let nudge = (BigInt(fractureIdx + 1) * ADELIC_CONST);
-                A ^= (nudge << BigInt(iteration % 64)) | (nudge >> BigInt(64 - (iteration % 64)));
-                
+                // --- PHASE III: ANTI-LOCK TUNER ---
+                if (fractureIdx === lastFracture) lockCounter++;
+                else { lockCounter = 0; lastFracture = fractureIdx; }
+
+                if (lockCounter > 3) {
+                    // APPLY SPECTRAL JOLT
+                    A ^= (stressSum * 61n * ADELIC_CONST) >> BigInt(iteration % 16);
+                    log(`<span style="color:var(--jolt)">!! PHASE LOCK AT ${fractureIdx}: SPECTRAL JOLT !!</span>`);
+                    lockCounter = 0;
+                } else {
+                    // Standard Index-Linked DPI
+                    let nudge = (BigInt(fractureIdx + 1) * ADELIC_CONST);
+                    A ^= (nudge << BigInt(iteration % 64));
+                    log(`TUNING: Fracture at Node ${fractureIdx}. (Iter ${iteration})`);
+                }
+
                 document.getElementById('truth-url-io').value = "0x" + A.toString(16).toUpperCase();
-                log(`TUNING: Fracture at Node ${fractureIdx}. Phase Shifting (Iter ${iteration})...`);
-                
                 cells[fractureIdx].classList.add('stress');
                 
-                // Clear the non-fixed nodes for the next shiver
-                cells.forEach((c, idx) => { if(!fixedIdx.includes(idx)) { c.innerText = ""; c.classList.remove('stress'); } });
+                // Reset board for the next shiver (keep stationary waves)
+                cells.forEach((c, idx) => { 
+                    if(!fixedIdx.includes(idx)) { 
+                        c.innerText = ""; 
+                        c.classList.remove('stress', 'calculated'); 
+                    } 
+                });
                 await new Promise(r => setTimeout(r, 0));
             }
         }
     }
 
-    function solidify() { cells.forEach(c => c.className = 'cell'); log("Waves Solidified."); }
+    function solidify() { cells.forEach(c => c.className = 'cell'); log("Stationary Waves Solidified."); }
     function purge() { cells.forEach(c => { c.innerText = ""; c.className = 'cell'; }); log("Manifold Purged."); }
     init();
 </script>
 </body>
 </html>
+
