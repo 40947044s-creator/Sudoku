@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Project NP | Adelic Oracle v8.8 Live</title>
+    <title>Project NP | Adelic Oracle v8.9 Entropy-Gravity</title>
     <style>
         :root { 
             --sentinel: #00ff41; --bedrock: #050505; --accent: #00d4ff; 
@@ -14,7 +14,10 @@
             display: flex; flex-direction: column; align-items: center; overflow-x: hidden;
         }
         .header { width: 100%; text-align: center; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 15px; }
-        .index-bar { width: 95%; max-width: 900px; background: var(--panel); border: 1px solid #222; padding: 12px; margin-bottom: 15px; border-left: 4px solid var(--gold); }
+        .index-bar { 
+            width: 95%; max-width: 900px; background: var(--panel); border: 1px solid #222; 
+            padding: 12px; margin-bottom: 15px; border-left: 4px solid var(--gold); 
+        }
         .index-value { font-size: 0.85rem; color: var(--gold); word-break: break-all; letter-spacing: 1px; min-height: 1.2em; }
         .main-layout { display: flex; gap: 20px; width: 95%; max-width: 1100px; justify-content: center; align-items: flex-start; }
         .sidebar { width: 260px; display: flex; flex-direction: column; gap: 10px; }
@@ -23,7 +26,10 @@
         .history-item.illegal { color: var(--friction); font-weight: bold; }
         .history-item.legal { color: var(--gold); }
         .stage { display: flex; flex-direction: column; align-items: center; gap: 15px; }
-        .controls { display: flex; gap: 10px; padding: 15px; background: rgba(0, 255, 65, 0.02); border: 1px solid #222; width: 100%; justify-content: center; }
+        .controls { 
+            display: flex; gap: 10px; padding: 15px; background: rgba(0, 255, 65, 0.02); 
+            border: 1px solid #222; width: 100%; justify-content: center;
+        }
         canvas { border: 1px solid var(--accent); background: #000; box-shadow: 0 0 50px rgba(0, 212, 255, 0.05); }
         input, button { background: #000; border: 1px solid #444; color: var(--accent); padding: 6px; font-size: 0.75rem; font-family: inherit; }
         .btn { border-color: var(--sentinel); color: var(--sentinel); cursor: pointer; text-transform: uppercase; transition: 0.2s; }
@@ -34,21 +40,21 @@
 <body>
 
 <div class="header">
-    <strong>PROJECT NP: ADELIC ORACLE v8.8</strong>
-    <div style="font-size: 0.6rem; color: #555; margin-top: 4px;">INTEGRATED TUNING | ELASTIC SNAPBACK | $n=16$ READY</div>
+    <strong>PROJECT NP: ADELIC ORACLE v8.9</strong>
+    <div style="font-size: 0.6rem; color: #555; margin-top: 4px;">ENTROPY-GRAVITY SCAN | TRINITY JITTER v2 | CSIE HARDENED</div>
 </div>
 
 <div class="index-bar">
-    <div style="font-size: 0.65rem; color: #888; margin-bottom: 4px;">ACTIVE ADELIC ADDRESS (DYNAMIC DRIFT)</div>
-    <div class="index-value" id="index-val">#INITIATING_MANIFOLD...</div>
+    <div style="font-size: 0.65rem; color: #888; margin-bottom: 4px;">ACTIVE ADELIC ADDRESS (GRAVITY DRIFT)</div>
+    <div class="index-value" id="index-val">#AWAITING_RESONANCE</div>
     <div style="font-size: 0.6rem; color: var(--accent); margin-top: 6px;">
-        Resonance: <span id="perc-val">0.00%</span> | Drift Count: <span id="f-val">0</span>
+        Drift Count: <span id="f-val">0</span> | Stability Zone: <span id="filled-val">0</span> / <span id="total-val">0</span>
     </div>
 </div>
 
 <div class="main-layout">
     <div class="sidebar">
-        <div style="font-size: 0.7rem; color: var(--gold); letter-spacing: 1px;">STATIONARY WAVES (FIXED)</div>
+        <div style="font-size: 0.7rem; color: var(--gold); letter-spacing: 1px;">STATIONARY WAVES</div>
         <div class="history-panel" id="history-list"></div>
         <button class="btn solidify" onclick="solidifyBoard()" style="width:100%; margin-top: 5px;">Solidify board</button>
         <button class="btn" onclick="factoryReset()" style="color:var(--friction); border-color:var(--friction); width:100%;">Factory Purge</button>
@@ -58,7 +64,7 @@
         <div class="controls">
             <div>z: <input type="number" id="z-val" value="3" min="2" max="5" style="width: 35px;" onchange="factoryReset()"></div>
             <div>Base Anchor: <input type="text" id="path-id" value="40947045" style="width: 140px;"></div>
-            <button class="btn" id="inf-btn" onclick="startInference()">Execute Live</button>
+            <button class="btn" id="inf-btn" onclick="startInference()">Execute Gravity</button>
         </div>
         <canvas id="mainCanvas"></canvas>
     </div>
@@ -66,8 +72,8 @@
 
 <script>
 let z, N, totalBits, isRunning = false;
-let board, fixed, phase, inputHistory = [];
-let rowM, colM, blkM, shadowR, shadowC, shadowB;
+let board, fixed, inputHistory = [];
+let rowM, colM, blkM;
 const ADELIC_CONST = 0x517cc1b727220a95n;
 
 const HEX_SENTINEL = "#00ff41", HEX_GOLD = "#d4af37", HEX_FRICTION = "#ff3333";
@@ -80,15 +86,14 @@ function factoryReset() {
     fixed = new Uint16Array(totalBits);
     inputHistory = [];
     document.getElementById('history-list').innerHTML = '';
+    document.getElementById('total-val').innerText = totalBits;
     softReset();
 }
 
 function softReset() {
     isRunning = false;
     board = new Uint16Array(totalBits);
-    phase = new Uint16Array(totalBits).fill(0);
     rowM = new Array(N).fill(0n); colM = new Array(N).fill(0n); blkM = new Array(N).fill(0n);
-    shadowR = new Array(totalBits); shadowC = new Array(totalBits); shadowB = new Array(totalBits);
     for(let i=0; i<totalBits; i++) {
         if(fixed[i]) {
             let r = Math.floor(i/N), c = i%N, b = Math.floor(r/z)*z + Math.floor(c/z);
@@ -118,18 +123,17 @@ function getConflict(idx, val, checkBoard = true) {
 }
 
 function solidifyBoard() {
-    let count = 0;
     for (let i = 0; i < totalBits; i++) {
         if (!fixed[i] && board[i]) {
             fixed[i] = board[i];
             inputHistory.push({idx: i, val: board[i], illegal: getConflict(i, board[i], false)});
-            count++;
         }
     }
     updateHistoryUI();
     softReset();
 }
 
+// --- v8.9 ENTROPY-GRAVITY CORE ---
 async function startInference() {
     if (isRunning) { isRunning = false; return; }
     softReset();
@@ -137,83 +141,77 @@ async function startInference() {
     document.getElementById('inf-btn').innerText = "STOP";
     
     let anchor = BigInt(document.getElementById('path-id').value);
-    if ((anchor & 1n) === 0n) anchor |= 1n; // Enforce Odd Parity
+    if ((anchor & 1n) === 0n) anchor |= 1n; 
 
-    let d = 0, friction = 0, driftCount = 0;
+    let driftCount = 0;
     let activeID = anchor; 
-    const frictionLimit = N * z; // Sensitivity
 
-    while (isRunning && d >= 0) {
-        if (d === totalBits) { finalize(); break; }
-        if (fixed[d]) { d++; continue; }
+    while (isRunning) {
+        let bestCell = -1, minOptsCount = N + 1, bestOpts = [], filledCount = 0;
 
-        // --- THE LIVE TUNER: Frequency Drift ---
-        if (friction > frictionLimit) {
-            driftCount++;
-            activeID++; // Rotate the global frequency
-            d = Math.max(0, d - (N * 2)); // Elastic Snapback (2 rows)
-            softResetToDepth(d); 
-            friction = 0;
-            updateStats(activeID, driftCount);
+        // 1. GLOBAL MANIFOLD SCAN
+        for (let i = 0; i < totalBits; i++) {
+            if (fixed[i] || board[i]) { filledCount++; continue; }
+
+            let r = Math.floor(i / N), c = i % N, b = Math.floor(r / z) * z + Math.floor(c / z);
+            let mask = rowM[r] | colM[c] | blkM[b];
+            let opts = [];
+            for (let v = 1; v <= N; v++) if (!(mask & (1n << BigInt(v)))) opts.push(v);
+
+            if (opts.length === 0) { minOptsCount = 0; break; } // Paradox detected
+
+            if (opts.length < minOptsCount) {
+                minOptsCount = opts.length;
+                bestCell = i;
+                bestOpts = opts;
+            }
+        }
+
+        if (filledCount === totalBits) { finalize(); break; }
+
+        // 2. PARADOX DRIFT
+        if (minOptsCount === 0) {
+            driftCount++; activeID++;
+            updateStats(activeID, driftCount, filledCount);
+            board.fill(0); // Wipe board, keep fixed
+            rowM.fill(0n); colM.fill(0n); blkM.fill(0n);
+            for(let i=0; i<totalBits; i++) if(fixed[i]) {
+                let r = Math.floor(i/N), c = i%N, b = Math.floor(r/z)*z + Math.floor(c/z);
+                let bit = 1n << BigInt(fixed[i]);
+                rowM[r] |= bit; colM[c] |= bit; blkM[b] |= bit;
+            }
+            await new Promise(r => setTimeout(r, 0));
             continue;
         }
 
-        let r = Math.floor(d / N), c = d % N, b = Math.floor(r / z) * z + Math.floor(c / z);
-        let mask = rowM[r] | colM[c] | blkM[b];
-        let opts = [];
-        for (let i = 1; i <= N; i++) if (!(mask & (1n << BigInt(i)))) opts.push(i);
-
-        if (opts.length === 0) {
-            board[d] = 0; d--;
-            while(d >= 0 && fixed[d]) d--; 
-            if (d < 0) { isRunning = false; break; }
-            rowM = [...shadowR[d]]; colM = [...shadowC[d]]; blkM = [...shadowB[d]];
-            phase[d]++; friction++; continue;
-        }
-
-        shadowR[d] = [...rowM]; shadowC[d] = [...colM]; shadowB[d] = [...blkM];
-
-        let val;
-        if (opts.length === 1) {
-            val = opts[0]; // Logic 2: Truth-Lock
+        // 3. THE MARILYN FOLD
+        let val, r = Math.floor(bestCell / N), c = bestCell % N, b = Math.floor(r / z) * z + Math.floor(c / z);
+        if (minOptsCount === 1) {
+            val = bestOpts[0]; // Truth-Lock
         } else {
-            // Logic 3: Trinity Jitter (13, 17, 19)
+            // Trinity Jitter v2
             let jitter = (BigInt(r) * 13n) ^ (BigInt(c) * 17n) ^ (BigInt(b) * 19n);
-            let h = (activeID ^ BigInt(d) ^ jitter) * ADELIC_CONST;
-            val = opts[Number(h % BigInt(opts.length))];
+            let h = (activeID ^ BigInt(bestCell) ^ jitter) * ADELIC_CONST;
+            val = bestOpts[Number(h % BigInt(bestOpts.length))];
         }
 
-        board[d] = val;
+        board[bestCell] = val;
         let bit = 1n << BigInt(val);
         rowM[r] |= bit; colM[c] |= bit; blkM[b] |= bit;
-        d++;
 
-        if (d % N === 0) { 
-            updateStats(activeID, driftCount);
-            render(); 
-            await new Promise(r => setTimeout(r, 0)); 
+        if (filledCount % Math.floor(N/2) === 0) {
+            updateStats(activeID, driftCount, filledCount);
+            render();
+            await new Promise(r => setTimeout(r, 0));
         }
     }
-    document.getElementById('inf-btn').innerText = "EXECUTE LIVE";
+    document.getElementById('inf-btn').innerText = "EXECUTE GRAVITY";
 }
 
-function softResetToDepth(depth) {
-    rowM.fill(0n); colM.fill(0n); blkM.fill(0n);
-    for(let i=0; i<totalBits; i++) {
-        let val = (i < depth) ? (fixed[i] || board[i]) : fixed[i];
-        if(i >= depth) board[i] = 0; 
-        if(val) {
-            let r = Math.floor(i/N), c = i%N, b = Math.floor(r/z)*z + Math.floor(c/z);
-            let bit = 1n << BigInt(val);
-            rowM[r] |= bit; colM[c] |= bit; blkM[b] |= bit;
-        }
-    }
-}
-
-function updateStats(id, f) {
+function updateStats(id, d, f) {
     document.getElementById('index-val').innerText = `#${id.toString()}`;
-    document.getElementById('f-val').innerText = f;
-    document.getElementById('perc-val').innerText = `${((Number(id % 1000n)/1000)*100).toFixed(2)}%`;
+    document.getElementById('f-val').innerText = d;
+    document.getElementById('filled-val').innerText = f;
 }
 
 function render(final = false) {
@@ -250,9 +248,9 @@ canvas.addEventListener('mousedown', (e) => {
 });
 
 function updateHistoryUI() {
-    document.getElementById('history-list').innerHTML = inputHistory.slice().reverse().map(h => 
+    document.getElementById('history-list').innerHTML = inputHistory.slice().map(h => 
         `<div class="history-item ${h.illegal?'illegal':'legal'}"><span>C${h.idx}</span><span>→ ${h.val}</span></div>`
-    ).join('');
+    ).reverse().join('');
 }
 
 function finalize() { isRunning = false; render(true); }
@@ -260,104 +258,4 @@ factoryReset();
 </script>
 </body>
 </html>
-            if (d < 0) { isRunning = false; break; }
-            rowM = [...shadowR[d]]; colM = [...shadowC[d]]; blkM = [...shadowB[d]];
-            phase[d]++; friction++; continue;
-        }
-        shadowR[d] = [...rowM]; shadowC[d] = [...colM]; shadowB[d] = [...blkM];
-        let val;
-        if (fixed[d] !== 0) {
-            val = opts.includes(fixed[d]) ? fixed[d] : 0;
-            if (val === 0) { d--; friction += 20; continue; }
-        } else if (opts.length === 1) {
-            val = opts[0]; // Truth-Lock [cite: 164, 189]
-        } else {
-            let seed = Number(((activeID ^ BigInt(d)) * ADELIC_CONST) % 0xFFFFFFFn);
-            val = opts[(Math.abs(seed) + phase[d]) % opts.length]; // Deterministic Seed [cite: 163, 187]
-        }
-        board[d] = val; let bit = 1n << BigInt(val);
-        rowM[r] |= bit; colM[c] |= bit; blkM[b] |= bit; d++;
-        if (d % N === 0) { updateStats(activeID, friction); render(); await new Promise(r => setTimeout(r, 0)); }
-    }
-    document.getElementById('inf-btn').innerText = "INFERENCE";
-}
 
-async function autoTuneResonance() {
-    if (isRunning) return;
-    document.getElementById('tune-btn').innerText = "...";
-    let base = BigInt(document.getElementById('path-id').value);
-    let bestA = base, maxFit = -1;
-    for (let i = 0n; i < 150n; i++) {
-        let tA = base + i; if ((tA & 1n) === 0n) tA |= (1n << 63n);
-        let fit = await probeFitness(tA);
-        if (fit > maxFit) { maxFit = fit; bestA = tA; updateStats(bestA, 0); }
-        if (fit >= totalBits) break;
-        if (i % 10n === 0n) await new Promise(r => setTimeout(r, 0));
-    }
-    document.getElementById('path-id').value = bestA.toString();
-    document.getElementById('tune-btn').innerText = "AUTO-TUNE";
-    initSystem();
-}
-
-async function probeFitness(tA) {
-    let d = 0, pR = [...rowM], pC = [...colM], pB = [...blkM], f = 0;
-    while (d < totalBits && f < 3) {
-        let r = Math.floor(d / N), c = d % N, b = Math.floor(r / z) * z + Math.floor(c / z);
-        let mask = pR[r] | pC[c] | pB[b];
-        let opts = [];
-        for (let i = 1; i <= N; i++) if (!(mask & (1n << BigInt(i)))) opts.push(i);
-        if (opts.length === 0) { f++; break; }
-        let val = fixed[d] || opts[Number(((tA ^ BigInt(d)) * ADELIC_CONST) % BigInt(opts.length))];
-        pR[r] |= (1n << BigInt(val)); pC[c] |= (1n << BigInt(val)); pB[b] |= (1n << BigInt(val)); d++;
-    }
-    return d;
-}
-
-function updateStats(id, f) {
-    document.getElementById('index-val').innerText = `#${id.toString()}`;
-    document.getElementById('f-val').innerText = f;
-}
-
-function render(final = false) {
-    const s = canvas.width / N;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    for (let i = 0; i < totalBits; i++) {
-        let x = (i % N) * s, y = Math.floor(i / N) * s;
-        ctx.strokeStyle = "#222"; ctx.strokeRect(x, y, s, s);
-        let val = fixed[i] || board[i];
-        if (val) {
-            let isFixed = fixed[i] !== 0;
-            let isBad = isFixed && getConflict(i, fixed[i]);
-            ctx.fillStyle = isBad ? C_FRICTION : (isFixed ? C_GOLD : (final ? C_SENTINEL : "white"));
-            if (isBad) { ctx.globalAlpha = 0.2; ctx.fillRect(x,y,s,s); ctx.globalAlpha = 1.0; }
-            ctx.font = `bold ${s*0.5}px monospace`; ctx.textAlign = "center";
-            ctx.fillText(val, x+s/2, y+s*0.7);
-        }
-    }
-}
-
-canvas.addEventListener('mousedown', (e) => {
-    const r = canvas.getBoundingClientRect(); const s = canvas.width / N;
-    const idx = Math.floor((e.clientY - r.top) / s) * N + Math.floor((e.clientX - r.left) / s);
-    let v = prompt(`Fix Cell ${idx}:`);
-    if (v !== null) {
-        let val = parseInt(v) || 0; fixed[idx] = val;
-        let bad = getConflict(idx, val);
-        inputHistory.push({idx, val, illegal: bad});
-        updateHistoryUI(); render();
-    }
-});
-
-function updateHistoryUI() {
-    const list = document.getElementById('history-list'); list.innerHTML = '';
-    inputHistory.slice().reverse().slice(0, 50).forEach(h => {
-        list.innerHTML += `<div class="history-item ${h.illegal?'illegal':'legal'}"><span>C${h.idx}</span><span>→${h.val}</span></div>`;
-    });
-}
-
-const canvasElement = document.getElementById('mainCanvas');
-const context = canvasElement.getContext('2d');
-initSystem();
-</script>
-</body>
-</html>
