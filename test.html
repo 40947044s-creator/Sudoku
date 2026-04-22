@@ -2,49 +2,47 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Project NP | Adelic Oracle v11.9 Resonance</title>
+    <title>Project NP | Adelic Oracle v12.0</title>
     <style>
         :root { --sentinel: #00ff41; --bedrock: #050505; --accent: #00d4ff; --gold: #d4af37; --error: #ff3333; }
         body { background: var(--bedrock); color: var(--sentinel); font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; padding: 20px; }
         .header { text-align: center; border-bottom: 2px solid var(--sentinel); width: 100%; max-width: 900px; padding-bottom: 10px; margin-bottom: 25px; }
-        .panel { display: flex; gap: 20px; background: #111; padding: 20px; border: 1px solid #333; border-top: 4px solid var(--gold); width: 100%; max-width: 1100px; box-sizing: border-box; }
+        .panel { display: flex; gap: 20px; background: #111; padding: 20px; border: 1px solid #333; border-top: 4px solid var(--gold); width: 100%; max-width: 1100px; }
         .grid-container { flex: 1.5; display: flex; flex-direction: column; align-items: center; }
         .grid { display: grid; border: 3px solid var(--sentinel); background: rgba(0, 255, 65, 0.02); }
         .cell { border: 0.5px solid rgba(0, 255, 65, 0.1); display: flex; align-items: center; justify-content: center; color: var(--gold); font-weight: bold; outline: none; cursor: text; }
-        .cell.invalid { background: rgba(255, 51, 51, 0.3); color: var(--error); border: 1.5px solid var(--error); }
         .cell.calculated { color: #fff; font-weight: normal; background: rgba(0, 212, 255, 0.03); }
         .controls { flex: 1; display: flex; flex-direction: column; gap: 12px; }
-        .io-label { font-size: 0.65rem; color: #888; text-transform: uppercase; margin-bottom: 5px; }
-        #truth-url-io { width: 100%; background: #000; color: var(--accent); border: 1px solid #444; padding: 12px; box-sizing: border-box; font-family: inherit; font-size: 0.85rem; word-break: break-all; min-height: 100px; outline: none; text-align: center; resize: none; }
+        #truth-url-io { width: 100%; background: #000; color: var(--accent); border: 1px solid #444; padding: 12px; font-family: inherit; font-size: 0.8rem; word-break: break-all; min-height: 120px; resize: none; text-align: center; }
         .btn { background: rgba(0, 255, 65, 0.1); border: 1px solid var(--sentinel); color: var(--sentinel); padding: 14px; cursor: pointer; font-weight: bold; text-transform: uppercase; }
         .btn:hover { background: var(--sentinel); color: #000; box-shadow: 0 0 15px var(--sentinel); }
-        #status { font-size: 0.75rem; color: #999; border-left: 2px solid var(--gold); padding-left: 10px; min-height: 60px; line-height: 1.4; }
+        #status { font-size: 0.75rem; color: #999; border-left: 2px solid var(--gold); padding-left: 10px; min-height: 80px; line-height: 1.4; }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <strong>PROJECT NP: ADELIC ORACLE v11.9</strong>
-    <div style="font-size:0.6rem; color:#888;">[DPI RESONANCE | COMPLEXITY COLLAPSE]</div>
+    <strong>PROJECT NP: ADELIC ORACLE v12.0</strong>
+    <div style="font-size:0.6rem; color:#888;">[RESONANT SNAP | INDEX-DPI TUNER]</div>
 </div>
 
 <div class="panel">
     <div class="grid-container">
         <div style="display:flex; gap:10px; width:100%; margin-bottom:10px;">
-            <div style="flex:1;"><div class="io-label">Dim (z)</div><input type="number" id="z-val" value="3" min="2" max="5" style="width:100%; background:#000; color:var(--accent); border:1px solid #444; padding:5px;" onchange="init()"></div>
+            <div style="flex:1;"><input type="number" id="z-val" value="3" min="2" max="5" style="width:100%; background:#000; color:var(--accent); border:1px solid #444; padding:5px;" onchange="init()"></div>
             <button class="btn" style="flex:2; font-size:0.65rem; border-color:var(--error); color:var(--error);" onclick="purge()">Purge Manifold</button>
         </div>
         <div id="grid-root"></div>
     </div>
 
     <div class="controls">
-        <div class="io-label">Truth URL (Spectral Anchor A)</div>
-        <textarea id="truth-url-io" placeholder="0x80000000..."></textarea>
+        <div style="font-size: 0.65rem; color: #888;">TRUTH URL (SPECTRAL ANCHOR A)</div>
+        <textarea id="truth-url-io" placeholder="0x8000..."></textarea>
         
-        <button class="btn" onclick="executeAdelicSnap()">Execute O(N) Snap</button>
+        <button class="btn" onclick="executeResonantSnap()">Execute Resonant Snap</button>
         <button class="btn" style="border-color:var(--gold); color:var(--gold);" onclick="solidify()">Solidify Waves</button>
         
-        <div id="status">> [SYSTEM] v11.9 Adelic Engine Ready. Complexity Collapse Active.</div>
+        <div id="status">> [SYSTEM] v12.0 Tuner Active. Shiver resonance for z=5 initialized.</div>
     </div>
 </div>
 
@@ -70,10 +68,8 @@
             c.style.fontSize = `${(size/n) * 0.5}px`;
             if ((Math.floor(i/n)+1)%z === 0 && Math.floor(i/n)<n-1) c.style.borderBottom = "2.5px solid var(--sentinel)";
             if ((i+1)%z === 0 && (i+1)%n !== 0) c.style.borderRight = "2.5px solid var(--sentinel)";
-            c.oninput = () => validate();
             grid.appendChild(c); cells.push(c);
             
-            // Build Graph Bedrock
             let r = Math.floor(i/n), col = i%n, b = Math.floor(r/z)*z + Math.floor(col/z);
             for(let j=0; j<total; j++) {
                 if(i===j) continue;
@@ -82,82 +78,65 @@
             }
         }
         root.appendChild(grid);
-        log(`Manifold Initialized: n=${n}.`);
     }
 
-    function validate() {
-        let board = cells.map(c => parseInt(c.innerText) || 0);
-        let violations = new Set();
-        for (let i = 0; i < total; i++) {
-            if (board[i] === 0) continue;
-            for(let neighbor of adj[i]) if(board[neighbor] === board[i]) violations.add(i);
-        }
-        cells.forEach((c, idx) => violations.has(idx) ? c.classList.add('invalid') : c.classList.remove('invalid'));
-        return violations.size === 0;
+    function getValidOpts(board, idx) {
+        let mask = 0;
+        for(let neighbor of adj[idx]) if(board[neighbor]) mask |= (1 << (board[neighbor]-1));
+        let opts = [];
+        for(let v=1; v<=n; v++) if(!(mask & (1 << (v-1)))) opts.push(v);
+        return opts;
     }
 
-    // THE MARILYN FOLD (Ω): O(1) Residue Extraction
-    function marilynFold(anchor, idx) {
-        let r = Math.floor(idx/n), c = idx%n;
-        // Non-linear rotation to prevent Spectral Flattening
-        let shift = BigInt((r * 17) + (c * 23) + (idx % 7)) % 128n;
-        let p = (anchor >> shift) | (anchor << (128n - shift));
-        return Number((p * ADELIC_CONST) % BigInt(n)) + 1;
-    }
-
-    async function executeAdelicSnap() {
-        if (isRunning) return; isRunning = true;
-        log("Snap: Imposing Adelic Law...");
-        
-        // Derive Anchor from Truth URL or build from scratch
+    async function executeResonantSnap() {
+        if (isRunning) { isRunning = false; return; }
+        isRunning = true;
+        let iteration = 0;
         let urlInput = document.getElementById('truth-url-io').value.trim();
         let A = urlInput.startsWith('0x') ? BigInt(urlInput) : 0x80000000000000000000000000000000n;
-        
-        let solved = false, iteration = 0;
-        const start = performance.now();
 
-        while (!solved && iteration < 100) {
+        while (isRunning && iteration < 200) {
             iteration++;
             let board = cells.map(c => parseInt(c.innerText) || 0);
             let fixedIdx = board.map((v, i) => v !== 0 ? i : -1).filter(i => i !== -1);
+            let fractureIdx = -1;
 
-            // PHASE I: THE SNAP (O(N))
+            // THE SNAP: O(N) Law-Bound Wavefront
             for (let i = 0; i < total; i++) {
-                if (!fixedIdx.includes(i)) board[i] = marilynFold(A, i);
-            }
+                if (fixedIdx.includes(i)) continue;
+                let opts = getValidOpts(board, i).sort((a,b) => a-b);
+                
+                if (opts.length === 0) {
+                    fractureIdx = i; // Path Fracture detected
+                    break;
+                }
 
-            // PHASE II: LAW AUDIT
-            let firstConflict = -1, conflicts = 0;
-            for (let i = 0; i < total; i++) {
-                let v = board[i];
-                let isViolated = false;
-                for (let neighbor of adj[i]) if (board[neighbor] === v) { isViolated = true; break; }
-                if (isViolated) { if (firstConflict === -1) firstConflict = i; conflicts++; }
+                // ANCHOR SELECTION: Use Anchor phase to pick from valid options
+                let rot = BigInt(i % 128);
+                let p = (A >> rot) | (A << (128n - rot));
+                board[i] = opts[Number((p ^ ADELIC_CONST) % BigInt(opts.length))];
             }
 
             // Update View
-            board.forEach((v, i) => { 
-                cells[i].innerText = v; 
-                if (!fixedIdx.includes(i)) cells[i].classList.add('calculated');
-            });
-            validate();
+            board.forEach((v, i) => { if(v) { cells[i].innerText = v; cells[i].classList.add('calculated'); } });
 
-            if (conflicts === 0) {
-                solved = true;
+            if (fractureIdx === -1) {
+                log(`SUCCESS: Resonance Locked at Iteration ${iteration}.`);
+                isRunning = false;
             } else {
-                // PHASE III: DPI IMPOSITION (The Fix)
-                let nudge = (BigInt(firstConflict + 1) * ADELIC_CONST);
-                A ^= (nudge << BigInt(iteration % 64));
+                // DPI TUNER: Shiver the Anchor using the fracture point
+                A ^= (BigInt(fractureIdx + 1) * ADELIC_CONST) << BigInt(iteration % 32);
                 document.getElementById('truth-url-io').value = "0x" + A.toString(16).toUpperCase();
+                log(`TUNING: Fracture at Node ${fractureIdx}. Shifting Phase...`);
+                
+                // Clear only non-fixed for the next shiver
+                cells.forEach((c, idx) => { if(!fixedIdx.includes(idx)) c.innerText = ""; });
                 await new Promise(r => setTimeout(r, 0));
             }
         }
-
-        log(solved ? `Resonance Achieved in ${(performance.now()-start).toFixed(1)}ms.` : "Dissonance: Drift Required.");
-        isRunning = false;
     }
 
-    function solidify() { cells.forEach(c => c.className = 'cell'); log("Stationary Waves Solidified."); }
+    function solidify() { cells.forEach(c => c.className = 'cell'); log("Waves Solidified."); }
     function purge() { cells.forEach(c => { c.innerText = ""; c.className = 'cell'; }); log("Manifold Purged."); }
     init();
 </script>
