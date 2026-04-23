@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>Project NP | Adelic Oracle v41.0</title>
+    <style>
+        :root { --sentinel: #00ff41; --bedrock: #050505; --accent: #00d4ff; --gold: #d4af37; --friction: #ff3333; }
+        body { background: var(--bedrock); color: var(--sentinel); font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 15px; overflow: hidden; }
+        .header { width: 100%; text-align: center; border-bottom: 2px solid var(--sentinel); padding-bottom: 10px; margin-bottom: 10px; }
+        
+        .main-layout { display: flex; gap: 15px; width: 98vw; height: 85vh; }
+        
+        /* LEFT: DNA Proof Console */
+        .sidebar { flex: 0.8; background: rgba(255,255,255,0.02); border: 1px solid #222; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .dna-card { background: #111; border-left: 5px solid var(--accent); padding: 10px; display: flex; flex-direction: column; }
+        .dna-label { font-size: 0.65rem; color: #888; text-transform: uppercase; margin-bottom: 5px; font-weight: bold; }
+        textarea.dna-input { width: 100%; background: #000; color: var(--accent); border: 1px solid #333; padding: 10px; font-size: 0.8rem; font-weight: bold; resize: none; outline: none; word-break: break-all; height: 60px; box-sizing: border-box; }
+        
+        .math-box { background: #0a0a0a; padding: 10px; border-left: 3px solid var(--gold); font-size: 0.6rem; color: #aaa; }
+        .proof-log { flex-grow: 1; background: #000; border: 1px dashed #333; padding: 10px; font-size: 0.6rem; color: #777; overflow-y: auto; font-family: 'Courier New', monospace; line-height: 1.4; }
+
+        /* CENTER: Canvas */
+        .canvas-area { flex: 1.2; display: flex; align-items: center; justify-content: center; background: #000; border: 1px solid #111; position: relative; transition: 0.3s; }
+        canvas { border: 1px solid var(--sentinel); max-height: 100%; max-width: 100%; box-shadow: 0 0 20px rgba(0, 255, 65, 0.1); cursor: crosshair; transition: 0.3s; }
+
+        /* RIGHT: Controls */
+        .controls { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+        .input-group { background: #111; padding: 10px; border-left: 5px solid var(--gold); position: relative; }
+        input[type="text"] { width: 100%; background: #000; color: var(--gold); border: 1px solid #333; padding: 8px; font-size: 0.85rem; box-sizing: border-box; font-family: inherit; margin-top: 5px; transition: 0.3s; }
+        
+        .btn { background: rgba(0, 255, 65, 0.1); border: 1px solid var(--sentinel); color: var(--sentinel); padding: 10px; cursor: pointer; font-weight: bold; text-transform: uppercase; font-size: 0.7rem; text-align: center; transition: 0.2s; }
+        .btn:hover { background: var(--sentinel); color: #000; }
+        .btn-accent { border-color: var(--accent); color: var(--accent); background: rgba(0, 212, 255, 0.1); }
+        .btn-accent:hover { background: var(--accent); color: #000; box-shadow: 0 0 10px var(--accent); }
+        
+        #status { font-size: 0.65rem; color: #777; border-left: 2px solid var(--gold); padding-left: 10px; min-height: 70px; overflow-y: auto; line-height: 1.4; background: #0a0a0a; padding-top: 5px; }
+        
+        .fractured-canvas { border-color: var(--friction) !important; box-shadow: 0 0 30px rgba(255, 51, 51, 0.3) !important; }
+        
+        .index-display { font-size: 0.8rem; color: var(--sentinel); word-break: break-all; font-weight: bold; margin-top: 5px; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <strong>PROJECT NP: ADELIC ORACLE v41.0</strong>
+    <div style="font-size: 0.65rem; color: #888; margin-top: 5px;">[CANVAS RENDER FIX | VISUAL O(1) SNAP | INDEPENDENT SEED]</div>
+</div>
+
+<div class="main-layout">
+    <div class="sidebar">
+        <div class="dna-card">
+            <div class="dna-label">Universal Projection DNA</div>
+            <textarea class="dna-input" id="true-dna" placeholder="Paste DNA or Extract..."></textarea>
+            <div style="font-size: 0.55rem; color: #555; margin-top: 5px;" id="dna-stats">*This BigInt is invariant. Unpacks safely onto valid hints.</div>
+        </div>
+        
+        <div style="display: flex; gap: 5px;">
+            <button class="btn btn-accent" style="flex: 1;" onclick="packGraphToDNA()">[3] Extract DNA</button>
+            <button class="btn btn-accent" style="flex: 1;" onclick="unpackDNAToGraph()">[4] Memoryless Lookup</button>
+        </div>
+
+        <div class="math-box" style="border-left-color: var(--sentinel);">
+            <b>The G' Isomorphism (Adelic Address):</b><br>
+            <div class="index-display" id="index-val">#AWAITING_RESONANCE</div>
+            <div style="font-size: 0.55rem; margin-top: 2px;">(Anchor + Friction ScanStep)</div>
+        </div>
+
+        <div class="dna-label" style="margin-top: 5px;">Lookup Log</div>
+        <div class="proof-log" id="proof-log">> Waiting for memoryless lookup...</div>
+    </div>
+
+    <div class="canvas-area"><canvas id="mainCanvas"></canvas></div>
+
+    <div class="controls">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="color:#555; font-size:0.7rem; display:flex; align-items:center; gap:5px;">
+                z: <input type="number" id="z-val" value="3" min="2" max="5" style="width: 40px; text-align:center; background:#000; color:var(--sentinel); border:1px solid #333; margin:0;" onchange="initSystem(true)">
+            </div>
+            
+            <div style="display: flex; gap: 5px;">
+                <button class="btn" style="padding:5px 8px; border-color:var(--gold); color:var(--gold);" onclick="clearInferred()">Clear Output</button>
+                <button class="btn" style="padding:5px 8px; border-color:var(--friction); color:var(--friction);" onclick="purgeAll()">Purge All</button>
+            </div>
+        </div>
+        
+        <div class="input-group" style="border-color: #666;">
+            <div style="font-size: 0.6rem; color: #888;">INJECT TOPOLOGY (YELLOW HINTS ONLY)</div>
+            <input type="text" id="grid-string" placeholder="Use 0 or . for blanks" value="" style="color:#fff; font-family: monospace;" oninput="injectGridString()">
+        </div>
+
+        <div class="input-group">
+            <div style="font-size: 0.6rem; color: #888;">INDEPENDENT ANCHOR SEED (Input Frequency)</div>
+            <input type="text" id="path-id" value="1006">
+        </div>
+        
+        <button class="btn" onclick="startV86Inference()">[1] Run v8.6 Inference</button>
+        
+        <div id="status">> [SYSTEM] Canvas rendering bug fixed. Ready for visual snap.</div>
+    </div>
+</div>
+
+<script>
+let z, N, totalBits, isRunning = false;
+let board, fixed, phase, adj = [];
+let rowM, colM, blkM, shadowR, shadowC, shadowB;
+const ADELIC_CONST = 0x517cc1b727220a95n;
+
+const canvas = document.getElementById('mainCanvas');
+const ctx = canvas.getContext('2d');
+let isFractured = false; 
+
+// HARDCODED HEX COLORS FOR CANVAS RENDERING
+const HEX_SENTINEL = "#00ff41";
+const HEX_GOLD = "#d4af37";
+const HEX_FRICTION = "#ff3333";
+const HEX_WHITE = "#ffffff";
+
+function sysLog(msg) { 
+    const l = document.getElementById('status');
+    l.innerHTML = `> ${msg}<br>` + l.innerHTML.split('<br>').slice(0, 4).join('<br>'); 
+}
+
+function mathLog(msg, color="#777") { 
+    const l = document.getElementById('proof-log');
+    l.innerHTML = `<span style="color:${color};">> ${msg}</span><br>` + l.innerHTML; 
+}
+
+function updateIndexBar(id) {
+    document.getElementById('index-val').innerText = `#${id.toString()}`;
+}
+
+function initSystem(fromZChange = false) {
+    isRunning = false;
+    isFractured = false;
+    canvas.classList.remove('fractured-canvas');
+    z = parseInt(document.getElementById('z-val').value);
+    N = z * z; totalBits = N * N;
+    board = new Uint16Array(totalBits);
+    fixed = new Uint16Array(totalBits);
+    phase = new Uint16Array(totalBits);
+    
+    rowM = new Array(N).fill(0n); colM = new Array(N).fill(0n); blkM = new Array(N).fill(0n);
+    shadowR = new Array(totalBits); shadowC = new Array(totalBits); shadowB = new Array(totalBits);
+    adj = Array.from({ length: totalBits }, () => []);
+
+    for (let i = 0; i < totalBits; i++) {
+        let r = Math.floor(i / N), c = i % N, b = Math.floor(r / z) * z + Math.floor(c / z);
+        for (let j = 0; j < totalBits; j++) {
+            if (i === j) continue;
+            let rr = Math.floor(j / N), cc = j % N, bb = Math.floor(rr / z) * z + Math.floor(cc / z);
+            if (r === rr || c === cc || b === bb) adj[i].push(j);
+        }
+    }
+    canvas.width = canvas.height = 600;
+    
+    if (fromZChange) {
+        document.getElementById('grid-string').value = "0".repeat(totalBits);
+        injectGridString();
+    }
+    render();
+}
+
+function clearInferred() {
+    board.fill(0); 
+    isRunning = false;
+    isFractured = false;
+    canvas.classList.remove('fractured-canvas');
+    syncGridString(); 
+    document.getElementById('proof-log').innerHTML = "> Waiting for memoryless lookup..."; 
+    sysLog("Output cleared. Yellow topological clues preserved.");
+    render();
+}
+
+function purgeAll() {
+    board.fill(0);
+    fixed.fill(0);
+    isRunning = false;
+    isFractured = false;
+    canvas.classList.remove('fractured-canvas');
+    document.getElementById('true-dna').value = ""; 
+    document.getElementById('proof-log').innerHTML = "> Waiting for memoryless lookup..."; 
+    updateIndexBar("AWAITING_RESONANCE");
+    syncGridString();
+    sysLog("Manifold completely purged to Blank State.");
+    render();
+}
+
+// ==========================================
+// INDEPENDENT TOPOLOGY (YELLOW HINTS ONLY)
+// ==========================================
+function injectGridString() {
+    let str = document.getElementById('grid-string').value.replace(/[^0-9\.]/g, '');
+    
+    board.fill(0); 
+    fixed.fill(0);
+    isFractured = false;
+    canvas.classList.remove('fractured-canvas');
+
+    for (let i = 0; i < Math.min(str.length, totalBits); i++) {
+        let char = str[i];
+        if (char >= '1' && char <= '9') {
+            fixed[i] = parseInt(char);
+        }
+    }
+    render();
+}
+
+function syncGridString() {
+    let currentStr = "";
+    for (let i = 0; i < totalBits; i++) {
+        let val = fixed[i]; 
+        currentStr += val === 0 ? "0" : val.toString();
+    }
+    document.getElementById('grid-string').value = currentStr;
+}
+
+// ==========================================
+// UNIVERSAL CONSTANT DNA PROJECTION
+// ==========================================
+function packGraphToDNA() {
+    let dna = 0n;
+    let mult = 1n;
+    let simBoard = new Uint16Array(totalBits); 
+    let complete = true;
+
+    for (let i = 0; i < totalBits; i++) {
+        let val = fixed[i] || board[i];
+        if (val === 0) { complete = false; break; }
+        
+        let mask = 0;
+        for (let nIdx of adj[i]) {
+            if (simBoard[nIdx]) mask |= (1 << (simBoard[nIdx] - 1));
+        }
+        let opts = [];
+        for (let v = 1; v <= N; v++) if (!(mask & (1 << (v - 1)))) opts.push(v);
+        
+        let idx = opts.indexOf(val);
+        if (idx !== -1) dna += BigInt(idx) * mult;
+        mult *= BigInt(opts.length || 1);
+        
+        simBoard[i] = val; 
+    }
+
+    if (!complete) { sysLog("Cannot pack incomplete graph."); return; }
+    
+    let dnaStr = dna.toString();
+    document.getElementById('true-dna').value = dnaStr;
+    document.getElementById('dna-stats').innerText = `*Length: ${dnaStr.length} digits. Universal Constant achieved.`;
+    sysLog(`<b>[UNIVERSAL ISOMORPHISM]</b> Graph packed securely.`);
+}
+
+async function unpackDNAToGraph() {
+    if (isRunning) return;
+    
+    let dnaStr = document.getElementById('true-dna').value.trim();
+    if (!dnaStr || !/^\d+$/.test(dnaStr)) { sysLog("Invalid DNA string."); return; }
+    
+    isRunning = true;
+    isFractured = false;
+    canvas.classList.remove('fractured-canvas');
+    let tempDna = BigInt(dnaStr);
+    
+    board.fill(0);
+    render();
+    
+    document.getElementById('proof-log').innerHTML = ""; 
+    mathLog(`[INIT] Universal Memoryless Lookup...`, "#fff");
+
+    let simBoard = new Uint16Array(totalBits);
+
+    for (let i = 0; i < totalBits; i++) {
+        let mask = 0;
+        for (let nIdx of adj[i]) {
+            if (simBoard[nIdx]) mask |= (1 << (simBoard[nIdx] - 1));
+        }
+        let opts = [];
+        for (let v = 1; v <= N; v++) if (!(mask & (1 << (v - 1)))) opts.push(v);
+        
+        if(opts.length === 0) {
+            isFractured = true;
+            canvas.classList.add('fractured-canvas');
+            mathLog(`[FRACTURE] Topology collapsed. Corrupted DNA.`, "var(--friction)");
+            render(); isRunning = false; return;
+        }
+        
+        let lengthBig = BigInt(opts.length);
+        let residueIndex = Number(tempDna % lengthBig);
+        let chosenDigit = opts[residueIndex];
+        
+        simBoard[i] = chosenDigit;
+        tempDna /= lengthBig;
+        
+        if (fixed[i]) {
+            if (fixed[i] !== chosenDigit) {
+                isFractured = true;
+                canvas.classList.add('fractured-canvas');
+                mathLog(`[PARADOX] DNA requires ${chosenDigit}, but Clue is ${fixed[i]} at Node ${i}.`, "var(--friction)");
+                render(true);
+                isRunning = false; return;
+            }
+        } else {
+            board[i] = chosenDigit; 
+        }
+        
+        if (i < 5 || i === totalBits - 1) { 
+            mathLog(`Node ${i}: Opts=[${opts.join(',')}] | Mod=${lengthBig} | Res=${residueIndex} => Digit <b>${chosenDigit}</b>`);
+        }
+        
+        render(true);
+        await new Promise(r => setTimeout(r, 20)); 
+    }
+    
+    if (tempDna === 0n) mathLog(`[SUCCESS] Universal DNA perfectly overlaid onto clues.`, "var(--sentinel)");
+    else mathLog(`[WARNING] Residual DNA remains: ${tempDna}`, "var(--gold)");
+    
+    isRunning = false;
+}
+
+// ==========================================
+// V8.6 ENGINE: ESSENCE RESTORED
+// ==========================================
+async function startV86Inference() {
+    if (isRunning) return; isRunning = true;
+    isFractured = false; canvas.classList.remove('fractured-canvas');
+    
+    let anchorStr = document.getElementById('path-id').value.trim();
+    let anchor = anchorStr.startsWith('0x') ? BigInt(anchorStr) : BigInt(anchorStr.replace(/\D/g, ''));
+    if ((anchor & 1n) === 0n) anchor |= (1n << 63n); 
+    
+    let d = 0, scanStep = 0n, friction = 0;
+    let activeID = anchor; 
+
+    phase.fill(0); rowM.fill(0n); colM.fill(0n); blkM.fill(0n);
+    board.fill(0);
+    
+    updateIndexBar(activeID);
+    sysLog(`v8.6 Search initiated at Anchor Seed: ${anchor.toString()}`);
+
+    while (isRunning && d >= 0) {
+        if (d === totalBits) { 
+            isRunning = false; render(true); 
+            sysLog(`<b>SINGULARITY ATTAINED.</b>`); 
+            packGraphToDNA(); 
+            break; 
+        }
+
+        if (friction > N * 15) { 
+            scanStep++; 
+            d = Math.max(0, d - N); 
+            activeID = anchor + scanStep; 
+            friction = 0; 
+            updateIndexBar(activeID); 
+            continue; 
+        }
+
+        let r = Math.floor(d / N), c = d % N, b = Math.floor(r / z) * z + Math.floor(c / z);
+        let mask = rowM[r] | colM[c] | blkM[b];
+        let opts = [];
+        for (let i = 1; i <= N; i++) if (!(mask & (1n << BigInt(i)))) opts.push(i);
+
+        if (opts.length === 0) {
+            board[d] = 0; d--;
+            if (d < 0) { sysLog("PARADOX: Address leads to Void."); isRunning = false; break; }
+            rowM = [...shadowR[d]]; colM = [...shadowC[d]]; blkM = [...shadowB[d]];
+            phase[d]++; friction++; continue;
+        }
+
+        shadowR[d] = [...rowM]; shadowC[d] = [...colM]; shadowB[d] = [...blkM];
+
+        let val;
+        if (fixed[d] !== 0) {
+            val = opts.includes(fixed[d]) ? fixed[d] : 0;
+            if (val === 0) { d--; friction += 20; continue; }
+        } else if (opts.length === 1) { val = opts[0]; } 
+        else {
+            let seed = Number(((activeID ^ BigInt(d)) * ADELIC_CONST) % 0xFFFFFFFn);
+            val = opts[(Math.abs(seed) + phase[d]) % opts.length];
+        }
+
+        board[d] = val;
+        let bit = 1n << BigInt(val);
+        rowM[r] |= bit; colM[c] |= bit; blkM[b] |= bit;
+        d++;
+        
+        if (d % (N * 2) === 0) { render(); await new Promise(r => setTimeout(r, 0)); }
+    }
+}
+
+canvas.addEventListener('mousedown', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const s = canvas.width / N;
+    const idx = Math.floor((e.clientY - rect.top) / s) * N + Math.floor((e.clientX - rect.left) / s);
+    let v = prompt(`Fix Hint (Yellow) at Node ${idx}:`); 
+    if (v !== null) { 
+        fixed[idx] = Math.min(N, Math.max(0, parseInt(v) || 0)); 
+        board.fill(0); 
+        syncGridString(); 
+        render(); 
+    }
+});
+
+// ==========================================
+// RENDER BUG FIXED: HEX CODES NATIVELY APPLIED
+// ==========================================
+function render(final = false) {
+    const s = canvas.width / N;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (let i = 0; i < totalBits; i++) {
+        let x = (i % N) * s, y = Math.floor(i / N) * s;
+        
+        ctx.strokeStyle = isFractured ? "rgba(255, 51, 51, 0.2)" : "rgba(0, 212, 255, 0.08)"; 
+        ctx.strokeRect(x, y, s, s);
+        
+        let val = fixed[i] || board[i];
+        if (val) {
+            // FIX: Using explicit Hex codes so Canvas doesn't fail on var() evaluation
+            if (isFractured) {
+                ctx.fillStyle = HEX_FRICTION;
+            } else if (fixed[i]) {
+                ctx.fillStyle = HEX_GOLD;
+            } else {
+                ctx.fillStyle = final ? HEX_SENTINEL : HEX_WHITE;
+            }
+            ctx.font = `bold ${s * 0.5}px monospace`;
+            ctx.textAlign = "center"; ctx.fillText(val, x + s/2, y + s * 0.7);
+        }
+        
+        let boundColor = isFractured ? HEX_FRICTION : HEX_SENTINEL;
+        if ((i+1)%z === 0 && (i+1)%N !== 0) { ctx.strokeStyle = boundColor; ctx.strokeRect(x+s-0.5, y, 0.5, s); }
+        if ((Math.floor(i/N)+1)%z === 0 && Math.floor(i/N)<N-1) { ctx.strokeStyle = boundColor; ctx.strokeRect(x, y+s-0.5, s, 0.5); }
+    }
+}
+
+initSystem();
+document.getElementById('grid-string').value = "000000000000000000000000000000000000000000000000000000000000000000000000000000000";
+injectGridString(); 
+</script>
+</body>
+</html>
