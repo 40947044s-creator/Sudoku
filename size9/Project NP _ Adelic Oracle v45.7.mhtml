@@ -1,0 +1,151 @@
+From: <Saved by Blink>
+Snapshot-Content-Location: file:///Users/marilyn/Desktop/page/demo17.html
+Subject: Project NP | Adelic Oracle v45.7
+Date: Thu, 23 Apr 2026 12:26:35 +0800
+MIME-Version: 1.0
+Content-Type: multipart/related;
+	type="text/html";
+	boundary="----MultipartBoundary--VYIDhwtdyo8CoBat9ChZ4CAw1KsXJLOiQQnXJkBivP----"
+
+
+------MultipartBoundary--VYIDhwtdyo8CoBat9ChZ4CAw1KsXJLOiQQnXJkBivP----
+Content-Type: text/html
+Content-ID: <frame-6A6EFB2AB1C1614C8EAD0EAC8D235378@mhtml.blink>
+Content-Transfer-Encoding: quoted-printable
+Content-Location: file:///Users/marilyn/Desktop/page/demo17.html
+
+<!DOCTYPE html><html lang=3D"zh-TW"><head><meta http-equiv=3D"Content-Type"=
+ content=3D"text/html; charset=3DUTF-8"><link rel=3D"stylesheet" type=3D"te=
+xt/css" href=3D"cid:css-fc7c60d9-bc87-446a-aa4c-35b6851735d6@mhtml.blink" /=
+>
+   =20
+    <title>Project NP | Adelic Oracle v45.7</title>
+   =20
+</head>
+<body>
+
+<div id=3D"header">
+    <strong>PROJECT NP: ADELIC ORACLE v45.7</strong>
+    <div style=3D"font-size: 0.65rem; color: #888; margin-top: 5px;">[DPI D=
+ETERMINISM | MRV ENTROPY COLLAPSE | 2-ADIC BIGINT]</div>
+</div>
+
+<div class=3D"main-layout">
+    <div class=3D"sidebar">
+        <div class=3D"io-card">
+            <div class=3D"io-label">Topology Output (String)</div>
+            <textarea id=3D"output-string" readonly=3D"" placeholder=3D"Sin=
+gularity result..."></textarea>
+        </div>
+        <div class=3D"io-card" style=3D"border-left-color: var(--gold);">
+            <div class=3D"io-label">Universal DNA Proof</div>
+            <textarea id=3D"true-dna" placeholder=3D"Adelic Isomorphism..."=
+></textarea>
+        </div>
+        <div id=3D"console"><span style=3D"color:#00ff41">&gt; SINGULARITY =
+ATTAINED.</span><br><span style=3D"color:#00ff41">&gt; INITIATING DPI PROJE=
+CTION [Anchor: #64006022]</span><br><span style=3D"color:#00ff41">&gt; Path=
+ ID derived from topology.</span><br> [SYSTEM] Ready for deconvolution. </d=
+iv>
+    </div>
+
+    <div class=3D"canvas-area"><canvas id=3D"mainCanvas" height=3D"550" wid=
+th=3D"550"></canvas></div>
+
+    <div class=3D"controls">
+        <div style=3D"display:flex; gap:10px; align-items:center;">
+            z: <input type=3D"number" id=3D"z-val" value=3D"3" style=3D"wid=
+th: 50px; background:#000; color:var(--sentinel); border:1px solid #333; te=
+xt-align:center;">
+            <button class=3D"btn" style=3D"flex:1;">Purge Manifold</button>
+        </div>
+       =20
+        <div class=3D"input-group">
+            <div class=3D"io-label">Topology Input (81-digit String)</div>
+            <input type=3D"text" id=3D"grid-string" value=3D"80000000000360=
+0000070090200050007000000045700000100030001000068008500010090000400">
+        </div>
+
+        <div class=3D"input-group" style=3D"background:#1a1a1a;">
+            <div class=3D"io-label">Path ID (Adelic Address)</div>
+            <div style=3D"display: flex; gap: 5px;">
+                <input type=3D"text" id=3D"path-id" value=3D"93070759963333=
+06414" style=3D"flex: 2;">
+                <button class=3D"btn" style=3D"flex: 1; padding: 5px;">Deri=
+ve</button>
+            </div>
+        </div>
+       =20
+        <button class=3D"btn btn-accent">Run DPI-Once Solver</button>
+        <div style=3D"font-size: 0.6rem; color: #555;">*DPI-Once mode uses =
+the Anchor to make deterministic choices at every node without branching.</=
+div>
+    </div>
+</div>
+
+
+
+</body></html>
+------MultipartBoundary--VYIDhwtdyo8CoBat9ChZ4CAw1KsXJLOiQQnXJkBivP----
+Content-Type: text/css
+Content-Transfer-Encoding: quoted-printable
+Content-Location: cid:css-fc7c60d9-bc87-446a-aa4c-35b6851735d6@mhtml.blink
+
+@charset "utf-8";
+
+:root { --sentinel: #00ff41; --bedrock: #050505; --accent: #00d4ff; --gold:=
+ #d4af37; --friction: #ff3333; --glass: rgba(0, 255, 65, 0.1); }
+
+body { background: var(--bedrock); color: var(--sentinel); font-family: "Co=
+urier New", monospace; display: flex; flex-direction: column; align-items: =
+center; margin: 0px; padding: 15px; overflow: hidden; height: 100vh; }
+
+#header { text-align: center; width: 100%; border-bottom: 1px solid var(--s=
+entinel); padding-bottom: 10px; margin-bottom: 15px; }
+
+.main-layout { display: flex; gap: 20px; width: 95vw; height: 80vh; }
+
+.sidebar { flex: 0.8 1 0%; display: flex; flex-direction: column; gap: 10px=
+; background: rgba(255, 255, 255, 0.02); padding: 15px; border: 1px solid r=
+gb(34, 34, 34); }
+
+.io-card { background: rgb(17, 17, 17); border-left: 4px solid var(--accent=
+); padding: 10px; }
+
+.io-label { font-size: 0.65rem; color: rgb(136, 136, 136); margin-bottom: 5=
+px; text-transform: uppercase; }
+
+textarea { width: 100%; background: rgb(0, 0, 0); color: var(--accent); bor=
+der: 1px solid rgb(51, 51, 51); padding: 8px; font-size: 0.75rem; height: 8=
+0px; resize: none; outline: none; }
+
+.canvas-area { flex: 1.2 1 0%; display: flex; align-items: center; justify-=
+content: center; background: rgb(0, 0, 0); border: 1px solid rgb(17, 17, 17=
+); position: relative; }
+
+canvas { border: 2px solid var(--sentinel); max-height: 100%; max-width: 10=
+0%; box-shadow: 0 0 20px var(--glass); cursor: crosshair; }
+
+.controls { flex: 1 1 0%; display: flex; flex-direction: column; gap: 12px;=
+ }
+
+.input-group { background: rgb(17, 17, 17); padding: 12px; border-left: 4px=
+ solid var(--gold); }
+
+input[type=3D"text"] { width: 100%; background: rgb(0, 0, 0); color: var(--=
+gold); border: 1px solid rgb(51, 51, 51); padding: 10px; font-size: 0.9rem;=
+ box-sizing: border-box; margin-top: 5px; }
+
+.btn { background: var(--glass); border: 1px solid var(--sentinel); color: =
+var(--sentinel); padding: 12px; cursor: pointer; text-transform: uppercase;=
+ font-weight: bold; font-size: 0.75rem; transition: 0.2s; }
+
+.btn:hover { background: var(--sentinel); color: rgb(0, 0, 0); }
+
+.btn-accent { border-color: var(--accent); color: var(--accent); background=
+: rgba(0, 212, 255, 0.1); }
+
+#console { font-size: 0.7rem; color: rgb(119, 119, 119); border-left: 2px s=
+olid var(--gold); padding-left: 10px; min-height: 80px; background: rgb(10,=
+ 10, 10); overflow-y: auto; line-height: 1.4; }
+------MultipartBoundary--VYIDhwtdyo8CoBat9ChZ4CAw1KsXJLOiQQnXJkBivP------
