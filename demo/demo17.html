@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>Project NP | Adelic Oracle v45.7</title>
+    <style>
+        :root {
+            --sentinel: #00ff41;
+            --bedrock: #050505;
+            --accent: #00d4ff;
+            --gold: #d4af37;
+            --friction: #ff3333;
+            --glass: rgba(0, 255, 65, 0.1);
+        }
+        body {
+            background: var(--bedrock);
+            color: var(--sentinel);
+            font-family: 'Courier New', monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 15px;
+            overflow: hidden;
+            height: 100vh;
+        }
+        #header { text-align: center; width: 100%; border-bottom: 1px solid var(--sentinel); padding-bottom: 10px; margin-bottom: 15px; }
+        .main-layout { display: flex; gap: 20px; width: 95vw; height: 80vh; }
+        
+        /* Sidebar for DNA and Trace Logs */
+        .sidebar { flex: 0.8; display: flex; flex-direction: column; gap: 10px; background: rgba(255,255,255,0.02); padding: 15px; border: 1px solid #222; }
+        .io-card { background: #111; border-left: 4px solid var(--accent); padding: 10px; }
+        .io-label { font-size: 0.65rem; color: #888; margin-bottom: 5px; text-transform: uppercase; }
+        textarea { width: 100%; background: #000; color: var(--accent); border: 1px solid #333; padding: 8px; font-size: 0.75rem; height: 80px; resize: none; outline: none; }
+        
+        /* Center Canvas */
+        .canvas-area { flex: 1.2; display: flex; align-items: center; justify-content: center; background: #000; border: 1px solid #111; position: relative; }
+        canvas { border: 2px solid var(--sentinel); max-height: 100%; max-width: 100%; box-shadow: 0 0 20px var(--glass); cursor: crosshair; }
+
+        /* Control Panel */
+        .controls { flex: 1; display: flex; flex-direction: column; gap: 12px; }
+        .input-group { background: #111; padding: 12px; border-left: 4px solid var(--gold); }
+        input[type="text"] { width: 100%; background: #000; color: var(--gold); border: 1px solid #333; padding: 10px; font-size: 0.9rem; box-sizing: border-box; margin-top: 5px; }
+        
+        .btn { background: var(--glass); border: 1px solid var(--sentinel); color: var(--sentinel); padding: 12px; cursor: pointer; text-transform: uppercase; font-weight: bold; font-size: 0.75rem; transition: 0.2s; }
+        .btn:hover { background: var(--sentinel); color: #000; }
+        .btn-accent { border-color: var(--accent); color: var(--accent); background: rgba(0, 212, 255, 0.1); }
+        
+        #console { font-size: 0.7rem; color: #777; border-left: 2px solid var(--gold); padding-left: 10px; min-height: 80px; background: #0a0a0a; overflow-y: auto; line-height: 1.4; }
+    </style>
+</head>
+<body>
+
+<div id="header">
+    <strong>PROJECT NP: ADELIC ORACLE v45.7</strong>
+    <div style="font-size: 0.65rem; color: #888; margin-top: 5px;">[DPI DETERMINISM | MRV ENTROPY COLLAPSE | 2-ADIC BIGINT]</div>
+</div>
+
+<div class="main-layout">
+    <div class="sidebar">
+        <div class="io-card">
+            <div class="io-label">Topology Output (String)</div>
+            <textarea id="output-string" readonly placeholder="Singularity result..."></textarea>
+        </div>
+        <div class="io-card" style="border-left-color: var(--gold);">
+            <div class="io-label">Universal DNA Proof</div>
+            <textarea id="true-dna" placeholder="Adelic Isomorphism..."></textarea>
+        </div>
+        <div id="console"> [SYSTEM] Ready for deconvolution. </div>
+    </div>
+
+    <div class="canvas-area"><canvas id="mainCanvas"></canvas></div>
+
+    <div class="controls">
+        <div style="display:flex; gap:10px; align-items:center;">
+            z: <input type="number" id="z-val" value="3" style="width: 50px; background:#000; color:var(--sentinel); border:1px solid #333; text-align:center;" onchange="initSystem()">
+            <button class="btn" style="flex:1;" onclick="clearSystem()">Purge Manifold</button>
+        </div>
+        
+        <div class="input-group">
+            <div class="io-label">Topology Input (81-digit String)</div>
+            <input type="text" id="grid-string" value="800000000003600000070090200050007000000045700000100030001000068008500010090000400" oninput="injectGridString()">
+        </div>
+
+        <div class="input-group" style="background:#1a1a1a;">
+            <div class="io-label">Path ID (Adelic Address)</div>
+            <div style="display: flex; gap: 5px;">
+                <input type="text" id="path-id" value="9307075996333306414" style="flex: 2;">
+                <button class="btn" style="flex: 1; padding: 5px;" onclick="deriveAnchor()">Derive</button>
+            </div>
+        </div>
+        
+        <button class="btn btn-accent" onclick="startDPIOnceSolver()">Run DPI-Once Solver</button>
+        <div style="font-size: 0.6rem; color: #555;">*DPI-Once mode uses the Anchor to make deterministic choices at every node without branching.</div>
+    </div>
+</div>
+
+<script>
+let z, N, totalBits, isRunning = false;
+let board, fixed, adj = [];
+let rowM, colM, blkM;
+const ADELIC_CONST = 0x517cc1b727220a95n; // Universal Adelic Generator
+const canvas = document.getElementById('mainCanvas'), ctx = canvas.getContext('2d');
+
+function updateLog(msg, err=false) {
+    const log = document.getElementById('console');
+    const color = err ? "#ff3333" : "#00ff41";
+    log.innerHTML = `<span style="color:${color}">> ${msg}</span><br>` + log.innerHTML;
+}
+
+function initSystem() {
+    isRunning = false;
+    z = parseInt(document.getElementById('z-val').value);
+    N = z * z; totalBits = N * N;
+    board = new Uint16Array(totalBits);
+    fixed = new Uint16Array(totalBits);
+    rowM = new BigUint64Array(N); colM = new BigUint64Array(N); blkM = new BigUint64Array(N);
+    
+    // Generate Adjacency Matrix for N-space [cite: 82, 83]
+    adj = Array.from({ length: totalBits }, () => []);
+    for (let i = 0; i < totalBits; i++) {
+        let r = Math.floor(i / N), c = i % N, b = Math.floor(r / z) * z + Math.floor(c / z);
+        for (let j = 0; j < totalBits; j++) {
+            if (i === j) continue;
+            let rr = Math.floor(j / N), cc = j % N, bb = Math.floor(rr / z) * z + Math.floor(cc / z);
+            if (r === rr || c === cc || b === bb) adj[i].push(j);
+        }
+    }
+    canvas.width = canvas.height = 550;
+    injectGridString();
+}
+
+/**
+ * DETERMINISTIC PATH INDEX (DPI) SOLVER
+ * Bypasses exponential branching by selecting residues via the Path ID[cite: 124, 164].
+ */
+async function startDPIOnceSolver() {
+    if (isRunning) return; isRunning = true;
+    let anchor = BigInt(document.getElementById('path-id').value.replace(/\D/g, '') || "1");
+    updateLog(`INITIATING DPI PROJECTION [Anchor: #${anchor.toString().slice(-8)}]`);
+
+    // Reset loop state
+    board.fill(0); rowM.fill(0n); colM.fill(0n); blkM.fill(0n);
+    let placed = new Uint8Array(totalBits);
+    
+    // Step 1: MSB Injection / Symmetry Break [cite: 101, 131]
+    for (let i = 0; i < totalBits; i++) {
+        if (fixed[i]) {
+            let r = Math.floor(i/N), c = i%N, b = Math.floor(r/z)*z+Math.floor(c/z);
+            rowM[r] |= (1n << BigInt(fixed[i]));
+            colM[c] |= (1n << BigInt(fixed[i]));
+            blkM[b] |= (1n << BigInt(fixed[i]));
+            placed[i] = 1;
+        }
+    }
+
+    // Step 2: The Deconvolution Walk (MRV Heuristic) [cite: 241, 262]
+    for (let step = 0; step < (totalBits - countFixed()); step++) {
+        let bestIdx = -1, minOpts = N + 1, bestMask = 0n;
+
+        // Identify the Singularity (Lowest remaining values)
+        for (let i = 0; i < totalBits; i++) {
+            if (placed[i]) continue;
+            let r = Math.floor(i/N), c = i%N, b = Math.floor(r/z)*z+Math.floor(c/z);
+            let mask = rowM[r] | colM[c] | blkM[b];
+            let count = 0;
+            for (let v = 1; v <= N; v++) if (!(mask & (1n << BigInt(v)))) count++;
+            
+            if (count < minOpts) { minOpts = count; bestIdx = i; bestMask = mask; }
+        }
+
+        if (bestIdx === -1) break;
+        if (minOpts === 0) {
+            updateLog("VOID: Topology/Anchor conflict at step " + step, true);
+            isRunning = false; return;
+        }
+
+        // Single-Pass Choice via DPI [cite: 146, 260]
+        let opts = [];
+        for (let v = 1; v <= N; v++) if (!(bestMask & (1n << BigInt(v)))) opts.push(v);
+        
+        let seed = (anchor ^ BigInt(bestIdx)) * ADELIC_CONST;
+        let val = opts[Number(seed % BigInt(opts.length))];
+
+        board[bestIdx] = val; placed[bestIdx] = 1;
+        let r = Math.floor(bestIdx/N), c = bestIdx%N, b = Math.floor(r/z)*z+Math.floor(c/z);
+        rowM[r] |= (1n << BigInt(val)); colM[c] |= (1n << BigInt(val)); blkM[b] |= (1n << BigInt(val));
+
+        if (step % 5 === 0) { render(); await new Promise(r => setTimeout(r, 0)); }
+    }
+
+    isRunning = false;
+    render(true);
+    updateLog("SINGULARITY ATTAINED.");
+    finalizeOutput();
+}
+
+function countFixed() { return fixed.reduce((a, b) => a + (b > 0 ? 1 : 0), 0); }
+
+function finalizeOutput() {
+    let s = "";
+    for(let i=0; i<totalBits; i++) s += (board[i] || fixed[i]).toString();
+    document.getElementById('output-string').value = s;
+    packDNA();
+}
+
+function packDNA() {
+    let dna = 0n, mult = 1n, sim = new Uint16Array(totalBits); 
+    for (let i = 0; i < totalBits; i++) {
+        let val = board[i] || fixed[i];
+        let mask = 0n;
+        for (let j of adj[i]) if (sim[j]) mask |= (1n << BigInt(sim[j]));
+        let opts = [];
+        for (let v = 1; v <= N; v++) if (!(mask & (1n << BigInt(v)))) opts.push(v);
+        let idx = opts.indexOf(val);
+        if (idx !== -1) dna += BigInt(idx) * mult;
+        mult *= BigInt(opts.length || 1); sim[i] = val;
+    }
+    document.getElementById('true-dna').value = dna.toString();
+}
+
+function deriveAnchor() {
+    let a = 0n; let count = 0;
+    for(let i=0; i<totalBits; i++) if(fixed[i]) { count++; a += BigInt(fixed[i] * (i+1)); }
+    const anchor = a ^ ADELIC_CONST;
+    document.getElementById('path-id').value = (anchor < 0n ? -anchor : anchor).toString();
+    updateLog("Path ID derived from topology.");
+}
+
+function injectGridString() {
+    let str = document.getElementById('grid-string').value.replace(/[^0-9]/g, '');
+    fixed.fill(0); board.fill(0);
+    for (let i = 0; i < Math.min(str.length, totalBits); i++) {
+        let v = parseInt(str[i]); if (v > 0) fixed[i] = v;
+    }
+    render();
+}
+
+function render(final = false) {
+    const s = canvas.width / N;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (let i = 0; i < totalBits; i++) {
+        let r = Math.floor(i/N), c = i%N;
+        let x = c * s, y = r * s;
+        ctx.strokeStyle = "#222"; ctx.strokeRect(x, y, s, s);
+        
+        // Block borders [cite: 45, 47]
+        if (c % z === 0) { ctx.strokeStyle = varColor('--sentinel'); ctx.lineWidth = 2; ctx.strokeRect(x, y, 0.1, s); }
+        if (r % z === 0) { ctx.strokeStyle = varColor('--sentinel'); ctx.lineWidth = 2; ctx.strokeRect(x, y, s, 0.1); }
+        ctx.lineWidth = 1;
+
+        let val = board[i] || fixed[i];
+        if (val) {
+            ctx.fillStyle = fixed[i] ? "#d4af37" : (final ? "#00ff41" : "#ffffff");
+            ctx.font = `bold ${s * 0.45}px monospace`;
+            ctx.textAlign = "center"; ctx.fillText(val, x + s/2, y + s * 0.65);
+        }
+    }
+}
+
+function varColor(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+function clearSystem() { isRunning = false; initSystem(); document.getElementById('output-string').value = ""; document.getElementById('true-dna').value = ""; }
+
+initSystem();
+</script>
+</body>
+</html>
