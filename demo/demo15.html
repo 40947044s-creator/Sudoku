@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>Project NP | Adelic Oracle v45.3</title>
+    <style>
+        :root { --sentinel: #00ff41; --bedrock: #050505; --accent: #00d4ff; --gold: #d4af37; --friction: #ff3333; }
+        body { background: var(--bedrock); color: var(--sentinel); font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 15px; overflow: hidden; }
+        .header { width: 100%; text-align: center; border-bottom: 2px solid var(--sentinel); padding-bottom: 10px; margin-bottom: 10px; }
+        .main-layout { display: flex; gap: 15px; width: 98vw; height: 85vh; }
+        
+        /* SIDEBAR: DNA & TERMINAL */
+        .sidebar { flex: 0.8; background: rgba(255,255,255,0.02); border: 1px solid #222; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .io-card { background: #111; border-left: 5px solid var(--accent); padding: 10px; }
+        .io-label { font-size: 0.6rem; color: #888; margin-bottom: 5px; text-transform: uppercase; font-weight: bold; }
+        textarea { width: 100%; background: #000; color: var(--accent); border: 1px solid #333; padding: 8px; font-size: 0.75rem; height: 80px; resize: none; outline: none; font-family: monospace; }
+        
+        .math-box { background: #0a0a0a; padding: 10px; border-left: 3px solid var(--gold); font-size: 0.6rem; color: #aaa; }
+        .proof-log { flex-grow: 1; background: #000; border: 1px dashed #333; padding: 10px; font-size: 0.6rem; color: #444; overflow-y: auto; line-height: 1.4; }
+
+        /* CENTER: CANVAS */
+        .canvas-area { flex: 1.2; display: flex; align-items: center; justify-content: center; background: #000; border: 1px solid #111; position: relative; }
+        canvas { border: 1px solid var(--sentinel); max-height: 100%; max-width: 100%; box-shadow: 0 0 20px rgba(0, 255, 65, 0.1); cursor: crosshair; }
+
+        /* RIGHT: CONTROLS */
+        .controls { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+        .input-group { background: #111; padding: 10px; border-left: 5px solid var(--gold); }
+        input[type="text"] { width: 100%; background: #000; color: var(--gold); border: 1px solid #333; padding: 8px; font-size: 0.85rem; box-sizing: border-box; font-family: inherit; margin-top: 5px; }
+        
+        .btn { background: rgba(0, 255, 65, 0.1); border: 1px solid var(--sentinel); color: var(--sentinel); padding: 10px; cursor: pointer; text-transform: uppercase; font-size: 0.7rem; font-weight: bold; text-align: center; }
+        .btn:hover { background: var(--sentinel); color: #000; }
+        .btn-accent { border-color: var(--accent); color: var(--accent); }
+        
+        #status { font-size: 0.65rem; color: #777; border-left: 2px solid var(--gold); padding-left: 10px; min-height: 70px; background: #0a0a0a; line-height: 1.4; }
+        .index-display { font-size: 0.8rem; color: var(--sentinel); word-break: break-all; font-weight: bold; margin-top: 5px; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <strong>PROJECT NP: ADELIC ORACLE v45.3</strong>
+    <div style="font-size: 0.65rem; color: #888; margin-top: 5px;">[INPUT/OUTPUT TERMINAL | MRV ENTROPY COLLAPSE | UNIVERSAL SOLVER]</div>
+</div>
+
+<div class="main-layout">
+    <div class="sidebar">
+        <div class="io-card">
+            <div class="io-label">Topology Output (Result String)</div>
+            <textarea id="output-string" readonly placeholder="Final 81-digit string will appear here..."></textarea>
+        </div>
+        <div class="io-card" style="border-left-color: var(--gold);">
+            <div class="io-label">Universal DNA Proof</div>
+            <textarea id="true-dna" placeholder="Invariant DNA BigInt..."></textarea>
+        </div>
+        <div class="math-box">
+            <b>Active Path ID:</b>
+            <div id="index-val" class="index-display">#AWAITING_RESONANCE</div>
+        </div>
+        <div id="proof-log" class="proof-log">> System initialized.</div>
+    </div>
+
+    <div class="canvas-area"><canvas id="mainCanvas"></canvas></div>
+
+    <div class="controls">
+        <div style="display:flex; gap:5px; align-items:center;">
+            z: <input type="number" id="z-val" value="3" min="2" max="5" style="width: 45px; background:#000; color:var(--sentinel); border:1px solid #333; text-align:center;" onchange="initSystem()">
+            <button class="btn" style="flex:1;" onclick="clearInferred()">Clear</button>
+            <button class="btn" style="border-color:var(--friction); color:var(--friction);" onclick="purgeAll()">Purge</button>
+        </div>
+        
+        <div class="input-group">
+            <div class="io-label">Topology Input (Paste Grid Here)</div>
+            <input type="text" id="grid-string" value="800000000003600000070090200050007000000045700000100030001000068008500010090000400" oninput="injectGridString()" placeholder="0000... (81 digits)">
+        </div>
+
+        <div class="input-group" style="background:#1a1a1a;">
+            <div class="io-label">Path ID Anchor</div>
+            <div style="display: flex; gap: 5px;">
+                <input type="text" id="path-id" value="9307075996333306414" style="flex: 2;">
+                <button class="btn" style="flex: 1; font-size:0.6rem;" onclick="deriveLatticeAnchor()">Derive</button>
+            </div>
+        </div>
+        
+        <button class="btn btn-accent" onclick="startUniversalSolver()">Run Adelic Solver</button>
+        <div id="status">> SOLVER READY. Inkala 2012 pre-loaded in Terminal.</div>
+    </div>
+</div>
+
+<script>
+let z, N, totalBits, isRunning = false;
+let board, fixed, adj = [];
+let rowM, colM, blkM, shadowR, shadowC, shadowB;
+const ADELIC_CONST = 0x517cc1b727220a95n;
+const canvas = document.getElementById('mainCanvas'), ctx = canvas.getContext('2d');
+const HEX_SENTINEL = "#00ff41", HEX_GOLD = "#d4af37", HEX_FRICTION = "#ff3333", HEX_WHITE = "#ffffff";
+
+function sysLog(msg, err=false) { 
+    const l = document.getElementById('status');
+    l.innerHTML = `<span style="color:${err?HEX_FRICTION:HEX_SENTINEL}">> ${msg}</span><br>` + l.innerHTML.split('<br>').slice(0, 3).join('<br>'); 
+}
+
+function initSystem() {
+    isRunning = false; z = parseInt(document.getElementById('z-val').value);
+    N = z * z; totalBits = N * N;
+    board = new Uint16Array(totalBits); fixed = new Uint16Array(totalBits);
+    rowM = new BigUint64Array(N); colM = new BigUint64Array(N); blkM = new BigUint64Array(N);
+    shadowR = Array.from({length: totalBits}, () => new BigUint64Array(N));
+    shadowC = Array.from({length: totalBits}, () => new BigUint64Array(N));
+    shadowB = Array.from({length: totalBits}, () => new BigUint64Array(N));
+    adj = Array.from({ length: totalBits }, () => []);
+    for (let i = 0; i < totalBits; i++) {
+        let r = Math.floor(i / N), c = i % N, b = Math.floor(r / z) * z + Math.floor(c / z);
+        for (let j = 0; j < totalBits; j++) {
+            if (i === j) continue;
+            let rr = Math.floor(j / N), cc = j % N, bb = Math.floor(rr / z) * z + Math.floor(cc / z);
+            if (r === rr || c === cc || b === bb) adj[i].push(j);
+        }
+    }
+    canvas.width = canvas.height = 600; injectGridString();
+}
+
+function deriveLatticeAnchor() {
+    let anchor = 0n; let count = 0;
+    const P1 = 0xbf58476d1ce4e5b9n, P2 = 0x94d049bb133111ebn;
+    for (let i = 0; i < totalBits; i++) {
+        if (fixed[i]) {
+            count++; let m = BigInt(i + 1);
+            m ^= m >> 33n; m *= P1; m ^= m >> 33n; m *= P2; m ^= m >> 33n;
+            anchor += (BigInt(fixed[i]) * m);
+        }
+    }
+    anchor ^= BigInt(count) * ADELIC_CONST;
+    document.getElementById('path-id').value = (anchor < 0n ? -anchor : anchor).toString();
+    sysLog("Anchor Grounded.");
+}
+
+async function startUniversalSolver() {
+    if (isRunning) return; isRunning = true;
+    let anchor = BigInt(document.getElementById('path-id').value.replace(/\D/g, '') || "1006");
+    document.getElementById('index-val').innerText = `#${anchor.toString()}`;
+    sysLog("DECONVOLUTION INITIATED...");
+
+    if (await runMRVResonance(anchor)) {
+        isRunning = false; render(true); 
+        packGraphToDNA();
+        generateOutputString();
+        sysLog("SINGULARITY ATTAINED.");
+    } else {
+        isRunning = false; sysLog("VOID: Sterile Address.", true);
+    }
+}
+
+async function runMRVResonance(anchor) {
+    board.fill(0); rowM.fill(0n); colM.fill(0n); blkM.fill(0n);
+    let placed = new Uint8Array(totalBits), stack = [], friction = 0;
+    
+    for (let i = 0; i < totalBits; i++) {
+        if (fixed[i]) {
+            let r = Math.floor(i/N), c = i%N, b = Math.floor(r/z)*z+Math.floor(c/z);
+            rowM[r] |= (1n << BigInt(fixed[i])); colM[c] |= (1n << BigInt(fixed[i])); blkM[b] |= (1n << BigInt(fixed[i]));
+            board[i] = fixed[i]; placed[i] = 1;
+        }
+    }
+
+    while (true) {
+        let bestIdx = -1, minOpts = Infinity, bestMask = 0n;
+        for (let i = 0; i < totalBits; i++) {
+            if (placed[i]) continue;
+            let r = Math.floor(i/N), c = i%N, b = Math.floor(r/z)*z+Math.floor(c/z);
+            let mask = rowM[r] | colM[c] | blkM[b];
+            let count = 0; for (let v = 1; v <= N; v++) if (!(mask & (1n << BigInt(v)))) count++;
+            if (count < minOpts) { minOpts = count; bestIdx = i; bestMask = mask; }
+        }
+
+        if (bestIdx === -1) return true;
+        if (minOpts === 0) {
+            while (stack.length > 0) {
+                let prev = stack.pop();
+                let r = Math.floor(prev.idx/N), c = prev.idx%N, b = Math.floor(r/z)*z+Math.floor(c/z);
+                board[prev.idx] = 0; placed[prev.idx] = 0;
+                rowM.set(prev.rM); colM.set(prev.cM); blkM.set(prev.bM);
+                let m = rowM[r] | colM[c] | blkM[b];
+                let opts = []; for (let v = 1; v <= N; v++) if (!(m & (1n << BigInt(v)))) opts.push(v);
+                prev.phase++;
+                if (prev.phase < opts.length) {
+                    let seed = (anchor ^ BigInt(prev.idx)) * ADELIC_CONST;
+                    let val = opts[(Number(seed % BigInt(opts.length)) + prev.phase) % opts.length];
+                    stack.push(prev); board[prev.idx] = val; placed[prev.idx] = 1;
+                    rowM[r] |= (1n << BigInt(val)); colM[c] |= (1n << BigInt(val)); blkM[b] |= (1n << BigInt(val));
+                    break;
+                }
+            }
+            if (stack.length === 0) return false;
+            friction++; if (friction % 400 === 0) { render(); await new Promise(r => setTimeout(r, 0)); }
+            continue;
+        }
+
+        let opts = []; for (let v = 1; v <= N; v++) if (!(bestMask & (1n << BigInt(v)))) opts.push(v);
+        let seed = (anchor ^ BigInt(bestIdx)) * ADELIC_CONST;
+        let val = opts[Number(seed % BigInt(opts.length))];
+        stack.push({idx: bestIdx, phase: 0, rM: new BigUint64Array(rowM), cM: new BigUint64Array(colM), bM: new BigUint64Array(blkM)});
+        board[bestIdx] = val; placed[bestIdx] = 1;
+        let r = Math.floor(bestIdx/N), c = bestIdx%N, b = Math.floor(r/z)*z+Math.floor(c/z);
+        rowM[r] |= (1n << BigInt(val)); colM[c] |= (1n << BigInt(val)); blkM[b] |= (1n << BigInt(val));
+    }
+}
+
+function generateOutputString() {
+    let s = "";
+    for(let i=0; i<totalBits; i++) s += board[i].toString();
+    document.getElementById('output-string').value = s;
+}
+
+function packGraphToDNA() {
+    let dna = 0n, mult = 1n, sim = new Uint16Array(totalBits); 
+    for (let i = 0; i < totalBits; i++) {
+        let val = board[i]; let mask = 0n;
+        for (let j of adj[i]) if (sim[j]) mask |= (1n << BigInt(sim[j]));
+        let opts = []; for (let v = 1; v <= N; v++) if (!(mask & (1n << BigInt(v)))) opts.push(v);
+        let idx = opts.indexOf(val);
+        if (idx !== -1) dna += BigInt(idx) * mult;
+        mult *= BigInt(opts.length || 1); sim[i] = val;
+    }
+    document.getElementById('true-dna').value = dna.toString();
+}
+
+function render(final = false) {
+    const s = canvas.width / N;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (let i = 0; i < totalBits; i++) {
+        let x = (i % N) * s, y = Math.floor(i / N) * s;
+        ctx.strokeStyle = "rgba(0, 212, 255, 0.08)"; ctx.strokeRect(x, y, s, s);
+        let val = board[i];
+        if (val) {
+            ctx.fillStyle = fixed[i] ? HEX_GOLD : (final ? HEX_SENTINEL : HEX_WHITE);
+            ctx.font = `bold ${s * 0.5}px monospace`;
+            ctx.textAlign = "center"; ctx.fillText(val, x + s/2, y + s * 0.7);
+        }
+    }
+}
+
+function injectGridString() {
+    let str = document.getElementById('grid-string').value.replace(/[^0-9]/g, '');
+    fixed.fill(0); board.fill(0);
+    for (let i = 0; i < Math.min(str.length, totalBits); i++) {
+        let char = str[i]; if (char >= '1' && char <= '9') fixed[i] = parseInt(char);
+    }
+    render();
+}
+function clearInferred() { board.fill(0); initSystem(); }
+function purgeAll() { fixed.fill(0); clearInferred(); }
+
+initSystem();
+</script>
+</body>
+</html>
